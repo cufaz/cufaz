@@ -24,10 +24,10 @@ export function SiteHeader() {
         <a href="#topo" className="flex items-center gap-3 group">
           <img
             src={logo}
-            alt="CUFA Z"
+            alt="CUFA"
             className="h-12 sm:h-16 md:h-18 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="sr-only">CUFA Z</span>
+          <span className="sr-only">CUFA</span>
         </a>
 
         <nav className="hidden items-center gap-6 lg:flex">

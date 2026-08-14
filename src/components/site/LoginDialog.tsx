@@ -23,7 +23,7 @@ export function LoginDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader className="text-left">
           <DialogTitle className="text-2xl">Entrar na plataforma</DialogTitle>
-          <DialogDescription>Acesse com o e-mail cadastrado no CUFA Z.</DialogDescription>
+          <DialogDescription>Acesse com o e-mail cadastrado na CUFA.</DialogDescription>
         </DialogHeader>
         <form
           className="grid gap-4"

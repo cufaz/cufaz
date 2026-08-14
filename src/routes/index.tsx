@@ -4,7 +4,6 @@ import { MapPin, Sparkles, Loader2 } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import cufaLogo from "@/assets/cufa-logo-transparent.png";
-import amazonLogo from "@/assets/amazon-logo-transparent.png";
 import hero from "@/assets/hero.jpg";
 import karate from "@/assets/karate.jpg";
 import jiujitsu from "@/assets/jiujitsu.jpg";
@@ -70,17 +69,17 @@ function ProgressiveImage({
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CUFA Z — Esporte e educação nas comunidades | CUFA + Amazon" },
+      { title: "CUFA — Esporte e educação nas comunidades" },
       {
         name: "description",
         content:
-          "CUFA Z é a plataforma dos projetos sociais CUFA e Amazon: karatê, jiu jitsu, futsal, natação, costura e inglês nas comunidades. Matricule-se ou seja professor.",
+          "CUFA é a plataforma dos projetos sociais nas comunidades: karatê, jiu jitsu, futsal, natação, costura e inglês. Matricule-se ou seja professor.",
       },
-      { property: "og:title", content: "CUFA Z — Projetos sociais CUFA + Amazon" },
+      { property: "og:title", content: "CUFA — Projetos sociais nas comunidades" },
       {
         property: "og:description",
         content:
-          "Esporte, cultura e educação para as comunidades. Conheça os projetos e faça sua inscrição na plataforma CUFA Z.",
+          "Esporte, cultura e educação para as comunidades. Conheça os projetos e faça sua inscrição na plataforma CUFA.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -118,7 +117,7 @@ function Index() {
         <section className="relative overflow-hidden bg-surface/40 border-b border-border">
           <ProgressiveImage
             src={hero}
-            alt="Jovens das comunidades atendidas pelos projetos CUFA Z"
+            alt="Jovens das comunidades atendidas pelos projetos CUFA"
             width={1600}
             height={1100}
             showSpinner={false}
@@ -128,14 +127,14 @@ function Index() {
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background pointer-events-none" />
           <div className="relative z-10 mx-auto max-w-6xl px-4 py-16 sm:py-24">
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider shadow-sm">
-              <Sparkles className="size-3.5 text-primary" /> CUFA × Amazon
+              <Sparkles className="size-3.5 text-primary" /> CENTRAL ÚNICA DAS FAVELAS
             </span>
             <h1 className="mt-5 max-w-3xl text-4xl leading-[1.08] sm:text-6xl font-extrabold text-foreground">
               A força da <span className="text-brand-gradient">favela</span> em movimento
             </h1>
             <div className="mt-5 max-w-xl rounded-2xl bg-white/85 p-5 border border-border shadow-xs backdrop-blur-md">
               <p className="text-base text-foreground font-medium sm:text-lg leading-relaxed">
-                O <strong className="font-bold text-primary">CUFA Z</strong> conecta comunidades, professores e voluntários em projetos de esporte, cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA acompanha tudo em um só lugar.
+                A <strong className="font-bold text-primary">CUFA</strong> conecta comunidades, professores e voluntários em projetos de esporte, cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA acompanha tudo em um só lugar.
               </p>
             </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -165,18 +164,18 @@ function Index() {
         {/* Institucional */}
         <section id="institucional" className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Quem faz acontecer</h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
-              <div className="flex h-16 items-center">
+          <div className="mt-8">
+            <article className="rounded-2xl border border-border bg-card p-6 sm:p-10 shadow-xs transition-shadow hover:shadow-md">
+              <div className="flex h-20 items-center">
                 <ProgressiveImage
                   src={cufaLogo}
                   alt="CUFA — Central Única das Favelas"
-                  containerClassName="h-14"
-                  className="h-14 w-auto object-contain"
+                  containerClassName="h-16"
+                  className="h-16 w-auto object-contain"
                 />
               </div>
-              <h3 className="mt-4 text-xl font-bold text-foreground">CUFA — Central Única das Favelas</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <h3 className="mt-4 text-2xl font-bold text-foreground">CUFA — Central Única das Favelas</h3>
+              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                 Criada em 1999 por jovens de diversas favelas do Rio de Janeiro, a CUFA nasceu da
                 união em torno do rap, do grafite, do break e do basquete de rua. Hoje está
                 presente em todos os estados brasileiros e em mais de 20 países, promovendo
@@ -184,37 +183,17 @@ function Index() {
                 que vivem nas periferias.
               </p>
             </article>
-            <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
-              <div className="flex h-16 items-center">
-                <ProgressiveImage
-                  src={amazonLogo}
-                  alt="Amazon — tecnologia e voluntariado"
-                  containerClassName="h-12"
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
-              <h3 className="mt-4 text-xl font-bold text-foreground">Amazon — tecnologia e voluntariado</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                A Amazon apoia projetos de impacto social no Brasil investindo em infraestrutura,
-                formação e no voluntariado de seus funcionários. Na parceria com a CUFA, os
-                voluntários colaboram em atividades nas comunidades — de aulas e oficinas a
-                mentorias — e a tecnologia entra para organizar, medir e ampliar o alcance de
-                cada projeto.
-              </p>
-            </article>
           </div>
 
           <div className="mt-6 flex flex-col items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center sm:flex-row sm:text-left">
             <ProgressiveImage
               src={logo}
-              alt="Logotipo CUFA Z"
+              alt="Logotipo CUFA"
               containerClassName="h-16 sm:h-20 shrink-0"
               className="h-16 sm:h-20 w-auto shrink-0 object-contain"
             />
             <p className="text-sm leading-relaxed text-muted-foreground">
-              <strong className="text-foreground font-semibold">CUFA Z</strong> é a plataforma que une as duas
-              histórias: um só lugar para inscrever professores, matricular alunos, organizar
-              turmas por comunidade e acompanhar o impacto real de cada modalidade.
+              <strong className="text-foreground font-semibold">CUFA</strong> é a plataforma que reúne nossa história: um só lugar para inscrever professores, matricular alunos, organizar turmas por comunidade e acompanhar o impacto real de cada modalidade.
             </p>
           </div>
         </section>
@@ -225,7 +204,7 @@ function Index() {
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Projetos e modalidades</h2>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
               Atividades gratuitas oferecidas nas unidades CUFA, com professores da própria
-              comunidade e apoio dos voluntários Amazon.
+              comunidade e apoio de voluntários.
             </p>
 
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -273,7 +252,7 @@ function Index() {
           </ul>
 
           <div className="mt-10 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary via-primary/95 to-brand-deep p-8 sm:p-10 text-white shadow-brand">
-            <h3 className="text-2xl sm:text-3xl font-extrabold">Faça parte do CUFA Z</h3>
+            <h3 className="text-2xl sm:text-3xl font-extrabold">Faça parte da CUFA</h3>
             <p className="mt-2 max-w-lg text-sm font-medium text-white/90 leading-relaxed">
               Alunos, professores e responsáveis CUFA: crie sua conta e participe das turmas da
               sua comunidade.
@@ -294,14 +273,14 @@ function Index() {
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-[auto_1fr] sm:items-center">
           <ProgressiveImage
             src={logo}
-            alt="CUFA Z"
+            alt="CUFA"
             containerClassName="h-14 sm:h-16 shrink-0"
             className="h-14 sm:h-16 w-auto object-contain"
           />
           <div className="text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">Projeto social CUFA em parceria com a Amazon.</p>
+            <p className="font-semibold text-foreground">Projeto social Central Única das Favelas.</p>
             <p className="mt-1">contato@cufaz.org.br</p>
-            <p className="mt-3 text-xs">© {new Date().getFullYear()} CUFA Z</p>
+            <p className="mt-3 text-xs">© {new Date().getFullYear()} CUFA</p>
           </div>
         </div>
       </footer>

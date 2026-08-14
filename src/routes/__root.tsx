@@ -78,18 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CUFA Z — Projetos sociais CUFA + Amazon" },
+      { title: "CUFA — Central Única das Favelas" },
       {
         name: "description",
         content:
-          "Plataforma dos projetos sociais CUFA e Amazon nas comunidades: esporte, cultura e educação.",
+          "Plataforma dos projetos sociais da CUFA nas comunidades: esporte, cultura e educação.",
       },
-      { name: "author", content: "CUFA Z" },
-      { property: "og:title", content: "CUFA Z — Projetos sociais CUFA + Amazon" },
+      { name: "author", content: "CUFA" },
+      { property: "og:title", content: "CUFA — Central Única das Favelas" },
       {
         property: "og:description",
         content:
-          "Plataforma dos projetos sociais CUFA e Amazon nas comunidades: esporte, cultura e educação.",
+          "Plataforma dos projetos sociais da CUFA nas comunidades: esporte, cultura e educação.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
