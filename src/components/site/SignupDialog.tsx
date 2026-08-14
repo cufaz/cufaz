@@ -114,7 +114,7 @@ export function SignupDialog({
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     toast.success("Cadastro enviado!", {
-      description: "Sua solicitação será analisada pela equipe CUFAZ.",
+      description: "Sua solicitação será analisada pela equipe CUFA Z.",
     });
     fechar(false);
   }
@@ -129,7 +129,7 @@ export function SignupDialog({
           <DialogDescription>
             {atual
               ? "Preencha os dados abaixo para enviar sua solicitação."
-              : "Escolha o seu perfil na plataforma CUFAZ."}
+              : "Escolha o seu perfil na plataforma CUFA Z."}
           </DialogDescription>
         </DialogHeader>
 

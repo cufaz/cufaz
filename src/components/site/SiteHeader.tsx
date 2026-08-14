@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
-import logo from "@/assets/cufaz-logo.png.asset.json";
+import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "./LoginDialog";
 import { SignupDialog } from "./SignupDialog";
@@ -23,11 +23,11 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:py-4">
         <a href="#topo" className="flex items-center gap-3 group">
           <img
-            src={logo.url}
-            alt="CUFAZ"
+            src={logo}
+            alt="CUFA Z"
             className="h-12 sm:h-16 md:h-18 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="sr-only">CUFAZ</span>
+          <span className="sr-only">CUFA Z</span>
         </a>
 
         <nav className="hidden items-center gap-6 lg:flex">

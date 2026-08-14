@@ -78,14 +78,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CUFAZ — Projetos sociais CUFA + Amazon" },
+      { title: "CUFA Z — Projetos sociais CUFA + Amazon" },
       {
         name: "description",
         content:
           "Plataforma dos projetos sociais CUFA e Amazon nas comunidades: esporte, cultura e educação.",
       },
-      { name: "author", content: "CUFAZ" },
-      { property: "og:title", content: "CUFAZ — Projetos sociais CUFA + Amazon" },
+      { name: "author", content: "CUFA Z" },
+      { property: "og:title", content: "CUFA Z — Projetos sociais CUFA + Amazon" },
       {
         property: "og:description",
         content:

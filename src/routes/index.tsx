@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { MapPin, Sparkles } from "lucide-react";
+import { MapPin, Sparkles, Loader2 } from "lucide-react";
 
-import logo from "@/assets/cufaz-logo.png.asset.json";
+import logo from "@/assets/cufa-z-logo.png";
 import cufaLogo from "@/assets/cufa-logo-transparent.png";
 import amazonLogo from "@/assets/amazon-logo-transparent.png";
 import hero from "@/assets/hero.jpg";
@@ -17,20 +17,62 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SignupDialog } from "@/components/site/SignupDialog";
 
+function ProgressiveImage({
+  src,
+  alt,
+  className = "",
+  containerClassName = "",
+  width,
+  height,
+  loading = "lazy",
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  containerClassName?: string;
+  width?: number;
+  height?: number;
+  loading?: "lazy" | "eager";
+}) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden bg-muted/20 ${containerClassName}`}>
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/40 backdrop-blur-xs z-10 transition-opacity duration-300">
+          <Loader2 className="size-7 animate-spin text-primary" />
+          <span className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Carregando...</span>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        loading={loading}
+        onLoad={() => setLoaded(true)}
+        className={`${className} transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CUFAZ — Esporte e educação nas comunidades | CUFA + Amazon" },
+      { title: "CUFA Z — Esporte e educação nas comunidades | CUFA + Amazon" },
       {
         name: "description",
         content:
-          "CUFAZ é a plataforma dos projetos sociais CUFA e Amazon: karatê, jiu jitsu, futsal, natação, costura e inglês nas comunidades. Matricule-se ou seja professor.",
+          "CUFA Z é a plataforma dos projetos sociais CUFA e Amazon: karatê, jiu jitsu, futsal, natação, costura e inglês nas comunidades. Matricule-se ou seja professor.",
       },
-      { property: "og:title", content: "CUFAZ — Projetos sociais CUFA + Amazon" },
+      { property: "og:title", content: "CUFA Z — Projetos sociais CUFA + Amazon" },
       {
         property: "og:description",
         content:
-          "Esporte, cultura e educação para as comunidades. Conheça os projetos e faça sua inscrição na plataforma CUFAZ.",
+          "Esporte, cultura e educação para as comunidades. Conheça os projetos e faça sua inscrição na plataforma CUFA Z.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -66,12 +108,13 @@ function Index() {
       <main>
         {/* Hero */}
         <section className="relative overflow-hidden bg-surface/40 border-b border-border">
-          <img
+          <ProgressiveImage
             src={hero}
-            alt="Jovens das comunidades atendidas pelos projetos CUFAZ"
+            alt="Jovens das comunidades atendidas pelos projetos CUFA Z"
             width={1600}
             height={1100}
-            className="absolute inset-0 size-full object-cover opacity-20"
+            containerClassName="absolute inset-0 size-full"
+            className="size-full object-cover opacity-20"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
           <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
@@ -82,7 +125,7 @@ function Index() {
               A força da <span className="text-brand-gradient">favela</span> em movimento
             </h1>
             <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-              O CUFAZ conecta comunidades, professores e voluntários em projetos de esporte,
+              O CUFA Z conecta comunidades, professores e voluntários em projetos de esporte,
               cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA
               acompanha tudo em um só lugar.
             </p>
@@ -116,9 +159,10 @@ function Index() {
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
               <div className="flex h-16 items-center">
-                <img
+                <ProgressiveImage
                   src={cufaLogo}
                   alt="CUFA — Central Única das Favelas"
+                  containerClassName="h-14"
                   className="h-14 w-auto object-contain"
                 />
               </div>
@@ -133,9 +177,10 @@ function Index() {
             </article>
             <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
               <div className="flex h-16 items-center">
-                <img
+                <ProgressiveImage
                   src={amazonLogo}
                   alt="Amazon — tecnologia e voluntariado"
+                  containerClassName="h-12"
                   className="h-12 w-auto object-contain"
                 />
               </div>
@@ -151,9 +196,14 @@ function Index() {
           </div>
 
           <div className="mt-6 flex flex-col items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center sm:flex-row sm:text-left">
-            <img src={logo.url} alt="Logotipo CUFAZ" className="h-16 sm:h-20 w-auto shrink-0" />
+            <ProgressiveImage
+              src={logo}
+              alt="Logotipo CUFA Z"
+              containerClassName="h-16 sm:h-20 shrink-0"
+              className="h-16 sm:h-20 w-auto shrink-0 object-contain"
+            />
             <p className="text-sm leading-relaxed text-muted-foreground">
-              <strong className="text-foreground font-semibold">CUFAZ</strong> é a plataforma que une as duas
+              <strong className="text-foreground font-semibold">CUFA Z</strong> é a plataforma que une as duas
               histórias: um só lugar para inscrever professores, matricular alunos, organizar
               turmas por comunidade e acompanhar o impacto real de cada modalidade.
             </p>
@@ -175,12 +225,13 @@ function Index() {
                   key={p.nome}
                   className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                 >
-                  <img
+                  <ProgressiveImage
                     src={p.img}
                     alt={`Turma de ${p.nome}`}
                     loading="lazy"
                     width={1200}
                     height={900}
+                    containerClassName="h-48 w-full"
                     className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="p-5">
@@ -213,7 +264,7 @@ function Index() {
           </ul>
 
           <div className="mt-10 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary via-primary/95 to-brand-deep p-8 sm:p-10 text-white shadow-brand">
-            <h3 className="text-2xl sm:text-3xl font-extrabold">Faça parte do CUFAZ</h3>
+            <h3 className="text-2xl sm:text-3xl font-extrabold">Faça parte do CUFA Z</h3>
             <p className="mt-2 max-w-lg text-sm font-medium text-white/90 leading-relaxed">
               Alunos, professores e responsáveis CUFA: crie sua conta e participe das turmas da
               sua comunidade.
@@ -232,11 +283,16 @@ function Index() {
 
       <footer id="contato" className="border-t border-border bg-card py-12">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-[auto_1fr] sm:items-center">
-          <img src={logo.url} alt="CUFAZ" className="h-14 sm:h-16 w-auto object-contain" />
+          <ProgressiveImage
+            src={logo}
+            alt="CUFA Z"
+            containerClassName="h-14 sm:h-16 shrink-0"
+            className="h-14 sm:h-16 w-auto object-contain"
+          />
           <div className="text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">Projeto social CUFA em parceria com a Amazon.</p>
             <p className="mt-1">contato@cufaz.org.br</p>
-            <p className="mt-3 text-xs">© {new Date().getFullYear()} CUFAZ</p>
+            <p className="mt-3 text-xs">© {new Date().getFullYear()} CUFA Z</p>
           </div>
         </div>
       </footer>
