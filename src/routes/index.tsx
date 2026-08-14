@@ -123,21 +123,21 @@ function Index() {
             height={1100}
             showSpinner={false}
             containerClassName="absolute inset-0 size-full pointer-events-none"
-            className="size-full object-cover opacity-25"
+            className="size-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background pointer-events-none" />
           <div className="relative z-10 mx-auto max-w-6xl px-4 py-16 sm:py-24">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider shadow-sm">
               <Sparkles className="size-3.5 text-primary" /> CUFA × Amazon
             </span>
             <h1 className="mt-5 max-w-3xl text-4xl leading-[1.08] sm:text-6xl font-extrabold text-foreground">
               A força da <span className="text-brand-gradient">favela</span> em movimento
             </h1>
-            <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-              O CUFA Z conecta comunidades, professores e voluntários em projetos de esporte,
-              cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA
-              acompanha tudo em um só lugar.
-            </p>
+            <div className="mt-5 max-w-xl rounded-2xl bg-white/85 p-5 border border-border shadow-xs backdrop-blur-md">
+              <p className="text-base text-foreground font-medium sm:text-lg leading-relaxed">
+                O <strong className="font-bold text-primary">CUFA Z</strong> conecta comunidades, professores e voluntários em projetos de esporte, cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA acompanha tudo em um só lugar.
+              </p>
+            </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
                 size="lg"
