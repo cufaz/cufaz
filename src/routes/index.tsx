@@ -25,6 +25,7 @@ function ProgressiveImage({
   width,
   height,
   loading = "lazy",
+  showSpinner = true,
 }: {
   src: string;
   alt: string;
@@ -33,6 +34,7 @@ function ProgressiveImage({
   width?: number;
   height?: number;
   loading?: "lazy" | "eager";
+  showSpinner?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const isAbsolute = containerClassName.includes("absolute");
@@ -40,9 +42,9 @@ function ProgressiveImage({
 
   return (
     <div className={`${positionClass} overflow-hidden ${containerClassName}`}>
-      {!loaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/40 backdrop-blur-xs z-10 transition-opacity duration-300">
-          <Loader2 className="size-7 animate-spin text-primary" />
+      {!loaded && showSpinner && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/30 backdrop-blur-xs z-10 pointer-events-none transition-opacity duration-300">
+          <Loader2 className="size-6 animate-spin text-primary" />
         </div>
       )}
       <img
@@ -51,6 +53,11 @@ function ProgressiveImage({
         width={width}
         height={height}
         loading={loading}
+        ref={(imgNode) => {
+          if (imgNode && imgNode.complete) {
+            setLoaded(true);
+          }
+        }}
         onLoad={() => setLoaded(true)}
         className={`${className} transition-opacity duration-500 ${
           loaded ? "opacity-100" : "opacity-0"
@@ -114,6 +121,7 @@ function Index() {
             alt="Jovens das comunidades atendidas pelos projetos CUFA Z"
             width={1600}
             height={1100}
+            showSpinner={false}
             containerClassName="absolute inset-0 size-full pointer-events-none"
             className="size-full object-cover opacity-25"
           />
