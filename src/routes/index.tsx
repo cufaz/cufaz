@@ -35,13 +35,14 @@ function ProgressiveImage({
   loading?: "lazy" | "eager";
 }) {
   const [loaded, setLoaded] = useState(false);
+  const isAbsolute = containerClassName.includes("absolute");
+  const positionClass = isAbsolute ? "" : "relative";
 
   return (
-    <div className={`relative overflow-hidden bg-muted/20 ${containerClassName}`}>
+    <div className={`${positionClass} overflow-hidden ${containerClassName}`}>
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/40 backdrop-blur-xs z-10 transition-opacity duration-300">
           <Loader2 className="size-7 animate-spin text-primary" />
-          <span className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Carregando...</span>
         </div>
       )}
       <img
@@ -113,11 +114,11 @@ function Index() {
             alt="Jovens das comunidades atendidas pelos projetos CUFA Z"
             width={1600}
             height={1100}
-            containerClassName="absolute inset-0 size-full"
-            className="size-full object-cover opacity-20"
+            containerClassName="absolute inset-0 size-full pointer-events-none"
+            className="size-full object-cover opacity-25"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
-          <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
+          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background pointer-events-none" />
+          <div className="relative z-10 mx-auto max-w-6xl px-4 py-16 sm:py-24">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
               <Sparkles className="size-3.5 text-primary" /> CUFA × Amazon
             </span>
