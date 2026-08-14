@@ -19,10 +19,14 @@ export function SiteHeader() {
   const [signup, setSignup] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur">
-      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
-        <a href="#topo" className="flex min-w-0 items-center gap-2">
-          <img src={logo.url} alt="CUFAZ" className="h-9 w-auto shrink-0 sm:h-11" />
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:py-4">
+        <a href="#topo" className="flex items-center gap-3 group">
+          <img
+            src={logo.url}
+            alt="CUFAZ"
+            className="h-12 sm:h-16 md:h-18 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
+          />
           <span className="sr-only">CUFAZ</span>
         </a>
 

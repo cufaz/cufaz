@@ -56,31 +56,31 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.16 0.012 60);
-  --foreground: oklch(0.97 0.008 80);
-  --surface: oklch(0.21 0.014 62);
-  --card: oklch(0.21 0.014 62);
-  --card-foreground: oklch(0.97 0.008 80);
-  --popover: oklch(0.19 0.013 62);
-  --popover-foreground: oklch(0.97 0.008 80);
-  --primary: oklch(0.76 0.183 62);
-  --primary-foreground: oklch(0.17 0.02 60);
-  --brand: oklch(0.76 0.183 62);
-  --brand-deep: oklch(0.66 0.19 45);
-  --ink: oklch(0.14 0.01 60);
-  --secondary: oklch(0.26 0.016 62);
-  --secondary-foreground: oklch(0.97 0.008 80);
-  --muted: oklch(0.26 0.016 62);
-  --muted-foreground: oklch(0.74 0.02 70);
-  --accent: oklch(0.3 0.05 60);
-  --accent-foreground: oklch(0.97 0.008 80);
+  --background: oklch(0.99 0.002 90);
+  --foreground: oklch(0.14 0.015 60);
+  --surface: oklch(0.97 0.005 80);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.14 0.015 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.14 0.015 60);
+  --primary: oklch(0.66 0.22 45);
+  --primary-foreground: oklch(1 0 0);
+  --brand: oklch(0.66 0.22 45);
+  --brand-deep: oklch(0.58 0.23 38);
+  --ink: oklch(0.12 0.015 60);
+  --secondary: oklch(0.95 0.008 80);
+  --secondary-foreground: oklch(0.14 0.015 60);
+  --muted: oklch(0.96 0.005 80);
+  --muted-foreground: oklch(0.42 0.015 60);
+  --accent: oklch(0.95 0.015 60);
+  --accent-foreground: oklch(0.14 0.015 60);
   --destructive: oklch(0.6 0.22 27);
   --destructive-foreground: oklch(0.98 0.005 80);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.76 0.183 62);
-  --gradient-brand: linear-gradient(135deg, oklch(0.82 0.16 78), oklch(0.66 0.19 45));
-  --shadow-brand: 0 18px 40px -18px oklch(0.72 0.19 55 / 0.65);
+  --border: oklch(0.90 0.008 80);
+  --input: oklch(0.88 0.008 80);
+  --ring: oklch(0.66 0.22 45);
+  --gradient-brand: linear-gradient(135deg, oklch(0.72 0.21 55), oklch(0.58 0.23 38));
+  --shadow-brand: 0 12px 30px -10px oklch(0.66 0.22 45 / 0.45);
 }
 
 @layer base {

@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { HeartHandshake, MapPin, Sparkles, Users } from "lucide-react";
+import { MapPin, Sparkles } from "lucide-react";
 
 import logo from "@/assets/cufaz-logo.png.asset.json";
+import cufaLogo from "@/assets/cufa-logo-transparent.png";
+import amazonLogo from "@/assets/amazon-logo-transparent.png";
 import hero from "@/assets/hero.jpg";
 import karate from "@/assets/karate.jpg";
 import jiujitsu from "@/assets/jiujitsu.jpg";
@@ -58,28 +60,28 @@ function Index() {
   const [signup, setSignup] = useState(false);
 
   return (
-    <div id="topo" className="min-h-screen bg-background">
+    <div id="topo" className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden bg-surface/40 border-b border-border">
           <img
             src={hero}
             alt="Jovens das comunidades atendidas pelos projetos CUFAZ"
             width={1600}
             height={1100}
-            className="absolute inset-0 size-full object-cover opacity-35"
+            className="absolute inset-0 size-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/85 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
           <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-              <Sparkles className="size-3.5" /> CUFA × Amazon
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+              <Sparkles className="size-3.5 text-primary" /> CUFA × Amazon
             </span>
-            <h1 className="mt-5 max-w-3xl text-4xl leading-[1.05] sm:text-6xl">
+            <h1 className="mt-5 max-w-3xl text-4xl leading-[1.08] sm:text-6xl font-extrabold text-foreground">
               A força da <span className="text-brand-gradient">favela</span> em movimento
             </h1>
-            <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
+            <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
               O CUFAZ conecta comunidades, professores e voluntários em projetos de esporte,
               cultura e educação. Aqui o aluno se matricula, o professor se inscreve e a CUFA
               acompanha tudo em um só lugar.
@@ -87,21 +89,21 @@ function Index() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
                 size="lg"
-                className="bg-brand-gradient font-semibold shadow-brand"
+                className="bg-brand-gradient text-white font-semibold shadow-brand hover:opacity-95 text-base px-7 py-6"
                 onClick={() => setSignup(true)}
               >
                 Quero participar
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-secondary font-semibold text-base px-7 py-6" asChild>
                 <a href="#projetos">Ver projetos</a>
               </Button>
             </div>
 
             <dl className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {numeros.map((n) => (
-                <div key={n.label} className="rounded-xl border border-border bg-card/70 p-4">
-                  <dt className="text-2xl font-display text-primary sm:text-3xl">{n.valor}</dt>
-                  <dd className="mt-1 text-xs text-muted-foreground sm:text-sm">{n.label}</dd>
+                <div key={n.label} className="rounded-xl border border-border bg-card/90 p-5 shadow-xs backdrop-blur-xs">
+                  <dt className="text-2xl font-display text-primary sm:text-4xl">{n.valor}</dt>
+                  <dd className="mt-1 text-xs font-medium text-muted-foreground sm:text-sm">{n.label}</dd>
                 </div>
               ))}
             </dl>
@@ -110,13 +112,17 @@ function Index() {
 
         {/* Institucional */}
         <section id="institucional" className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
-          <h2 className="text-3xl sm:text-4xl">Quem faz o CUFAZ acontecer</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <article className="rounded-2xl border border-border bg-card p-6">
-              <span className="grid size-11 place-items-center rounded-xl bg-brand-gradient text-primary-foreground">
-                <Users className="size-5" />
-              </span>
-              <h3 className="mt-4 text-xl">CUFA — Central Única das Favelas</h3>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Quem faz acontecer</h2>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
+              <div className="flex h-16 items-center">
+                <img
+                  src={cufaLogo}
+                  alt="CUFA — Central Única das Favelas"
+                  className="h-14 w-auto object-contain"
+                />
+              </div>
+              <h3 className="mt-4 text-xl font-bold text-foreground">CUFA — Central Única das Favelas</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 Criada em 1999 por jovens de diversas favelas do Rio de Janeiro, a CUFA nasceu da
                 união em torno do rap, do grafite, do break e do basquete de rua. Hoje está
@@ -125,11 +131,15 @@ function Index() {
                 que vivem nas periferias.
               </p>
             </article>
-            <article className="rounded-2xl border border-border bg-card p-6">
-              <span className="grid size-11 place-items-center rounded-xl bg-brand-gradient text-primary-foreground">
-                <HeartHandshake className="size-5" />
-              </span>
-              <h3 className="mt-4 text-xl">Amazon — tecnologia e voluntariado</h3>
+            <article className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs transition-shadow hover:shadow-md">
+              <div className="flex h-16 items-center">
+                <img
+                  src={amazonLogo}
+                  alt="Amazon — tecnologia e voluntariado"
+                  className="h-12 w-auto object-contain"
+                />
+              </div>
+              <h3 className="mt-4 text-xl font-bold text-foreground">Amazon — tecnologia e voluntariado</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 A Amazon apoia projetos de impacto social no Brasil investindo em infraestrutura,
                 formação e no voluntariado de seus funcionários. Na parceria com a CUFA, os
@@ -140,10 +150,10 @@ function Index() {
             </article>
           </div>
 
-          <div className="mt-4 flex flex-col items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center sm:flex-row sm:text-left">
-            <img src={logo.url} alt="Logotipo CUFAZ" className="h-14 w-auto" />
+          <div className="mt-6 flex flex-col items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center sm:flex-row sm:text-left">
+            <img src={logo.url} alt="Logotipo CUFAZ" className="h-16 sm:h-20 w-auto shrink-0" />
             <p className="text-sm leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">CUFAZ</strong> é a plataforma que une as duas
+              <strong className="text-foreground font-semibold">CUFAZ</strong> é a plataforma que une as duas
               histórias: um só lugar para inscrever professores, matricular alunos, organizar
               turmas por comunidade e acompanhar o impacto real de cada modalidade.
             </p>
@@ -151,19 +161,19 @@ function Index() {
         </section>
 
         {/* Projetos */}
-        <section id="projetos" className="border-y border-border bg-surface/40 py-16 sm:py-20">
+        <section id="projetos" className="border-y border-border bg-surface/50 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4">
-            <h2 className="text-3xl sm:text-4xl">Projetos e modalidades</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Projetos e modalidades</h2>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
               Atividades gratuitas oferecidas nas unidades CUFA, com professores da própria
               comunidade e apoio dos voluntários Amazon.
             </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {projetos.map((p) => (
                 <article
                   key={p.nome}
-                  className="group overflow-hidden rounded-2xl border border-border bg-card"
+                  className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                 >
                   <img
                     src={p.img}
@@ -171,14 +181,14 @@ function Index() {
                     loading="lazy"
                     width={1200}
                     height={900}
-                    className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="p-5">
-                    <h3 className="text-lg">{p.nome}</h3>
-                    <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                    <h3 className="text-lg font-bold text-foreground">{p.nome}</h3>
+                    <p className="mt-1 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-primary">
                       <MapPin className="size-3.5" /> {p.local}
                     </p>
-                    <p className="mt-3 text-sm text-muted-foreground">{p.desc}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
                   </div>
                 </article>
               ))}
@@ -188,13 +198,13 @@ function Index() {
 
         {/* Comunidades */}
         <section id="comunidades" className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
-          <h2 className="text-3xl sm:text-4xl">Onde estamos</h2>
-          <ul className="mt-6 flex flex-wrap gap-2">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Onde estamos</h2>
+          <ul className="mt-6 flex flex-wrap gap-2.5">
             {["Madureira", "Complexo da Penha", "Paraisópolis", "Cidade de Deus", "Heliópolis"].map(
               (c) => (
                 <li
                   key={c}
-                  className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium"
+                  className="rounded-full border border-border bg-card px-4.5 py-2 text-sm font-semibold text-foreground shadow-2xs"
                 >
                   {c}
                 </li>
@@ -202,16 +212,16 @@ function Index() {
             )}
           </ul>
 
-          <div className="mt-10 rounded-2xl border border-border bg-brand-gradient p-8 text-primary-foreground">
-            <h3 className="text-2xl sm:text-3xl">Faça parte do CUFAZ</h3>
-            <p className="mt-2 max-w-lg text-sm font-medium opacity-90">
+          <div className="mt-10 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary via-primary/95 to-brand-deep p-8 sm:p-10 text-white shadow-brand">
+            <h3 className="text-2xl sm:text-3xl font-extrabold">Faça parte do CUFAZ</h3>
+            <p className="mt-2 max-w-lg text-sm font-medium text-white/90 leading-relaxed">
               Alunos, professores e responsáveis CUFA: crie sua conta e participe das turmas da
               sua comunidade.
             </p>
             <Button
               size="lg"
               variant="secondary"
-              className="mt-6 font-semibold"
+              className="mt-6 font-bold bg-white text-ink hover:bg-white/90 shadow-sm px-6 py-5 text-base"
               onClick={() => setSignup(true)}
             >
               Cadastre-se agora
@@ -220,11 +230,11 @@ function Index() {
         </section>
       </main>
 
-      <footer id="contato" className="border-t border-border py-10">
+      <footer id="contato" className="border-t border-border bg-card py-12">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-[auto_1fr] sm:items-center">
-          <img src={logo.url} alt="CUFAZ" className="h-12 w-auto" />
+          <img src={logo.url} alt="CUFAZ" className="h-14 sm:h-16 w-auto object-contain" />
           <div className="text-sm text-muted-foreground">
-            <p>Projeto social CUFA em parceria com a Amazon.</p>
+            <p className="font-semibold text-foreground">Projeto social CUFA em parceria com a Amazon.</p>
             <p className="mt-1">contato@cufaz.org.br</p>
             <p className="mt-3 text-xs">© {new Date().getFullYear()} CUFAZ</p>
           </div>
