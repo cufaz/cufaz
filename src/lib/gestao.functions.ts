@@ -72,7 +72,7 @@ export const listAtividades = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const atividades = unwrap(
-      await supabase
+      await db(supabase)
         .from("atividades")
         .select("*, polos(nome, slug), turmas(*)")
         .order("nome"),
@@ -135,7 +135,7 @@ export const getOrcamentoAtividade = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const itens = unwrap(
-      await supabase
+      await db(supabase)
         .from("itens_orcamento")
         .select("*, categorias_custo(nome)")
         .eq("atividade_id", data.atividadeId)
@@ -192,7 +192,7 @@ export const getFinanceiro = createServerFn({ method: "POST" })
 
     const itens = ids.length
       ? unwrap(
-          await supabase
+          await db(supabase)
             .from("itens_orcamento")
             .select("id, item, custo_mensal, categoria_id, atividade_id")
             .in("atividade_id", ids),
@@ -218,7 +218,7 @@ export const saveLancamento = createServerFn({ method: "POST" })
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id)
       return unwrap(
-        await supabase
+        await db(supabase)
           .from("lancamentos_financeiros")
           .update(values)
           .eq("id", id)
@@ -246,7 +246,7 @@ export const listPedidos = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const pedidos = unwrap(
-      await supabase
+      await db(supabase)
         .from("pedidos_compra")
         .select("*, polos(nome), atividades(nome), categorias_custo(nome)")
         .order("created_at", { ascending: false }),
@@ -261,7 +261,7 @@ export const decidirPedido = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const pedido = unwrap(
-      await supabase
+      await db(supabase)
         .from("pedidos_compra")
         .update({
           status: data.status,
@@ -276,7 +276,7 @@ export const decidirPedido = createServerFn({ method: "POST" })
 
     await db(supabase).from("lancamentos_financeiros").delete().eq("pedido_id", data.id);
     if (data.status === "aprovado") {
-      const p = pedido as Record<string, string | number | null>;
+      const p = (pedido ?? {}) as Record<string, string | number | null>;
       const { error } = await db(supabase).from("lancamentos_financeiros").insert({
         polo_id: p['polo_id'],
         atividade_id: p['atividade_id'],
@@ -300,7 +300,7 @@ export const criarPedido = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     return unwrap(
-      await supabase
+      await db(supabase)
         .from("pedidos_compra")
         .insert({ ...data, solicitante_id: userId })
         .select()
@@ -314,7 +314,7 @@ export const listAlunos = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const matriculas = unwrap(
-      await supabase
+      await db(supabase)
         .from("matriculas")
         .select("*, turmas(id, nome, vagas, atividades(id, nome, polos(nome)))")
         .order("created_at", { ascending: false }),
@@ -359,12 +359,12 @@ export const listProfessores = createServerFn({ method: "GET" })
       ? unwrap(await db(supabase).from("profiles").select("*, polos(nome)").in("id", ids))
       : [];
     const vinculos = unwrap(
-      await supabase
+      await db(supabase)
         .from("professores_atividades")
         .select("id, professor_id, atividades(nome, polos(nome))"),
     );
     const avaliacoes = unwrap(
-      await supabase
+      await db(supabase)
         .from("avaliacoes_professor")
         .select("id, professor_id, nota, comentario, created_at")
         .order("created_at", { ascending: false }),
