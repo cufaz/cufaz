@@ -21,7 +21,8 @@ function ProfessoresPage() {
   });
 
   const professores: Row[] = data?.professores ?? [];
-  const turmas: Row[] = data?.turmas ?? [];
+  const vinculos: Row[] = data?.vinculos ?? [];
+  const avaliacoes: Row[] = data?.avaliacoes ?? [];
 
   return (
     <GestorShell
@@ -38,14 +39,16 @@ function ProfessoresPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {professores.map((p) => {
-            const suas = turmas.filter((t) => t['professor_id'] === p['id']);
+            const suas = vinculos.filter((t) => t['professor_id'] === p['id']);
+            const notas = avaliacoes.filter((a) => a['professor_id'] === p['id']).map((a) => Number(a['nota']));
+            const media = notas.length ? notas.reduce((s2, n) => s2 + n, 0) / notas.length : null;
             return (
               <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
                 <h2 className="text-base font-bold">{String(p['nome'] ?? "Sem nome")}</h2>
                 <p className="text-xs text-muted-foreground">{String(p['email'] ?? "")}</p>
                 <p className="mt-1 flex items-center gap-1 text-xs font-bold text-primary">
                   <Star className="size-3.5 fill-current" />
-                  {p['media_avaliacao'] ? Number(p['media_avaliacao']).toFixed(1) : "Sem avaliações"}
+                  {media !== null ? `${media.toFixed(1)} (${notas.length})` : "Sem avaliações"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1">
                   {suas.length === 0 ? (
@@ -53,7 +56,7 @@ function ProfessoresPage() {
                   ) : (
                     suas.map((t) => (
                       <Badge key={String(t['id'])} variant="secondary" className="text-[10px] font-bold">
-                        {t['atividades']?.nome} · {t['nome']}
+                        {t['atividades']?.nome}
                       </Badge>
                     ))
                   )}
