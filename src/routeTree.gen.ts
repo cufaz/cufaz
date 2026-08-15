@@ -14,6 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedGestorRouteRouteImport } from './routes/_authenticated/gestor/route'
 import { Route as AuthenticatedGestorIndexRouteImport } from './routes/_authenticated/gestor/index'
+import { Route as AuthenticatedGestorAtividadesRouteImport } from './routes/_authenticated/gestor/atividades'
+import { Route as AuthenticatedGestorFinanceiroRouteImport } from './routes/_authenticated/gestor/financeiro'
+import { Route as AuthenticatedGestorPolosRouteImport } from './routes/_authenticated/gestor/polos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,16 +44,40 @@ const AuthenticatedGestorIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGestorRouteRoute,
   } as any)
+const AuthenticatedGestorAtividadesRoute =
+  AuthenticatedGestorAtividadesRouteImport.update({
+    id: '/atividades',
+    path: '/atividades',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
+const AuthenticatedGestorFinanceiroRoute =
+  AuthenticatedGestorFinanceiroRouteImport.update({
+    id: '/financeiro',
+    path: '/financeiro',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
+const AuthenticatedGestorPolosRoute =
+  AuthenticatedGestorPolosRouteImport.update({
+    id: '/polos',
+    path: '/polos',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
+  '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
+  '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/': typeof AuthenticatedGestorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
+  '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor': typeof AuthenticatedGestorIndexRoute
 }
 export interface FileRoutesById {
@@ -59,19 +86,38 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
+  '/_authenticated/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
+  '/_authenticated/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/_authenticated/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/_authenticated/gestor/': typeof AuthenticatedGestorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/gestor' | '/gestor/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/gestor'
+    | '/gestor/atividades'
+    | '/gestor/financeiro'
+    | '/gestor/polos'
+    | '/gestor/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/gestor'
+  to:
+    | '/'
+    | '/auth'
+    | '/gestor/atividades'
+    | '/gestor/financeiro'
+    | '/gestor/polos'
+    | '/gestor'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/gestor'
+    | '/_authenticated/gestor/atividades'
+    | '/_authenticated/gestor/financeiro'
+    | '/_authenticated/gestor/polos'
     | '/_authenticated/gestor/'
   fileRoutesById: FileRoutesById
 }
@@ -118,15 +164,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGestorIndexRouteImport
       parentRoute: typeof AuthenticatedGestorRouteRoute
     }
+    '/_authenticated/gestor/atividades': {
+      id: '/_authenticated/gestor/atividades'
+      path: '/atividades'
+      fullPath: '/gestor/atividades'
+      preLoaderRoute: typeof AuthenticatedGestorAtividadesRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
+    '/_authenticated/gestor/financeiro': {
+      id: '/_authenticated/gestor/financeiro'
+      path: '/financeiro'
+      fullPath: '/gestor/financeiro'
+      preLoaderRoute: typeof AuthenticatedGestorFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
+    '/_authenticated/gestor/polos': {
+      id: '/_authenticated/gestor/polos'
+      path: '/polos'
+      fullPath: '/gestor/polos'
+      preLoaderRoute: typeof AuthenticatedGestorPolosRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
   }
 }
 
 interface AuthenticatedGestorRouteRouteChildren {
+  AuthenticatedGestorAtividadesRoute: typeof AuthenticatedGestorAtividadesRoute
+  AuthenticatedGestorFinanceiroRoute: typeof AuthenticatedGestorFinanceiroRoute
+  AuthenticatedGestorPolosRoute: typeof AuthenticatedGestorPolosRoute
   AuthenticatedGestorIndexRoute: typeof AuthenticatedGestorIndexRoute
 }
 
 const AuthenticatedGestorRouteRouteChildren: AuthenticatedGestorRouteRouteChildren =
   {
+    AuthenticatedGestorAtividadesRoute: AuthenticatedGestorAtividadesRoute,
+    AuthenticatedGestorFinanceiroRoute: AuthenticatedGestorFinanceiroRoute,
+    AuthenticatedGestorPolosRoute: AuthenticatedGestorPolosRoute,
     AuthenticatedGestorIndexRoute: AuthenticatedGestorIndexRoute,
   }
 
