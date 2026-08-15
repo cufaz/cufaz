@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShieldCheck } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "./LoginDialog";
 import { SignupDialog } from "./SignupDialog";
+import { AdminDialog } from "./AdminDialog";
 
 const links = [
   { href: "#institucional", label: "Institucional" },
   { href: "#projetos", label: "Projetos" },
   { href: "#comunidades", label: "Comunidades" },
   { href: "#contato", label: "Contato" },
+  { href: "#adm", label: "Adm", isAdm: true },
 ];
 
 export function SiteHeader() {
   const [menu, setMenu] = useState(false);
   const [login, setLogin] = useState(false);
   const [signup, setSignup] = useState(false);
+  const [admin, setAdmin] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
@@ -31,15 +34,27 @@ export function SiteHeader() {
         </a>
 
         <nav className="hidden items-center gap-6 lg:flex">
-          {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              {l.label}
-            </a>
-          ))}
+          {links.map((l) =>
+            l.isAdm ? (
+              <button
+                key={l.href}
+                type="button"
+                onClick={() => setAdmin(true)}
+                className="inline-flex items-center gap-1 text-sm font-bold text-primary transition-colors hover:text-primary/80 bg-primary/10 px-3 py-1 rounded-full border border-primary/20"
+              >
+                <ShieldCheck className="size-3.5" />
+                {l.label}
+              </button>
+            ) : (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              >
+                {l.label}
+              </a>
+            ),
+          )}
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -74,16 +89,30 @@ export function SiteHeader() {
           <ul className="grid gap-1">
             {links.map((l) => (
               <li key={l.href}>
-                <a
-                  href={l.href}
-                  onClick={() => setMenu(false)}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  {l.label}
-                </a>
+                {l.isAdm ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenu(false);
+                      setAdmin(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-primary bg-primary/10"
+                  >
+                    <ShieldCheck className="size-4" />
+                    {l.label} — Painel do Gestor
+                  </button>
+                ) : (
+                  <a
+                    href={l.href}
+                    onClick={() => setMenu(false)}
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    {l.label}
+                  </a>
+                )}
               </li>
             ))}
-            <li className="sm:hidden">
+            <li className="sm:hidden border-t border-border/40 pt-2 mt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -101,6 +130,7 @@ export function SiteHeader() {
 
       <LoginDialog open={login} onOpenChange={setLogin} />
       <SignupDialog open={signup} onOpenChange={setSignup} />
+      <AdminDialog open={admin} onOpenChange={setAdmin} />
     </header>
   );
 }
