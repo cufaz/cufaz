@@ -37,7 +37,26 @@ export const Route = createFileRoute("/_authenticated/gestor/atividades")({
 
 type Row = Record<string, any>;
 
-function AtividadesPage() {
+function getPeriodos(key: string) {
+  try {
+    const stored = localStorage.getItem(`cufa_periodos_${key}`);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return {
+    data_inicio_matricula: "2026-08-01",
+    data_fim_matricula: "2026-08-31",
+    data_inicio_atividade: "2026-09-01",
+    data_fim_atividade: "2027-01-31",
+  };
+}
+
+function savePeriodos(key: string, periodos: any) {
+  try {
+    localStorage.setItem(`cufa_periodos_${key}`, JSON.stringify(periodos));
+  } catch {}
+}
+
+export function AtividadesPage() {
   const qc = useQueryClient();
   const fetchAtividades = useServerFn(listAtividades);
   const salvar = useServerFn(saveAtividade);
@@ -72,6 +91,14 @@ function AtividadesPage() {
 
   const mAtividade = useMutation({
     mutationFn: (v: Row) => {
+      const actKey = String(v['id'] || v['slug'] || v['nome']);
+      savePeriodos(actKey, {
+        data_inicio_matricula: v['data_inicio_matricula'] || "2026-08-01",
+        data_fim_matricula: v['data_fim_matricula'] || "2026-08-31",
+        data_inicio_atividade: v['data_inicio_atividade'] || "2026-09-01",
+        data_fim_atividade: v['data_fim_atividade'] || "2027-01-31",
+      });
+
       const payload: Row = {
         nome: v['nome'],
         slug: v['slug'],
@@ -245,7 +272,22 @@ function AtividadesPage() {
                   <Button size="icon" variant="ghost" onClick={() => setOrcamentoDe(a)}>
                     <Wallet className="size-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => setForm({ ...a, polos: undefined, turmas: undefined })}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      const p = getPeriodos(String(a['id'] || a['slug'] || a['nome']));
+                      setForm({
+                        ...a,
+                        data_inicio_matricula: p.data_inicio_matricula,
+                        data_fim_matricula: p.data_fim_matricula,
+                        data_inicio_atividade: p.data_inicio_atividade,
+                        data_fim_atividade: p.data_fim_atividade,
+                        polos: undefined,
+                        turmas: undefined,
+                      });
+                    }}
+                  >
                     <Pencil className="size-4" />
                   </Button>
                   <Button size="icon" variant="ghost" className="text-destructive" onClick={() => mDelAtividade.mutate(String(a['id']))}>
@@ -305,6 +347,38 @@ function AtividadesPage() {
                   ))}
                 </ul>
               </div>
+
+              {/* PERÍODO DE MATRÍCULAS E DURAÇÃO DA ATIVIDADE (Anexo 4) */}
+              {(() => {
+                const p = getPeriodos(String(a['id'] || a['slug'] || a['nome']));
+                const formatIsoDate = (iso: string) => {
+                  if (!iso) return "-";
+                  const parts = iso.split("-");
+                  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                  return iso;
+                };
+                return (
+                  <div className="mt-3 rounded-lg border border-border/80 bg-muted/40 p-2.5 text-xs">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1 mb-1.5">
+                      <Calendar className="size-3.5 text-primary" /> Período de Matrículas & Atividade
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-foreground block font-medium">Matrículas:</span>
+                        <span className="font-bold text-foreground">
+                          {formatIsoDate(p.data_inicio_matricula)} a {formatIsoDate(p.data_fim_matricula)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block font-medium">Atividade:</span>
+                        <span className="font-bold text-primary">
+                          {formatIsoDate(p.data_inicio_atividade)} a {formatIsoDate(p.data_fim_atividade)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </article>
           )))
         }

@@ -200,6 +200,19 @@ export function generateProfessionalPdf({
       3: { cellWidth: 34 },
       4: { cellWidth: 26, halign: "right", fontStyle: "bold" },
     },
+    didDrawCell: (data) => {
+      // Draw category separator line when category changes (Anexo 5)
+      if (data.section === "body" && data.row.index < itemRows.length - 1) {
+        const currentCat = itemRows[data.row.index]?.[1];
+        const nextCat = itemRows[data.row.index + 1]?.[1];
+        if (currentCat && nextCat && currentCat !== nextCat) {
+          const y = data.cell.y + data.cell.height;
+          doc.setDrawColor(249, 115, 22); // CUFA Brand Orange line
+          doc.setLineWidth(0.6);
+          doc.line(data.cell.x, y, data.cell.x + data.cell.width, y);
+        }
+      }
+    },
   });
 
   // Footer Page Numbering
