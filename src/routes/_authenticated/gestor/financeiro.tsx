@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Plus, Trash2, FileSpreadsheet, Calendar, Filter } from "lucide-react";
+import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter } from "lucide-react";
 import { toast } from "sonner";
 
 import { getFinanceiro, saveLancamento, deleteLancamento } from "@/lib/gestao.functions";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { brl } from "@/lib/format";
 import { exportProfessionalExcel } from "@/components/admin/utils";
+import { generateProfessionalPdf } from "@/components/admin/exportPdf";
 
 export const Route = createFileRoute("/_authenticated/gestor/financeiro")({
   component: FinanceiroPage,
@@ -210,19 +211,61 @@ function FinanceiroPage() {
     });
   }
 
+  function handleExportPdf() {
+    const exportPolos = polosList.map((p) => ({
+      id: String(p['id']),
+      nome: String(p['nome']),
+    }));
+
+    const exportLancamentos = lancamentos.map((l) => ({
+      id: String(l['id']),
+      tipo: (l['tipo'] === "receita" ? "receita" : "despesa") as "receita" | "despesa",
+      valor: Number(l['valor'] || 0),
+      descricao: String(l['descricao'] || ""),
+      categoria: String(l['categoria'] || l['categoria_nome'] || "Geral"),
+      poloId: String(l['polo_id'] || "todos"),
+      data: String(l['data'] || l['created_at'] || "").slice(0, 10),
+    }));
+
+    const exportCatDespesas = categorias.map((c) => ({
+      nome: String(c['nome']),
+      previsto: Number(c['previsto'] || 0),
+    }));
+
+    generateProfessionalPdf({
+      polos: exportPolos,
+      lancamentos: exportLancamentos,
+      categoriasDespesas: exportCatDespesas,
+      selectedPoloId: poloId || "todos",
+      dataInicio,
+      dataFim,
+    });
+  }
+
   return (
     <GestorShell
       title="Demonstrativo financeiro"
       description="Receitas, despesas por categoria e resumo do mês, com previsto x realizado."
       actions={
-        <div className="flex flex-wrap gap-2">
-          {/* Anexo 2: Excel Profissional Button */}
+        <div className="flex items-center gap-2">
+          {/* Excel Icon-only Button (Requirement 4) */}
           <Button
             variant="outline"
-            className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-600 hover:text-white font-bold"
+            size="icon"
+            className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-600 hover:text-white"
             onClick={handleExportExcel}
+            title="Baixar Relatório Excel (.xlsx)"
           >
-            <FileSpreadsheet className="mr-1.5 size-4" /> Excel Profissional
+            <FileSpreadsheet className="size-4" />
+          </Button>
+          {/* PDF Button (Requirement 4) */}
+          <Button
+            variant="outline"
+            className="border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-600 hover:text-white font-bold"
+            onClick={handleExportPdf}
+            title="Baixar Relatório PDF"
+          >
+            <FileText className="mr-1.5 size-4" /> PDF
           </Button>
           <Button
             className="bg-brand-gradient font-bold text-white shadow-brand"

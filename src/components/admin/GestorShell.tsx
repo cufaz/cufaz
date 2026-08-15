@@ -10,14 +10,15 @@ import {
   GraduationCap,
   LogOut,
   Loader2,
+  Menu,
+  X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
 
 const nav = [
   { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -48,6 +49,7 @@ export function GestorShell({
   });
   const fetching = useIsFetching();
   const carregando = fetching > 0 || pendingTo !== null;
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   async function sair() {
     await queryClient.cancelQueries();
@@ -57,62 +59,108 @@ export function GestorShell({
   }
 
   return (
-    <div className="min-h-dvh bg-surface">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        {carregando ? (
-          <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
-            <div className="h-full w-1/3 animate-[slide-in-right_1s_ease-in-out_infinite] bg-brand-gradient" />
-          </div>
-        ) : null}
-        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
-          <Link to="/gestor" className="flex min-w-0 items-center gap-2">
-            <img src={logo} alt="CUFAZ" className="h-9 w-auto shrink-0 object-contain" />
-            <span className="hidden truncate text-xs font-bold uppercase tracking-wide text-primary sm:block">
-              Painel do Gestor
-            </span>
-          </Link>
-          <Button size="sm" variant="ghost" className="shrink-0 font-semibold text-destructive" onClick={sair}>
-            <LogOut className="mr-1 size-4" /> Sair
-          </Button>
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+      {/* Top Loading Progress Bar */}
+      {carregando ? (
+        <div className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden">
+          <div className="h-full w-1/3 animate-[slide-in-right_1s_ease-in-out_infinite] bg-brand-gradient" />
         </div>
+      ) : null}
 
-        <nav className="mx-auto max-w-7xl overflow-x-auto px-2 pb-2">
-          <ul className="flex min-w-max gap-1">
+      {/* Mobile Top Header */}
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
+        <Link to="/gestor" className="flex items-center gap-2">
+          <img src={logo} alt="CUFA" className="h-8 w-auto object-contain" />
+          <span className="text-xs font-black uppercase text-primary">PAINEL DO GESTOR</span>
+        </Link>
+        <button
+          type="button"
+          aria-label="Abrir menu"
+          onClick={() => setMobileOpen((v) => !v)}
+          className="grid size-9 place-items-center rounded-lg border border-border"
+        >
+          {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </div>
+
+      {/* Left Vertical Sidebar (Anexo 2) */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card flex flex-col justify-between transition-transform duration-300 lg:static lg:translate-x-0 shrink-0",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        <div>
+          {/* Header & Logo */}
+          <div className="p-6 border-b border-border/60">
+            <Link to="/gestor" className="flex items-center gap-3">
+              <img src={logo} alt="CUFA" className="h-10 w-auto object-contain" />
+              <div>
+                <span className="block text-xs font-black uppercase tracking-wider text-primary">
+                  PAINEL DO GESTOR
+                </span>
+                <span className="block text-[10px] text-muted-foreground font-semibold">
+                  Central Única das Favelas
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="p-4 space-y-1">
             {nav.map((n) => {
               const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
               const indo = pendingTo === n.to || (pendingTo !== null && !n.exact && pendingTo.startsWith(n.to));
               return (
-                <li key={n.to}>
-                  <Link
-                    to={n.to as "/gestor"}
-                    preload="intent"
-                    className={cn(
-                      "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
-                      active || indo
-                        ? "bg-brand-gradient text-white shadow-brand"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                    )}
-                  >
-                    {indo ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <n.icon className="size-3.5" />
-                    )}
-                    {n.label}
-                  </Link>
-                </li>
+                <Link
+                  key={n.to}
+                  to={n.to as "/gestor"}
+                  preload="intent"
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all",
+                    active || indo
+                      ? "bg-primary text-white shadow-brand"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  {indo ? (
+                    <Loader2 className="size-4 animate-spin shrink-0" />
+                  ) : (
+                    <n.icon className="size-4 shrink-0" />
+                  )}
+                  <span>{n.label}</span>
+                </Link>
               );
             })}
-          </ul>
-        </nav>
-      </header>
+          </nav>
+        </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        {/* Footer Sidebar Profile & Logout */}
+        <div className="p-4 border-t border-border/60 space-y-3">
+          <div className="rounded-xl bg-muted/40 p-3 flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">Gestor Conectado</p>
+              <p className="text-[10px] text-muted-foreground truncate">gestor@cufa.com.br</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10 border-destructive/20"
+            onClick={sair}
+          >
+            <LogOut className="mr-2 size-4" /> Sair do Painel
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content View */}
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold sm:text-3xl">{title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
             {description ? (
-              <p className="mt-1 text-xs leading-snug text-muted-foreground sm:text-sm">{description}</p>
+              <p className="mt-1 text-xs sm:text-sm text-muted-foreground font-medium">{description}</p>
             ) : null}
           </div>
           {actions}
@@ -121,5 +169,4 @@ export function GestorShell({
       </main>
     </div>
   );
-
 }

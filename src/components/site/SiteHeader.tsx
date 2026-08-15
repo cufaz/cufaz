@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, ShieldCheck, Download } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { LoginDialog } from "./LoginDialog";
 import { SignupDialog } from "./SignupDialog";
+import { InstallAppDialog } from "./InstallAppDialog";
 
 const links = [
   { href: "#institucional", label: "Institucional" },
@@ -20,7 +21,19 @@ export function SiteHeader() {
   const [menu, setMenu] = useState(false);
   const [login, setLogin] = useState(false);
   const [signup, setSignup] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const hidden = localStorage.getItem("cufa_hide_install_prompt");
+    if (!hidden) {
+      const timer = setTimeout(() => setInstallOpen(true), 1500);
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+    return undefined;
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
@@ -59,6 +72,15 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* Instalar App PWA Button (Anexo 3) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden font-bold border-primary/30 text-primary hover:bg-primary/10 sm:inline-flex"
+            onClick={() => setInstallOpen(true)}
+          >
+            <Download className="size-3.5 mr-1" /> Instalar App
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -113,7 +135,19 @@ export function SiteHeader() {
                 )}
               </li>
             ))}
-            <li className="sm:hidden border-t border-border/40 pt-2 mt-1">
+            <li className="pt-2 border-t border-border/40">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenu(false);
+                  setInstallOpen(true);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-primary"
+              >
+                <Download className="size-4" /> Instalar App no Celular
+              </button>
+            </li>
+            <li className="sm:hidden">
               <button
                 type="button"
                 onClick={() => {
@@ -131,6 +165,7 @@ export function SiteHeader() {
 
       <LoginDialog open={login} onOpenChange={setLogin} />
       <SignupDialog open={signup} onOpenChange={setSignup} />
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </header>
   );
 }

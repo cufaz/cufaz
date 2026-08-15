@@ -1,5 +1,5 @@
-import { useState, useTransition } from "react";
-import { Plus, FileSpreadsheet, Loader2, Calendar, Filter } from "lucide-react";
+import { useState } from "react";
+import { Plus, FileSpreadsheet, FileText, Loader2, Calendar, Filter } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Polo, Lancamento, CategoriaDespesa } from "./types";
 import { formatBRL, exportProfessionalExcel } from "./utils";
+import { generateProfessionalPdf } from "./exportPdf";
 
 export function FinanceiroTab({
   polos,
@@ -166,10 +167,13 @@ export function FinanceiroTab({
             Receitas, despesas por categoria e resumo do período, com previsto × realizado.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Icon-only Excel Button */}
           <Button
             variant="outline"
-            className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-600 hover:text-white font-bold"
+            size="icon"
+            className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-600 hover:text-white"
+            title="Baixar Relatório Excel (.xlsx)"
             onClick={() =>
               exportProfessionalExcel({
                 polos,
@@ -181,7 +185,25 @@ export function FinanceiroTab({
               })
             }
           >
-            <FileSpreadsheet className="size-4 mr-2" /> Excel Profissional
+            <FileSpreadsheet className="size-4" />
+          </Button>
+          {/* PDF Button */}
+          <Button
+            variant="outline"
+            className="border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-600 hover:text-white font-bold"
+            title="Baixar Relatório PDF"
+            onClick={() =>
+              generateProfessionalPdf({
+                polos,
+                lancamentos,
+                categoriasDespesas,
+                selectedPoloId,
+                dataInicio,
+                dataFim,
+              })
+            }
+          >
+            <FileText className="size-4 mr-1.5" /> PDF
           </Button>
           <Button
             className="bg-brand-gradient text-white font-bold shadow-brand"
