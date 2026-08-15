@@ -8,6 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { LoginDialog } from "./LoginDialog";
 import { SignupDialog } from "./SignupDialog";
 import { InstallAppDialog } from "./InstallAppDialog";
+import { MasterAdminDialog } from "./MasterAdminDialog";
 
 const links = [
   { href: "#institucional", label: "Institucional" },
@@ -22,7 +23,29 @@ export function SiteHeader() {
   const [login, setLogin] = useState(false);
   const [signup, setSignup] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
+  const [masterAdminOpen, setMasterAdminOpen] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
+
+  function handleLogoClick(e: React.MouseEvent) {
+    e.preventDefault();
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    if (clickTimer) clearTimeout(clickTimer);
+
+    if (newCount >= 3) {
+      setClickCount(0);
+      setMasterAdminOpen(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setClickCount(0);
+    }, 1200);
+    setClickTimer(timer);
+  }
 
   useEffect(() => {
     const hidden = localStorage.getItem("cufa_hide_install_prompt");
@@ -38,7 +61,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:py-4">
-        <a href="#topo" className="flex items-center gap-3 group">
+        <a href="#topo" onClick={handleLogoClick} className="flex items-center gap-3 group cursor-pointer" title="Clique 3x para Acesso Master Admin">
           <img
             src={logo}
             alt="CUFA"
@@ -166,6 +189,7 @@ export function SiteHeader() {
       <LoginDialog open={login} onOpenChange={setLogin} />
       <SignupDialog open={signup} onOpenChange={setSignup} />
       <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
+      <MasterAdminDialog open={masterAdminOpen} onOpenChange={setMasterAdminOpen} />
     </header>
   );
 }

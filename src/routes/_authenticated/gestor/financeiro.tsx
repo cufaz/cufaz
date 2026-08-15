@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter } from "lucide-react";
+import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { getFinanceiro, saveLancamento, deleteLancamento } from "@/lib/gestao.functions";
@@ -85,7 +85,25 @@ function FinanceiroPage() {
   }
 
   const mSalvar = useMutation({
-    mutationFn: (v: Row) => salvar({ data: v }),
+    mutationFn: (v: Row) => {
+      const compRaw = String(v['competencia'] || dataInicio || "2026-08-01").slice(0, 10);
+      const competenciaVal = compRaw.length === 7 ? `${compRaw}-01` : compRaw;
+
+      const payload: Row = {
+        tipo: v['tipo'] || "despesa",
+        natureza: v['natureza'] || "realizado",
+        descricao: String(v['descricao'] || ""),
+        valor: Number(v['valor'] || 0),
+        competencia: competenciaVal,
+        data: competenciaVal,
+        polo_id: v['polo_id'] || null,
+        categoria_id: v['categoria_id'] || null,
+      };
+      if (v['id']) {
+        payload['id'] = v['id'];
+      }
+      return salvar({ data: payload });
+    },
     onSuccess: () => {
       setForm(null);
       toast.success("Lançamento salvo com sucesso!");
@@ -493,7 +511,27 @@ function FinanceiroPage() {
                   </div>
                   <span className="flex items-center gap-2">
                     <span className="whitespace-nowrap font-bold text-destructive tabular-nums">{brl(l['valor'])}</span>
-                    <button type="button" className="text-destructive hover:opacity-80" onClick={() => mApagar.mutate(String(l['id']))}>
+                    <button
+                      type="button"
+                      className="text-primary hover:opacity-80 p-1"
+                      title="Editar lançamento"
+                      onClick={() => {
+                        setValorDisplay(brl(Number(l['valor'])).replace("R$", "").trim());
+                        setForm({
+                          id: l['id'],
+                          tipo: l['tipo'] || "despesa",
+                          natureza: "realizado",
+                          descricao: String(l['descricao'] || ""),
+                          valor: Number(l['valor'] || 0),
+                          competencia: String(l['competencia'] || dataInicio || "").slice(0, 10),
+                          polo_id: l['polo_id'] || null,
+                          categoria_id: l['categoria_id'] || null,
+                        });
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button type="button" className="text-destructive hover:opacity-80 p-1" title="Excluir lançamento" onClick={() => mApagar.mutate(String(l['id']))}>
                       <Trash2 className="size-4" />
                     </button>
                   </span>

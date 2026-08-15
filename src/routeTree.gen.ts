@@ -17,6 +17,7 @@ import { Route as AuthenticatedGestorIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedGestorAlunosRouteImport } from './routes/_authenticated/gestor/alunos'
 import { Route as AuthenticatedGestorAtividadesRouteImport } from './routes/_authenticated/gestor/atividades'
 import { Route as AuthenticatedGestorFinanceiroRouteImport } from './routes/_authenticated/gestor/financeiro'
+import { Route as AuthenticatedGestorGestoresRouteImport } from './routes/_authenticated/gestor/gestores'
 import { Route as AuthenticatedGestorPedidosRouteImport } from './routes/_authenticated/gestor/pedidos'
 import { Route as AuthenticatedGestorPolosRouteImport } from './routes/_authenticated/gestor/polos'
 import { Route as AuthenticatedGestorProfessoresRouteImport } from './routes/_authenticated/gestor/professores'
@@ -65,6 +66,12 @@ const AuthenticatedGestorFinanceiroRoute =
     path: '/financeiro',
     getParentRoute: () => AuthenticatedGestorRouteRoute,
   } as any)
+const AuthenticatedGestorGestoresRoute =
+  AuthenticatedGestorGestoresRouteImport.update({
+    id: '/gestores',
+    path: '/gestores',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
 const AuthenticatedGestorPedidosRoute =
   AuthenticatedGestorPedidosRouteImport.update({
     id: '/pedidos',
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/gestor/gestores': typeof AuthenticatedGestorGestoresRoute
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
   '/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/gestor/gestores': typeof AuthenticatedGestorGestoresRoute
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/_authenticated/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/_authenticated/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/_authenticated/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
+  '/_authenticated/gestor/gestores': typeof AuthenticatedGestorGestoresRoute
   '/_authenticated/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/_authenticated/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/_authenticated/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/gestor/alunos'
     | '/gestor/atividades'
     | '/gestor/financeiro'
+    | '/gestor/gestores'
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/gestor/alunos'
     | '/gestor/atividades'
     | '/gestor/financeiro'
+    | '/gestor/gestores'
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
@@ -154,6 +166,7 @@ export interface FileRouteTypes {
     | '/_authenticated/gestor/alunos'
     | '/_authenticated/gestor/atividades'
     | '/_authenticated/gestor/financeiro'
+    | '/_authenticated/gestor/gestores'
     | '/_authenticated/gestor/pedidos'
     | '/_authenticated/gestor/polos'
     | '/_authenticated/gestor/professores'
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGestorFinanceiroRouteImport
       parentRoute: typeof AuthenticatedGestorRouteRoute
     }
+    '/_authenticated/gestor/gestores': {
+      id: '/_authenticated/gestor/gestores'
+      path: '/gestores'
+      fullPath: '/gestor/gestores'
+      preLoaderRoute: typeof AuthenticatedGestorGestoresRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
     '/_authenticated/gestor/pedidos': {
       id: '/_authenticated/gestor/pedidos'
       path: '/pedidos'
@@ -252,6 +272,7 @@ interface AuthenticatedGestorRouteRouteChildren {
   AuthenticatedGestorAlunosRoute: typeof AuthenticatedGestorAlunosRoute
   AuthenticatedGestorAtividadesRoute: typeof AuthenticatedGestorAtividadesRoute
   AuthenticatedGestorFinanceiroRoute: typeof AuthenticatedGestorFinanceiroRoute
+  AuthenticatedGestorGestoresRoute: typeof AuthenticatedGestorGestoresRoute
   AuthenticatedGestorPedidosRoute: typeof AuthenticatedGestorPedidosRoute
   AuthenticatedGestorPolosRoute: typeof AuthenticatedGestorPolosRoute
   AuthenticatedGestorProfessoresRoute: typeof AuthenticatedGestorProfessoresRoute
@@ -263,6 +284,7 @@ const AuthenticatedGestorRouteRouteChildren: AuthenticatedGestorRouteRouteChildr
     AuthenticatedGestorAlunosRoute: AuthenticatedGestorAlunosRoute,
     AuthenticatedGestorAtividadesRoute: AuthenticatedGestorAtividadesRoute,
     AuthenticatedGestorFinanceiroRoute: AuthenticatedGestorFinanceiroRoute,
+    AuthenticatedGestorGestoresRoute: AuthenticatedGestorGestoresRoute,
     AuthenticatedGestorPedidosRoute: AuthenticatedGestorPedidosRoute,
     AuthenticatedGestorPolosRoute: AuthenticatedGestorPolosRoute,
     AuthenticatedGestorProfessoresRoute: AuthenticatedGestorProfessoresRoute,
