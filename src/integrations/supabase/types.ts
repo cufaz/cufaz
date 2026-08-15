@@ -14,16 +14,639 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      atividades: {
+        Row: {
+          ativo: boolean
+          beneficiarios_projetados: number
+          created_at: string
+          custo_mensal: number
+          descricao: string | null
+          dias: string | null
+          id: string
+          imagem_url: string | null
+          nome: string
+          perfil_tematico: string | null
+          polo_id: string
+          professor_id: string | null
+          slug: string
+          updated_at: string
+          vagas: number
+        }
+        Insert: {
+          ativo?: boolean
+          beneficiarios_projetados?: number
+          created_at?: string
+          custo_mensal?: number
+          descricao?: string | null
+          dias?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          perfil_tematico?: string | null
+          polo_id: string
+          professor_id?: string | null
+          slug: string
+          updated_at?: string
+          vagas?: number
+        }
+        Update: {
+          ativo?: boolean
+          beneficiarios_projetados?: number
+          created_at?: string
+          custo_mensal?: number
+          descricao?: string | null
+          dias?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          perfil_tematico?: string | null
+          polo_id?: string
+          professor_id?: string | null
+          slug?: string
+          updated_at?: string
+          vagas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_polo_id_fkey"
+            columns: ["polo_id"]
+            isOneToOne: false
+            referencedRelation: "polos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avaliacoes_professor: {
+        Row: {
+          aluno_id: string | null
+          atividade_id: string | null
+          comentario: string | null
+          created_at: string
+          id: string
+          nota: number
+          professor_id: string
+        }
+        Insert: {
+          aluno_id?: string | null
+          atividade_id?: string | null
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota: number
+          professor_id: string
+        }
+        Update: {
+          aluno_id?: string | null
+          atividade_id?: string | null
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota?: number
+          professor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_professor_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_professor_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_professor_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorias_custo: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          tipo?: string
+        }
+        Relationships: []
+      }
+      itens_orcamento: {
+        Row: {
+          atividade_id: string
+          categoria_id: string | null
+          created_at: string
+          custo_mensal: number
+          descricao: string | null
+          id: string
+          item: string
+          quantidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          atividade_id: string
+          categoria_id?: string | null
+          created_at?: string
+          custo_mensal?: number
+          descricao?: string | null
+          id?: string
+          item: string
+          quantidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          atividade_id?: string
+          categoria_id?: string | null
+          created_at?: string
+          custo_mensal?: number
+          descricao?: string | null
+          id?: string
+          item?: string
+          quantidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_orcamento_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_orcamento_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_custo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lancamentos_financeiros: {
+        Row: {
+          atividade_id: string | null
+          categoria_id: string | null
+          competencia: string
+          created_at: string
+          descricao: string
+          id: string
+          natureza: string
+          pedido_id: string | null
+          polo_id: string | null
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          atividade_id?: string | null
+          categoria_id?: string | null
+          competencia?: string
+          created_at?: string
+          descricao: string
+          id?: string
+          natureza?: string
+          pedido_id?: string | null
+          polo_id?: string | null
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          atividade_id?: string | null
+          categoria_id?: string | null
+          competencia?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+          natureza?: string
+          pedido_id?: string | null
+          polo_id?: string | null
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_financeiros_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_financeiros_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_financeiros_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_financeiros_polo_id_fkey"
+            columns: ["polo_id"]
+            isOneToOne: false
+            referencedRelation: "polos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matriculas: {
+        Row: {
+          aluno_id: string | null
+          aluno_nome: string
+          created_at: string
+          id: string
+          observacao: string | null
+          status: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          aluno_id?: string | null
+          aluno_nome?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string | null
+          aluno_nome?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matriculas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matriculas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos_compra: {
+        Row: {
+          atividade_id: string | null
+          categoria_id: string | null
+          competencia: string
+          created_at: string
+          decidido_em: string | null
+          decidido_por: string | null
+          descricao: string | null
+          id: string
+          item: string
+          justificativa: string | null
+          observacao_gestor: string | null
+          polo_id: string
+          quantidade: number
+          solicitante_id: string | null
+          solicitante_nome: string
+          status: string
+          updated_at: string
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          atividade_id?: string | null
+          categoria_id?: string | null
+          competencia?: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          descricao?: string | null
+          id?: string
+          item: string
+          justificativa?: string | null
+          observacao_gestor?: string | null
+          polo_id: string
+          quantidade?: number
+          solicitante_id?: string | null
+          solicitante_nome?: string
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Update: {
+          atividade_id?: string | null
+          categoria_id?: string | null
+          competencia?: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          descricao?: string | null
+          id?: string
+          item?: string
+          justificativa?: string | null
+          observacao_gestor?: string | null
+          polo_id?: string
+          quantidade?: number
+          solicitante_id?: string | null
+          solicitante_nome?: string
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_compra_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_decidido_por_fkey"
+            columns: ["decidido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_polo_id_fkey"
+            columns: ["polo_id"]
+            isOneToOne: false
+            referencedRelation: "polos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polos: {
+        Row: {
+          ativo: boolean
+          beneficiarios_projetados: number
+          cidade: string
+          created_at: string
+          endereco: string | null
+          fotos_url: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          orcamento_mensal: number
+          perfil_tematico: string | null
+          ponto_focal: string | null
+          slug: string
+          uf: string
+          updated_at: string
+          vagas_totais: number
+        }
+        Insert: {
+          ativo?: boolean
+          beneficiarios_projetados?: number
+          cidade: string
+          created_at?: string
+          endereco?: string | null
+          fotos_url?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          orcamento_mensal?: number
+          perfil_tematico?: string | null
+          ponto_focal?: string | null
+          slug: string
+          uf: string
+          updated_at?: string
+          vagas_totais?: number
+        }
+        Update: {
+          ativo?: boolean
+          beneficiarios_projetados?: number
+          cidade?: string
+          created_at?: string
+          endereco?: string | null
+          fotos_url?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          orcamento_mensal?: number
+          perfil_tematico?: string | null
+          ponto_focal?: string | null
+          slug?: string
+          uf?: string
+          updated_at?: string
+          vagas_totais?: number
+        }
+        Relationships: []
+      }
+      professores_atividades: {
+        Row: {
+          atividade_id: string
+          created_at: string
+          id: string
+          professor_id: string
+        }
+        Insert: {
+          atividade_id: string
+          created_at?: string
+          id?: string
+          professor_id: string
+        }
+        Update: {
+          atividade_id?: string
+          created_at?: string
+          id?: string
+          professor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professores_atividades_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professores_atividades_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          polo_id: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id: string
+          nome?: string
+          polo_id?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          polo_id?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_polo_fk"
+            columns: ["polo_id"]
+            isOneToOne: false
+            referencedRelation: "polos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turmas: {
+        Row: {
+          atividade_id: string
+          ativo: boolean
+          created_at: string
+          horario: string | null
+          id: string
+          nome: string
+          turno: string
+          updated_at: string
+          vagas: number
+        }
+        Insert: {
+          atividade_id: string
+          ativo?: boolean
+          created_at?: string
+          horario?: string | null
+          id?: string
+          nome: string
+          turno?: string
+          updated_at?: string
+          vagas?: number
+        }
+        Update: {
+          atividade_id?: string
+          ativo?: boolean
+          created_at?: string
+          horario?: string | null
+          id?: string
+          nome?: string
+          turno?: string
+          updated_at?: string
+          vagas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_gestor: { Args: never; Returns: boolean }
+      meu_polo: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "gestor" | "responsavel" | "professor" | "aluno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +773,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["gestor", "responsavel", "professor", "aluno"],
+    },
   },
 } as const
