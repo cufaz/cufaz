@@ -20,6 +20,7 @@ import {
 import { brl } from "@/lib/format";
 import { exportProfessionalExcel } from "@/components/admin/utils";
 import { generateProfessionalPdf } from "@/components/admin/exportPdf";
+import { itensOrcamentoOFICIAIS } from "@/components/admin/dataDetalhada";
 
 export const Route = createFileRoute("/_authenticated/gestor/financeiro")({
   component: FinanceiroPage,
@@ -384,30 +385,97 @@ function FinanceiroPage() {
             <Linha label="Diferença previsto x realizado" valor={previstoTotal - totalDespesas} />
           </section>
 
-          {/* 2. DESPESAS POR CATEGORIA */}
+          {/* 2. DESPESAS POR CATEGORIA (DETALHADO POR ITEM, DESCRIÇÃO, QUANTIDADE E VARIAÇÃO) */}
           <section className="rounded-xl border border-border bg-card shadow-xs lg:col-span-2">
-            <h2 className="border-b border-border bg-muted/40 px-4 py-3 text-sm font-bold uppercase tracking-wide">
-              2. Despesas por categoria
-            </h2>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 px-4 py-2.5 text-xs font-bold uppercase text-muted-foreground border-b border-border">
-              <span>Categoria</span>
-              <span className="text-right">Previsto</span>
-              <span className="text-right">Realizado</span>
+            <div className="border-b border-border bg-muted/40 px-4 py-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-wide">
+                2. Despesas por categoria e detalhamento de itens
+              </h2>
+              <span className="text-xs font-semibold text-muted-foreground">
+                Itens previstos × realizados
+              </span>
             </div>
-            {previstoPorCategoria.map((r) => (
-              <div
-                key={String(r.categoria['id'])}
-                className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 border-b border-border/60 px-4 py-3 text-sm hover:bg-muted/30"
-              >
-                <span className="min-w-0 break-words font-medium">{String(r.categoria['nome'])}</span>
-                <span className="whitespace-nowrap text-right tabular-nums text-muted-foreground">{brl(r.previsto)}</span>
-                <span className="whitespace-nowrap text-right font-bold tabular-nums text-foreground">{brl(r.realizado)}</span>
-              </div>
-            ))}
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 px-4 py-3 text-sm font-extrabold bg-muted/20">
-              <span>Total</span>
-              <span className="text-right">{brl(previstoTotal)}</span>
-              <span className="text-right text-primary">{brl(totalDespesas)}</span>
+
+            <div className="p-4 space-y-6">
+              {(() => {
+                // Combine Database items & Parsed detailed items
+                const poloItens = itensOrcamentoOFICIAIS.filter((item) => !poloId || item.poloId === poloId);
+
+                // Group by category
+                const categoriasMap: Record<string, typeof poloItens> = {};
+                poloItens.forEach((item) => {
+                  if (!categoriasMap[item.categoria]) {
+                    categoriasMap[item.categoria] = [];
+                  }
+                  categoriasMap[item.categoria]!.push(item);
+                });
+
+                // Add empty fallback if no detailed items
+                if (Object.keys(categoriasMap).length === 0) {
+                  return (
+                    <div className="text-center py-6 text-sm text-muted-foreground">
+                      Selecione um polo para visualizar o detalhamento completo de itens e provisões.
+                    </div>
+                  );
+                }
+
+                return Object.entries(categoriasMap).map(([catNome, catItens]) => {
+                  const catPrevisto = catItens.reduce((s, i) => s + i.previsto, 0);
+                  const catRealizado = catItens.reduce((s, i) => s + i.realizado, 0);
+                  const catVariacao = catPrevisto - catRealizado;
+
+                  return (
+                    <div key={catNome} className="rounded-xl border border-border/80 overflow-hidden">
+                      {/* Header da Categoria */}
+                      <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold">
+                        <span>CATEGORIA: {catNome.toUpperCase()}</span>
+                        <div className="flex items-center gap-4 text-xs font-semibold">
+                          <span>Previsto: {brl(catPrevisto)}</span>
+                          <span>Realizado: {brl(catRealizado)}</span>
+                          <span className={catVariacao >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                            Variação: {brl(catVariacao)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Tabela de Itens */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/30 uppercase text-[10px] font-bold text-muted-foreground">
+                              <th className="py-2.5 px-3">Item ou Serviço</th>
+                              <th className="py-2.5 px-3">Descrição / Detalhe</th>
+                              <th className="py-2.5 px-3">Quantidade</th>
+                              <th className="py-2.5 px-3 text-right">Previsto (R$)</th>
+                              <th className="py-2.5 px-3 text-right">Realizado (R$)</th>
+                              <th className="py-2.5 px-3 text-right">Variação / Diferença (R$)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {catItens.map((item) => {
+                              const variacao = item.previsto - item.realizado;
+                              return (
+                                <tr key={item.id} className="hover:bg-muted/20">
+                                  <td className="py-2.5 px-3 font-bold text-foreground">{item.item}</td>
+                                  <td className="py-2.5 px-3 text-muted-foreground font-medium max-w-xs leading-relaxed">
+                                    {item.descricao}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-semibold text-primary">{item.quantidade}</td>
+                                  <td className="py-2.5 px-3 text-right font-semibold text-foreground">{brl(item.previsto)}</td>
+                                  <td className="py-2.5 px-3 text-right font-bold text-foreground">{brl(item.realizado)}</td>
+                                  <td className={`py-2.5 px-3 text-right font-extrabold ${variacao >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                                    {brl(variacao)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </section>
 
