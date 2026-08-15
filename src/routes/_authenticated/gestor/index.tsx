@@ -86,18 +86,18 @@ function DashboardPage() {
               <p className="text-xs text-muted-foreground">
                 {p.cidade} / {p.uf}
               </p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Atividades</dt>
-                  <dd className="font-bold">{ativs.length}</dd>
+                  <dd className="break-words font-bold tabular-nums">{ativs.length}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Vagas</dt>
-                  <dd className="font-bold">{p.vagas_totais}</dd>
+                  <dd className="break-words font-bold tabular-nums">{p.vagas_totais}</dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-xs text-muted-foreground">Custo mensal</dt>
-                  <dd className="font-bold text-primary">{brl(custo)}</dd>
+                  <dd className="break-words font-bold tabular-nums text-primary">{brl(custo)}</dd>
                 </div>
               </dl>
             </div>

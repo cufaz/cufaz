@@ -122,18 +122,18 @@ function PolosPage() {
                 </div>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{String(p['endereco'] ?? "")}</p>
-              <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
                 <div>
                   <dt className="text-[11px] text-muted-foreground">Vagas</dt>
-                  <dd className="font-bold">{String(p['vagas_totais'])}</dd>
+                  <dd className="break-words font-bold tabular-nums">{String(p['vagas_totais'])}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] text-muted-foreground">Beneficiários</dt>
-                  <dd className="font-bold">{String(p['beneficiarios_projetados'])}</dd>
+                  <dd className="break-words font-bold tabular-nums">{String(p['beneficiarios_projetados'])}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] text-muted-foreground">Orçamento/mês</dt>
-                  <dd className="font-bold text-primary">{brl(Number(p['orcamento_mensal']))}</dd>
+                  <dd className="break-words font-bold tabular-nums text-primary">{brl(Number(p['orcamento_mensal']))}</dd>
                 </div>
               </dl>
               <p className="mt-3 text-xs text-muted-foreground">
