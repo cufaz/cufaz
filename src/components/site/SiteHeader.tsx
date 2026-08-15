@@ -3,9 +3,10 @@ import { Menu, X, ShieldCheck } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "@tanstack/react-router";
+
 import { LoginDialog } from "./LoginDialog";
 import { SignupDialog } from "./SignupDialog";
-import { AdminDialog } from "./AdminDialog";
 
 const links = [
   { href: "#institucional", label: "Institucional" },
@@ -19,7 +20,7 @@ export function SiteHeader() {
   const [menu, setMenu] = useState(false);
   const [login, setLogin] = useState(false);
   const [signup, setSignup] = useState(false);
-  const [admin, setAdmin] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
@@ -39,7 +40,7 @@ export function SiteHeader() {
               <button
                 key={l.href}
                 type="button"
-                onClick={() => setAdmin(true)}
+                onClick={() => navigate({ to: "/auth" })}
                 className="inline-flex items-center gap-1 text-sm font-bold text-primary transition-colors hover:text-primary/80 bg-primary/10 px-3 py-1 rounded-full border border-primary/20"
               >
                 <ShieldCheck className="size-3.5" />
@@ -94,7 +95,7 @@ export function SiteHeader() {
                     type="button"
                     onClick={() => {
                       setMenu(false);
-                      setAdmin(true);
+                      navigate({ to: "/auth" });
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-primary bg-primary/10"
                   >
@@ -130,7 +131,6 @@ export function SiteHeader() {
 
       <LoginDialog open={login} onOpenChange={setLogin} />
       <SignupDialog open={signup} onOpenChange={setSignup} />
-      <AdminDialog open={admin} onOpenChange={setAdmin} />
     </header>
   );
 }
