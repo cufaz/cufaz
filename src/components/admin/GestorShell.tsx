@@ -25,7 +25,7 @@ const nav = [
   { to: "/gestor/pedidos", label: "Pedidos", icon: ShoppingCart },
   { to: "/gestor/alunos", label: "Alunos", icon: Users },
   { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
-] as const;
+] as { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[];
 
 export function GestorShell({
   title,
@@ -71,7 +71,7 @@ export function GestorShell({
               return (
                 <li key={n.to}>
                   <Link
-                    to={n.to}
+                    to={n.to as "/gestor"}
                     className={cn(
                       "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
                       active

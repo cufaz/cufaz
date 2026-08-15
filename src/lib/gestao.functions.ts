@@ -322,7 +322,12 @@ export const listAlunos = createServerFn({ method: "GET" })
     const turmas = unwrap(
       await db(supabase).from("turmas").select("id, nome, vagas, atividades(nome, polos(nome))"),
     );
-    return { matriculas, turmas };
+    const roles = unwrap(await db(supabase).from("user_roles").select("user_id").eq("role", "aluno"));
+    const ids = (roles ?? []).map((r: { user_id: string }) => r.user_id);
+    const alunos = ids.length
+      ? unwrap(await db(supabase).from("profiles").select("*, polos(nome)").in("id", ids))
+      : [];
+    return { matriculas, turmas, alunos };
   });
 
 export const saveMatricula = createServerFn({ method: "POST" })

@@ -51,7 +51,7 @@ function FinanceiroPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["financeiro", competencia, poloId],
-    queryFn: () => fetchFinanceiro({ data: { competencia, poloId: poloId || undefined } }),
+    queryFn: () => fetchFinanceiro({ data: poloId ? { competencia, poloId } : { competencia } }),
   });
 
   const mSalvar = useMutation({
