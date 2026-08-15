@@ -22,6 +22,7 @@ import {
 import { Polo, Lancamento, CategoriaDespesa } from "./types";
 import { formatBRL, exportProfessionalExcel } from "./utils";
 import { generateProfessionalPdf } from "./exportPdf";
+import { itensOrcamentoOFICIAIS } from "./dataDetalhada";
 
 export function FinanceiroTab({
   polos,
@@ -323,42 +324,96 @@ export function FinanceiroTab({
               <dd className="font-bold text-foreground">{formatBRL(diferencaPrevistoRealizado)}</dd>
             </div>
           </dl>
+      {/* 2. DESPESAS POR CATEGORIA (DETALHADO POR ITEM, DESCRIÇÃO E QUANTIDADE) */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-foreground">
+            2. DESPESAS POR CATEGORIA E DETALHAMENTO DE ITENS
+          </h3>
+          <span className="text-xs font-semibold text-muted-foreground">
+            Oficinas e Provisões oficiais
+          </span>
+        </div>
+
+        <div className="space-y-6">
+          {(() => {
+            const poloItens = itensOrcamentoOFICIAIS.filter(
+              (item) => !selectedPoloId || selectedPoloId === "todos" || item.poloId === selectedPoloId
+            );
+
+            const categoriasMap: Record<string, typeof poloItens> = {};
+            poloItens.forEach((item) => {
+              if (!categoriasMap[item.categoria]) {
+                categoriasMap[item.categoria] = [];
+              }
+              categoriasMap[item.categoria]!.push(item);
+            });
+
+            if (Object.keys(categoriasMap).length === 0) {
+              return (
+                <div className="text-center py-6 text-sm text-muted-foreground">
+                  Selecione um polo para visualizar o detalhamento completo de itens.
+                </div>
+              );
+            }
+
+            return Object.entries(categoriasMap).map(([catNome, catItens]) => {
+              const catPrevisto = catItens.reduce((s, i) => s + i.previsto, 0);
+              const catRealizado = catItens.reduce((s, i) => s + i.realizado, 0);
+              const catVariacao = catPrevisto - catRealizado;
+
+              return (
+                <div key={catNome} className="rounded-xl border border-border/80 overflow-hidden">
+                  <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold">
+                    <span>CATEGORIA: {catNome.toUpperCase()}</span>
+                    <div className="flex items-center gap-4 text-xs font-semibold">
+                      <span>Previsto: {formatBRL(catPrevisto)}</span>
+                      <span>Realizado: {formatBRL(catRealizado)}</span>
+                      <span className={catVariacao >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                        Variação: {formatBRL(catVariacao)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/30 uppercase text-[10px] font-bold text-muted-foreground">
+                          <th className="py-2.5 px-3">Item ou Serviço</th>
+                          <th className="py-2.5 px-3">Descrição / Detalhe</th>
+                          <th className="py-2.5 px-3">Quantidade</th>
+                          <th className="py-2.5 px-3 text-right">Previsto (R$)</th>
+                          <th className="py-2.5 px-3 text-right">Realizado (R$)</th>
+                          <th className="py-2.5 px-3 text-right">Variação / Diferença (R$)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {catItens.map((item) => {
+                          const variacao = item.previsto - item.realizado;
+                          return (
+                            <tr key={item.id} className="hover:bg-muted/20">
+                              <td className="py-2.5 px-3 font-bold text-foreground">{item.item}</td>
+                              <td className="py-2.5 px-3 text-muted-foreground font-medium max-w-xs leading-relaxed">
+                                {item.descricao}
+                              </td>
+                              <td className="py-2.5 px-3 font-semibold text-primary">{item.quantidade}</td>
+                              <td className="py-2.5 px-3 text-right font-semibold text-foreground">{formatBRL(item.previsto)}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-foreground">{formatBRL(item.realizado)}</td>
+                              <td className={`py-2.5 px-3 text-right font-extrabold ${variacao >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                                {formatBRL(variacao)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
-
-      {/* 2. DESPESAS POR CATEGORIA */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-        <h3 className="text-lg font-bold text-foreground mb-4">2. DESPESAS POR CATEGORIA</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                <th className="pb-3">Categoria</th>
-                <th className="pb-3 text-right">Previsto (R$)</th>
-                <th className="pb-3 text-right">Realizado (R$)</th>
-                <th className="pb-3 text-right">Diferença (R$)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {categoriasDespesas.map((c) => {
-                const realizadoCat = lancamentosFiltrados
-                  .filter((l) => l.tipo === "despesa" && l.categoria === c.nome)
-                  .reduce((sum, l) => sum + l.valor, 0);
-                const dif = c.previsto - realizadoCat;
-
-                return (
-                  <tr key={c.nome} className="hover:bg-muted/30">
-                    <td className="py-3 font-medium text-foreground">{c.nome}</td>
-                    <td className="py-3 text-right text-muted-foreground">{formatBRL(c.previsto)}</td>
-                    <td className="py-3 text-right font-bold text-foreground">{formatBRL(realizadoCat)}</td>
-                    <td className={`py-3 text-right font-semibold ${dif >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                      {formatBRL(dif)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
 
