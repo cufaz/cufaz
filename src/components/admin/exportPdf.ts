@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatBRL } from "./utils";
+import { itensOrcamentoOFICIAIS } from "./dataDetalhada";
 
 export interface PdfExportData {
   polos: Array<{ id: string; nome: string }>;
@@ -22,7 +23,6 @@ export interface PdfExportData {
 export function generateProfessionalPdf({
   polos,
   lancamentos,
-  categoriasDespesas,
   selectedPoloId,
   dataInicio,
   dataFim,
@@ -33,9 +33,23 @@ export function generateProfessionalPdf({
     format: "a4",
   });
 
-  const poloNome = selectedPoloId === "todos" || !selectedPoloId
+  // Find selected polo name for flexible matching
+  const poloObj = polos.find((p) => p.id === selectedPoloId);
+  const poloNome = !selectedPoloId || selectedPoloId === "todos"
     ? "Todos os Polos"
-    : (polos.find((p) => p.id === selectedPoloId)?.nome || selectedPoloId);
+    : (poloObj?.nome || selectedPoloId);
+
+  const poloNomeClean = poloNome.toLowerCase();
+
+  // Filter official dataset items with flexible matching
+  const poloItensPrevisto = itensOrcamentoOFICIAIS.filter((item) => {
+    if (!selectedPoloId || selectedPoloId === "todos") return true;
+    if (item.poloId === selectedPoloId) return true;
+    if (poloNomeClean.includes("penha") && item.poloId === "penha") return true;
+    if (poloNomeClean.includes("madureira") && item.poloId === "madureira") return true;
+    if ((poloNomeClean.includes("paraisópolis") || poloNomeClean.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+    return false;
+  });
 
   // Filter lancamentos
   const lancamentosFiltrados = lancamentos.filter((l) => {
@@ -52,7 +66,7 @@ export function generateProfessionalPdf({
     .filter((l) => l.tipo === "despesa")
     .reduce((sum, l) => sum + l.valor, 0);
 
-  const totalDespesasPrevistas = categoriasDespesas.reduce((sum, c) => sum + c.previsto, 0);
+  const totalDespesasPrevistas = poloItensPrevisto.reduce((sum, i) => sum + i.previsto, 0);
   const saldoRealizado = totalReceitas - totalDespesasRealizadas;
   const difPrevistoRealizado = totalDespesasPrevistas - totalDespesasRealizadas;
   const percUtilizado = totalDespesasPrevistas > 0 ? (totalDespesasRealizadas / totalDespesasPrevistas) * 100 : 0;
@@ -119,26 +133,32 @@ export function generateProfessionalPdf({
     },
   });
 
-  // Section 2: Despesas por Categoria
+  // Section 2: Despesas por Categoria (From Official Dataset)
   const nextY1 = (doc as any).lastAutoTable.finalY + 8;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(249, 115, 22);
   doc.text("2. DESPESAS POR CATEGORIA", 14, nextY1);
 
-  const catRows = categoriasDespesas.map((c) => {
+  // Group by category from official dataset
+  const catMap: Record<string, number> = {};
+  poloItensPrevisto.forEach((item) => {
+    catMap[item.categoria] = (catMap[item.categoria] || 0) + item.previsto;
+  });
+
+  const catRows = Object.entries(catMap).map(([catNome, previstoCat]) => {
     const gastoCat = lancamentosFiltrados
-      .filter((l) => l.tipo === "despesa" && l.categoria === c.nome)
+      .filter((l) => l.tipo === "despesa" && l.categoria.toLowerCase() === catNome.toLowerCase())
       .reduce((sum, l) => sum + l.valor, 0);
-    const dif = c.previsto - gastoCat;
-    const perc = c.previsto > 0 ? ((gastoCat / c.previsto) * 100).toFixed(1) + "%" : "0%";
-    return [c.nome, formatBRL(c.previsto), formatBRL(gastoCat), formatBRL(dif), perc];
+    const dif = previstoCat - gastoCat;
+    const perc = previstoCat > 0 ? ((gastoCat / previstoCat) * 100).toFixed(1) + "%" : "0%";
+    return [catNome, formatBRL(previstoCat), formatBRL(gastoCat), formatBRL(dif), perc];
   });
 
   autoTable(doc, {
     startY: nextY1 + 3,
     head: [["CATEGORIA", "PREVISTO (R$)", "REALIZADO (R$)", "DIFERENÇA (R$)", "% UTILIZADO"]],
-    body: catRows,
+    body: catRows.length === 0 ? [["-", "R$ 0,00", "R$ 0,00", "R$ 0,00", "0%"]] : catRows,
     theme: "grid",
     headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255], fontStyle: "bold" },
     styles: { fontSize: 8.5, cellPadding: 2 },
@@ -151,39 +171,34 @@ export function generateProfessionalPdf({
     },
   });
 
-  // Section 3: Lançamentos Detalhados (com Descrição / Detalhe)
+  // Section 3: Detalhamento de Itens Orçados do Polo
   const nextY2 = (doc as any).lastAutoTable.finalY + 8;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(249, 115, 22);
-  doc.text("3. LANÇAMENTOS DETALHADOS NO PERÍODO", 14, nextY2);
+  doc.text("3. ITENS DE CUSTO E PROVISÕES DA ATIVIDADE", 14, nextY2);
 
-  const lancRows = lancamentosFiltrados.map((l) => {
-    const pNome = l.poloId === "todos" ? "Geral" : (polos.find((p) => p.id === l.poloId)?.nome || l.poloId);
-    return [
-      l.data,
-      l.tipo.toUpperCase(),
-      pNome,
-      l.categoria,
-      l.descricao || "-",
-      formatBRL(l.valor),
-    ];
-  });
+  const itemRows = poloItensPrevisto.map((item) => [
+    item.atividade,
+    item.categoria,
+    item.item,
+    item.quantidade,
+    formatBRL(item.previsto),
+  ]);
 
   autoTable(doc, {
     startY: nextY2 + 3,
-    head: [["DATA", "TIPO", "POLO", "CATEGORIA", "DESCRIÇÃO / DETALHE", "VALOR (R$)"]],
-    body: lancRows.length === 0 ? [["-", "-", "-", "-", "Nenhum lançamento no período", "R$ 0,00"]] : lancRows,
+    head: [["ATIVIDADE", "CATEGORIA", "ITEM OU SERVIÇO", "QUANTIDADE", "PREVISTO (R$)"]],
+    body: itemRows.length === 0 ? [["-", "-", "Nenhum item cadastrado", "-", "R$ 0,00"]] : itemRows,
     theme: "striped",
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "bold" },
     styles: { fontSize: 8, cellPadding: 2 },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 20, fontStyle: "bold" },
-      2: { cellWidth: 32 },
-      3: { cellWidth: 38 },
-      4: { cellWidth: 46 },
-      5: { cellWidth: 24, halign: "right", fontStyle: "bold" },
+      0: { cellWidth: 28 },
+      1: { cellWidth: 32 },
+      2: { cellWidth: 62, fontStyle: "bold" },
+      3: { cellWidth: 34 },
+      4: { cellWidth: 26, halign: "right", fontStyle: "bold" },
     },
   });
 
@@ -196,7 +211,8 @@ export function generateProfessionalPdf({
     doc.text(`CUFA — Central Única das Favelas | Página ${i} de ${pageCount}`, 105, 290, { align: "center" });
   }
 
-  // Save PDF file
-  const fileName = `Relatorio_Financeiro_CUFA_${new Date().toISOString().slice(0, 10)}.pdf`;
+  // Dynamic File Name per Filtered Polo (Anexo 4)
+  const poloSlug = poloNome.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
+  const fileName = `Relatorio_Financeiro_${poloSlug}_${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 }

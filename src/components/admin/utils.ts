@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { Polo, Lancamento, CategoriaDespesa } from "./types";
+import { itensOrcamentoOFICIAIS } from "./dataDetalhada";
 
 export function formatBRL(val: number): string {
   if (isNaN(val) || val === null || val === undefined) return "R$ 0,00";
@@ -19,7 +20,7 @@ export function parseCurrencyInput(input: string): number {
 
 export function formatCurrencyInput(val: number): string {
   if (!val || isNaN(val)) return "0,00";
-  return (val).toLocaleString("pt-BR", {
+  return val.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -28,23 +29,40 @@ export function formatCurrencyInput(val: number): string {
 export function exportProfessionalExcel({
   polos,
   lancamentos,
-  categoriasDespesas,
   selectedPoloId,
   dataInicio,
   dataFim,
 }: {
   polos: Polo[];
   lancamentos: Lancamento[];
-  categoriasDespesas: CategoriaDespesa[];
+  categoriasDespesas?: CategoriaDespesa[];
   selectedPoloId: string;
   dataInicio: string;
   dataFim: string;
 }) {
   const wb = XLSX.utils.book_new();
 
+  // Find selected polo name
+  const poloObj = polos.find((p) => p.id === selectedPoloId);
+  const poloNome = !selectedPoloId || selectedPoloId === "todos"
+    ? "Todos os Polos"
+    : (poloObj?.nome || selectedPoloId);
+
+  const poloNomeClean = poloNome.toLowerCase();
+
+  // Filter official dataset items with flexible matching
+  const poloItensPrevisto = itensOrcamentoOFICIAIS.filter((item) => {
+    if (!selectedPoloId || selectedPoloId === "todos") return true;
+    if (item.poloId === selectedPoloId) return true;
+    if (poloNomeClean.includes("penha") && item.poloId === "penha") return true;
+    if (poloNomeClean.includes("madureira") && item.poloId === "madureira") return true;
+    if ((poloNomeClean.includes("paraisópolis") || poloNomeClean.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+    return false;
+  });
+
   // Filter lancamentos
   const lancamentosFiltrados = lancamentos.filter((l) => {
-    const matchPolo = selectedPoloId === "todos" || l.poloId === selectedPoloId;
+    const matchPolo = !selectedPoloId || selectedPoloId === "todos" || l.poloId === selectedPoloId;
     const matchData = (!dataInicio || l.data >= dataInicio) && (!dataFim || l.data <= dataFim);
     return matchPolo && matchData;
   });
@@ -57,14 +75,7 @@ export function exportProfessionalExcel({
     .filter((l) => l.tipo === "despesa")
     .reduce((sum, l) => sum + l.valor, 0);
 
-  let totalDespesasPrevistas = 0;
-  if (selectedPoloId === "todos") {
-    totalDespesasPrevistas = polos.filter((p) => p.ativo).reduce((sum, p) => sum + p.orcamentoMensal, 0);
-  } else {
-    const p = polos.find((item) => item.id === selectedPoloId);
-    totalDespesasPrevistas = p ? p.orcamentoMensal : 0;
-  }
-
+  const totalDespesasPrevistas = poloItensPrevisto.reduce((sum, i) => sum + i.previsto, 0);
   const saldoRealizado = totalReceitas - totalDespesasRealizadas;
   const difPrevistoRealizado = totalDespesasPrevistas - totalDespesasRealizadas;
   const percUtilizado = totalDespesasPrevistas > 0 ? (totalDespesasRealizadas / totalDespesasPrevistas) * 100 : 0;
@@ -73,7 +84,7 @@ export function exportProfessionalExcel({
   const resumoData = [
     ["RELATÓRIO FINANCEIRO CUFA — DEMONSTRATIVO GERAL"],
     ["Período de Extração:", `${dataInicio || "Início"} até ${dataFim || "Atual"}`],
-    ["Polo Selecionado:", selectedPoloId === "todos" ? "Todos os Polos" : (polos.find(p => p.id === selectedPoloId)?.nome || selectedPoloId)],
+    ["Polo Selecionado:", poloNome],
     ["Data de Geração:", new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR")],
     [""],
     ["INDICADOR FINANCEIRO", "VALOR (R$)", "STATUS / OBSERVAÇÃO"],
@@ -88,56 +99,62 @@ export function exportProfessionalExcel({
   XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo Financeiro");
 
   // Sheet 2: Despesas por Categoria
+  const catMap: Record<string, number> = {};
+  poloItensPrevisto.forEach((item) => {
+    catMap[item.categoria] = (catMap[item.categoria] || 0) + item.previsto;
+  });
+
   const catData = [
     ["CATEGORIA DE DESPESA", "PREVISTO (R$)", "REALIZADO (R$)", "DIFERENÇA (R$)", "% UTILIZADO"],
   ];
-  categoriasDespesas.forEach((c) => {
+  Object.entries(catMap).forEach(([catNome, previstoCat]) => {
     const gastoCat = lancamentosFiltrados
-      .filter((l) => l.tipo === "despesa" && l.categoria === c.nome)
+      .filter((l) => l.tipo === "despesa" && l.categoria.toLowerCase() === catNome.toLowerCase())
       .reduce((sum, l) => sum + l.valor, 0);
-    const dif = c.previsto - gastoCat;
-    const perc = c.previsto > 0 ? ((gastoCat / c.previsto) * 100).toFixed(1) + "%" : "0%";
-    catData.push([c.nome, formatBRL(c.previsto), formatBRL(gastoCat), formatBRL(dif), perc]);
+    const dif = previstoCat - gastoCat;
+    const perc = previstoCat > 0 ? ((gastoCat / previstoCat) * 100).toFixed(1) + "%" : "0%";
+    catData.push([catNome, formatBRL(previstoCat), formatBRL(gastoCat), formatBRL(dif), perc]);
   });
   const wsCat = XLSX.utils.aoa_to_sheet(catData);
   XLSX.utils.book_append_sheet(wb, wsCat, "Por Categoria");
 
-  // Sheet 3: Lançamentos Detalhados (com Descrição / Detalhe)
+  // Sheet 3: Detalhamento Completo de Itens
+  const itensData = [
+    ["POLO", "ATIVIDADE", "CATEGORIA", "ITEM OU SERVIÇO", "DESCRIÇÃO / DETALHE", "QUANTIDADE", "PREVISTO (R$)"],
+  ];
+  poloItensPrevisto.forEach((i) => {
+    itensData.push([
+      poloNome,
+      i.atividade,
+      i.categoria,
+      i.item,
+      i.descricao,
+      i.quantidade,
+      formatBRL(i.previsto),
+    ]);
+  });
+  const wsItens = XLSX.utils.aoa_to_sheet(itensData);
+  XLSX.utils.book_append_sheet(wb, wsItens, "Itens e Provisões");
+
+  // Sheet 4: Lançamentos Efetivados
   const lancData = [
     ["DATA", "TIPO", "POLO", "CATEGORIA", "DESCRIÇÃO / DETALHE", "VALOR (R$)"],
   ];
   lancamentosFiltrados.forEach((l) => {
-    const pNome = l.poloId === "todos" ? "Geral" : (polos.find(p => p.id === l.poloId)?.nome || l.poloId);
     lancData.push([
       l.data,
       l.tipo.toUpperCase(),
-      pNome,
+      poloNome,
       l.categoria,
       l.descricao || "-",
       formatBRL(l.valor),
     ]);
   });
   const wsLanc = XLSX.utils.aoa_to_sheet(lancData);
-  XLSX.utils.book_append_sheet(wb, wsLanc, "Lançamentos Detalhados");
+  XLSX.utils.book_append_sheet(wb, wsLanc, "Lançamentos Efetivados");
 
-  // Sheet 4: Polos e Orçamentos
-  const polosData = [
-    ["NOME DO POLO", "CIDADE/UF", "VAGAS TOTAIS", "BENEFICIÁRIOS PROJETADOS", "ORÇAMENTO MENSAL (R$)", "STATUS"],
-  ];
-  polos.forEach((p) => {
-    polosData.push([
-      p.nome,
-      `${p.cidade} / ${p.uf}`,
-      p.vagasTotais.toString(),
-      p.beneficiariosProjetados.toString(),
-      formatBRL(p.orcamentoMensal),
-      p.ativo ? "Ativo" : "Inativo",
-    ]);
-  });
-  const wsPolos = XLSX.utils.aoa_to_sheet(polosData);
-  XLSX.utils.book_append_sheet(wb, wsPolos, "Polos e Orçamentos");
-
-  // Write workbook to file download
-  const fileName = `Relatorio_Financeiro_CUFA_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  // Dynamic File Name per Filtered Polo (Anexo 4)
+  const poloSlug = poloNome.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
+  const fileName = `Relatorio_Financeiro_${poloSlug}_${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }

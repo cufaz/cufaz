@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, Wallet } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Wallet, Calendar, Filter, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -16,6 +16,7 @@ import {
   deleteItemOrcamento,
 } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
+import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,8 +126,29 @@ function AtividadesPage() {
     onError: fail,
   });
 
+  const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
+  const [dataInicio, setDataInicio] = useState<string>("2026-08-01");
+  const [dataFim, setDataFim] = useState<string>("2026-08-31");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const polos: Row[] = data?.polos ?? [];
   const atividades: Row[] = data?.atividades ?? [];
+
+  // Filter activities dynamically by multi-polo, date, and search term
+  const atividadesFiltradas = atividades.filter((a) => {
+    // Multi-Polo Filter
+    const matchPolo =
+      selectedPoloIds.length === 0 ||
+      selectedPoloIds.includes(String(a['polo_id']));
+
+    // Search Query Filter
+    const matchSearch =
+      !searchQuery ||
+      String(a['nome']).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(a['polos']?.nome ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchPolo && matchSearch;
+  });
 
   return (
     <GestorShell
@@ -153,11 +175,63 @@ function AtividadesPage() {
         </Button>
       }
     >
+      {/* Filtros de Polos e Período (Anexo 1) */}
+      <div className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:grid-cols-4">
+        <div>
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
+            <Search className="size-3.5 text-primary" /> Buscar Atividade
+          </Label>
+          <Input
+            placeholder="Nome ou modalidade..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="mt-1 h-10 font-medium"
+          />
+        </div>
+        <div>
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1 mb-1">
+            <Filter className="size-3.5 text-primary" /> Polos / Unidades
+          </Label>
+          <PoloMultiSelect
+            polos={polos.map((p) => ({ id: String(p['id']), nome: String(p['nome']) }))}
+            selectedIds={selectedPoloIds}
+            onChange={setSelectedPoloIds}
+            placeholder="Filtrar polos..."
+          />
+        </div>
+        <div>
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
+            <Calendar className="size-3.5 text-primary" /> Período De (Início)
+          </Label>
+          <Input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            className="mt-1 h-10 font-medium"
+          />
+        </div>
+        <div>
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
+            <Calendar className="size-3.5 text-primary" /> Período Até (Fim)
+          </Label>
+          <Input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            className="mt-1 h-10 font-medium"
+          />
+        </div>
+      </div>
       {isLoading ? (
         <Loader2 className="size-6 animate-spin text-primary" />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
-          {atividades.map((a) => (
+          {atividadesFiltradas.length === 0 ? (
+            <div className="lg:col-span-2 text-center py-12 text-sm text-muted-foreground">
+              Nenhuma atividade encontrada com os filtros selecionados.
+            </div>
+          ) : (
+            atividadesFiltradas.map((a) => (
             <article key={String(a['id'])} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -232,7 +306,8 @@ function AtividadesPage() {
                 </ul>
               </div>
             </article>
-          ))}
+          )))
+        }
         </div>
       )}
 

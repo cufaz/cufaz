@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { getFinanceiro, saveLancamento, deleteLancamento } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
+import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -311,21 +312,15 @@ function FinanceiroPage() {
           />
         </div>
         <div>
-          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1 mb-1">
             <Filter className="size-3.5 text-primary" /> Polo / Unidade
           </Label>
-          <select
-            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-            value={poloId}
-            onChange={(e) => handlePoloChange(e.target.value)}
-          >
-            <option value="">Todos os polos</option>
-            {polosList.map((p: Row) => (
-              <option key={String(p['id'])} value={String(p['id'])}>
-                {String(p['nome'])}
-              </option>
-            ))}
-          </select>
+          <PoloMultiSelect
+            polos={polosList.map((p: Row) => ({ id: String(p['id']), nome: String(p['nome']) }))}
+            selectedIds={poloId ? [poloId] : []}
+            onChange={(ids) => handlePoloChange(ids[0] || "")}
+            placeholder="Filtrar polos..."
+          />
         </div>
       </div>
 

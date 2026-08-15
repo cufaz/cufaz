@@ -23,6 +23,7 @@ import { Polo, Lancamento, CategoriaDespesa } from "./types";
 import { formatBRL, exportProfessionalExcel } from "./utils";
 import { generateProfessionalPdf } from "./exportPdf";
 import { itensOrcamentoOFICIAIS } from "./dataDetalhada";
+import { PoloMultiSelect } from "./PoloMultiSelect";
 
 export function FinanceiroTab({
   polos,
@@ -252,22 +253,15 @@ export function FinanceiroTab({
           />
         </div>
         <div>
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5 mb-1.5">
             <Filter className="size-3.5 text-primary" /> Polo / Unidade
           </Label>
-          <Select value={selectedPoloId} onValueChange={handlePoloChange}>
-            <SelectTrigger className="mt-1.5 h-10 font-medium">
-              <SelectValue placeholder="Selecione o polo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os polos</SelectItem>
-              {polos.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PoloMultiSelect
+            polos={polos.map((p) => ({ id: p.id, nome: p.nome }))}
+            selectedIds={selectedPoloId === "todos" ? [] : [selectedPoloId]}
+            onChange={(ids) => handlePoloChange(ids[0] || "todos")}
+            placeholder="Filtrar polos..."
+          />
         </div>
       </div>
 
