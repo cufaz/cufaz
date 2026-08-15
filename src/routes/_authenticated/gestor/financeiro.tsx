@@ -398,8 +398,19 @@ function FinanceiroPage() {
 
             <div className="p-4 space-y-6">
               {(() => {
-                // Combine Database items & Parsed detailed items
-                const poloItens = itensOrcamentoOFICIAIS.filter((item) => !poloId || item.poloId === poloId);
+                // Find selected polo name for flexible matching
+                const poloObj = polosList.find((p) => String(p['id']) === poloId);
+                const poloNome = poloObj ? String(poloObj['nome']).toLowerCase() : "";
+
+                // Combine Database items & Parsed detailed items with flexible matching
+                const poloItens = itensOrcamentoOFICIAIS.filter((item) => {
+                  if (!poloId || poloId === "todos") return true;
+                  if (item.poloId === poloId) return true;
+                  if (poloNome.includes("penha") && item.poloId === "penha") return true;
+                  if (poloNome.includes("madureira") && item.poloId === "madureira") return true;
+                  if ((poloNome.includes("paraisópolis") || poloNome.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+                  return false;
+                });
 
                 // Group by category
                 const categoriasMap: Record<string, typeof poloItens> = {};

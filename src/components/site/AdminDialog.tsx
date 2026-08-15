@@ -23,13 +23,16 @@ export function AdminDialog({
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => {
+    return localStorage.getItem("cufa_gestor_authenticated") === "true";
+  });
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
     if (email.trim().toLowerCase() === "gestor@cufa.com.br" && senha === "gestao26") {
       setAuthenticated(true);
+      localStorage.setItem("cufa_gestor_authenticated", "true");
       toast.success("Acesso de Gestor Autorizado!", {
         description: "Bem-vindo ao Painel do Gestor da CUFA.",
       });
@@ -42,6 +45,7 @@ export function AdminDialog({
 
   function handleLogout() {
     setAuthenticated(false);
+    localStorage.removeItem("cufa_gestor_authenticated");
     setEmail("");
     setSenha("");
   }

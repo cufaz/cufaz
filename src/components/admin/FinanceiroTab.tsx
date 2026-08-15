@@ -160,6 +160,14 @@ export function FinanceiroTab({
         </div>
       )}
 
+      {/* Centered Circle Loading Overlay (Anexo 4 & 5) */}
+      {isFiltering && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center z-50">
+          <Loader2 className="size-12 animate-spin text-primary" />
+          <p className="mt-3 text-sm font-bold text-foreground">Atualizando unidade...</p>
+        </div>
+      )}
+
       {/* Header & Main Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -337,9 +345,17 @@ export function FinanceiroTab({
 
         <div className="space-y-6">
           {(() => {
-            const poloItens = itensOrcamentoOFICIAIS.filter(
-              (item) => !selectedPoloId || selectedPoloId === "todos" || item.poloId === selectedPoloId
-            );
+            const poloObj = polos.find((p) => p.id === selectedPoloId);
+            const poloNome = poloObj ? poloObj.nome.toLowerCase() : "";
+
+            const poloItens = itensOrcamentoOFICIAIS.filter((item) => {
+              if (!selectedPoloId || selectedPoloId === "todos") return true;
+              if (item.poloId === selectedPoloId) return true;
+              if (poloNome.includes("penha") && item.poloId === "penha") return true;
+              if (poloNome.includes("madureira") && item.poloId === "madureira") return true;
+              if ((poloNome.includes("paraisópolis") || poloNome.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+              return false;
+            });
 
             const categoriasMap: Record<string, typeof poloItens> = {};
             poloItens.forEach((item) => {

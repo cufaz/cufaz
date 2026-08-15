@@ -99,14 +99,18 @@ function DashboardPage() {
 
   const activeAlerts = poloAlerts.filter((a: { isWarning: boolean; isCritical: boolean }) => a.isWarning || a.isCritical);
 
+  // Custo Total Previsto (Projeto 6 Meses)
+  const custoTotalPrevisto = custoMensalPrevisto * 6;
+
   return (
     <GestorShell
       title="Dashboard"
       description="Visão geral da plataforma CUFA — polos, atividades, vagas e orçamento."
     >
-      {/* Cards de KPIs Principais (Anexo 4 & 5) */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento planejado" />
+      {/* Cards de KPIs Principais (Anexo 1 & 2) */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
+        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint="Projeto 6 meses" />
         <Kpi label="Valores já utilizados" value={brl(despesasRealizadas)} hint="Despesas realizadas" />
         <Kpi label="% Orçamento utilizado" value={`${percUtilizado.toFixed(1)}%`} hint="Em relação ao previsto" />
         <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma de todos os polos" />

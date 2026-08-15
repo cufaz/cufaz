@@ -277,9 +277,64 @@ function AtividadesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Custo mensal (R$)</Label>
-                  <Input type="number" step="0.01" value={Number(form['custo_mensal'] ?? 0)} onChange={(e) => setForm({ ...form, custo_mensal: Number(e.target.value) })} />
+                  <Input
+                    type="text"
+                    value={form['custo_mensal_display'] ?? brl(Number(form['custo_mensal'] ?? 0))}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      const num = digits ? Number(digits) / 100 : 0;
+                      setForm({
+                        ...form,
+                        custo_mensal: num,
+                        custo_mensal_display: brl(num),
+                      });
+                    }}
+                    className="font-bold text-primary"
+                  />
                 </div>
               </div>
+
+              {/* Períodos de Matrícula & Atividade (Anexo 2) */}
+              <div className="border-t border-border pt-3 mt-2 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Período de Matrículas e Duração da Atividade
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Início das Matrículas</Label>
+                    <Input
+                      type="date"
+                      value={String(form['data_inicio_matricula'] ?? "")}
+                      onChange={(e) => setForm({ ...form, data_inicio_matricula: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Fim das Matrículas</Label>
+                    <Input
+                      type="date"
+                      value={String(form['data_fim_matricula'] ?? "")}
+                      onChange={(e) => setForm({ ...form, data_fim_matricula: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Início da Atividade</Label>
+                    <Input
+                      type="date"
+                      value={String(form['data_inicio_atividade'] ?? "")}
+                      onChange={(e) => setForm({ ...form, data_inicio_atividade: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Término da Atividade (Fim)</Label>
+                    <Input
+                      type="date"
+                      value={String(form['data_fim_atividade'] ?? "")}
+                      onChange={(e) => setForm({ ...form, data_fim_atividade: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="submit" className="bg-brand-gradient font-bold text-white">
                   Salvar
@@ -340,61 +395,70 @@ function AtividadesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Orçamento */}
+      {/* Orçamento Previsto com Centered Circle Loading Spinner (Anexo 3) */}
       <Dialog open={Boolean(orcamentoDe)} onOpenChange={(v) => !v && setOrcamentoDe(null)}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Orçamento previsto — {String(orcamentoDe?.['nome'] ?? "")}</DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Total mensal:{" "}
-              <span className="font-bold text-primary">
-                {brl((orcamento.data?.itens ?? []).reduce((s: number, i: Row) => s + Number(i['custo_mensal']), 0))}
-              </span>
-            </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="font-bold"
-              onClick={() =>
-                setItemForm({
-                  atividade_id: orcamentoDe?.['id'],
-                  item: "",
-                  descricao: "",
-                  quantidade: "",
-                  custo_mensal: 0,
-                  categoria_id: orcamento.data?.categorias?.[0]?.id ?? null,
-                })
-              }
-            >
-              <Plus className="mr-1 size-4" /> Item
-            </Button>
-          </div>
-
-          <div className="mt-3 grid gap-1.5">
-            {(orcamento.data?.itens ?? []).map((i: Row) => (
-              <div key={String(i['id'])} className="flex items-start justify-between gap-2 rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-bold">{String(i['item'])}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {i['categorias_custo']?.nome} · {String(i['quantidade'] ?? "")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{String(i['descricao'] ?? "")}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-bold text-primary">{brl(i['custo_mensal'])}</span>
-                  <button type="button" className="text-primary" onClick={() => setItemForm({ ...i, categorias_custo: undefined })}>
-                    <Pencil className="size-4" />
-                  </button>
-                  <button type="button" className="text-destructive" onClick={() => mDelItem.mutate(String(i['id']))}>
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
+          {orcamento.isLoading || orcamento.isFetching ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-3">
+              <Loader2 className="size-10 animate-spin text-primary" />
+              <p className="text-xs font-semibold text-muted-foreground">Carregando itens de orçamento...</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Total mensal:{" "}
+                  <span className="font-bold text-primary">
+                    {brl((orcamento.data?.itens ?? []).reduce((s: number, i: Row) => s + Number(i['custo_mensal']), 0))}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="font-bold"
+                  onClick={() =>
+                    setItemForm({
+                      atividade_id: orcamentoDe?.['id'],
+                      item: "",
+                      descricao: "",
+                      quantidade: "",
+                      custo_mensal: 0,
+                      categoria_id: orcamento.data?.categorias?.[0]?.id ?? null,
+                    })
+                  }
+                >
+                  <Plus className="mr-1 size-4" /> Item
+                </Button>
               </div>
-            ))}
-          </div>
+
+              <div className="mt-3 grid gap-1.5">
+                {(orcamento.data?.itens ?? []).map((i: Row) => (
+                  <div key={String(i['id'])} className="flex items-start justify-between gap-2 rounded-lg border border-border p-3">
+                    <div>
+                      <p className="text-sm font-bold">{String(i['item'])}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {i['categorias_custo']?.nome} · {String(i['quantidade'] ?? "")}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{String(i['descricao'] ?? "")}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm font-bold text-primary">{brl(i['custo_mensal'])}</span>
+                      <button type="button" className="text-primary" onClick={() => setItemForm({ ...i, categorias_custo: undefined })}>
+                        <Pencil className="size-4" />
+                      </button>
+                      <button type="button" className="text-destructive" onClick={() => mDelItem.mutate(String(i['id']))}>
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

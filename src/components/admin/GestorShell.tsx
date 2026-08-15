@@ -59,11 +59,12 @@ export function GestorShell({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
-      {/* Top Loading Progress Bar */}
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row relative">
+      {/* Centered Circle Loading Spinner Overlay for Page Transitions (Anexo 5) */}
       {carregando ? (
-        <div className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden">
-          <div className="h-full w-1/3 animate-[slide-in-right_1s_ease-in-out_infinite] bg-brand-gradient" />
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">
+          <Loader2 className="size-12 animate-spin text-primary" />
+          <p className="mt-3 text-sm font-bold text-foreground">Carregando informações...</p>
         </div>
       ) : null}
 

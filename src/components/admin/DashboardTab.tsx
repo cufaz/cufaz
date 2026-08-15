@@ -17,6 +17,7 @@ export function DashboardTab({
 
   // Budget vs Spent
   const totalOrcamentoPrevisto = activePolos.reduce((sum, p) => sum + p.orcamentoMensal, 0);
+  const totalOrcamentoProjeto = totalOrcamentoPrevisto * 6; // 6 Meses
 
   const totalDespesasRealizadas = lancamentos
     .filter((l) => l.tipo === "despesa")
@@ -53,7 +54,7 @@ export function DashboardTab({
       </div>
 
       {/* Main KPI Cards Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         {/* Polos Ativos */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -86,13 +87,27 @@ export function DashboardTab({
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Custo Mensal Previsto</span>
-            <span className="grid size-9 place-items-center rounded-xl bg-amber-500/10 text-amber-600">
+            <span className="grid size-9 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
               <DollarSign className="size-4" />
             </span>
           </div>
           <div className="mt-4">
             <span className="text-2xl font-extrabold text-foreground">{formatBRL(totalOrcamentoPrevisto)}</span>
-            <p className="text-xs text-muted-foreground mt-1">Orçamento aprovado</p>
+            <p className="text-xs text-muted-foreground mt-1">Orçamento mensal</p>
+          </div>
+        </div>
+
+        {/* Custo Total Previsto (Projeto) */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Custo Total Previsto</span>
+            <span className="grid size-9 place-items-center rounded-xl bg-purple-500/10 text-purple-600">
+              <DollarSign className="size-4" />
+            </span>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-extrabold text-foreground">{formatBRL(totalOrcamentoProjeto)}</span>
+            <p className="text-xs text-muted-foreground mt-1">Projeto (6 meses)</p>
           </div>
         </div>
 
