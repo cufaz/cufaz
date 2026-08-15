@@ -136,16 +136,20 @@ export function FinanceiroTab({
     .filter((l) => l.tipo === "despesa")
     .reduce((sum, l) => sum + l.valor, 0);
 
-  // Orçamento (Despesas Previstas):
-  // If specific Polo selected -> that polo's orcamentoMensal
-  // If "todos" -> sum of all active polos' orcamentoMensal
-  let totalDespesasPrevistas = 0;
-  if (selectedPoloId === "todos") {
-    totalDespesasPrevistas = polos.filter((p) => p.ativo).reduce((sum, p) => sum + p.orcamentoMensal, 0);
-  } else {
-    const p = polos.find((item) => item.id === selectedPoloId);
-    totalDespesasPrevistas = p ? p.orcamentoMensal : 0;
-  }
+  // Orçamento (Despesas Previstas): Flexible matching with official dataset
+  const poloObjTab = polos.find((p) => p.id === selectedPoloId);
+  const poloNomeTab = poloObjTab ? poloObjTab.nome.toLowerCase() : "";
+
+  const poloItensPrevistoTab = itensOrcamentoOFICIAIS.filter((item) => {
+    if (!selectedPoloId || selectedPoloId === "todos") return true;
+    if (item.poloId === selectedPoloId) return true;
+    if (poloNomeTab.includes("penha") && item.poloId === "penha") return true;
+    if (poloNomeTab.includes("madureira") && item.poloId === "madureira") return true;
+    if ((poloNomeTab.includes("paraisópolis") || poloNomeTab.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+    return false;
+  });
+
+  const totalDespesasPrevistas = poloItensPrevistoTab.reduce((sum, i) => sum + i.previsto, 0);
 
   const saldoMesRealizado = totalReceitas - totalDespesasRealizadas;
   const diferencaPrevistoRealizado = totalDespesasPrevistas - totalDespesasRealizadas;

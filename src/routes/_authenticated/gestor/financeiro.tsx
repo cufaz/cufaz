@@ -119,30 +119,20 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // Calculate Despesas Previstas (Orçamento Mensal)
-  // If specific polo selected -> that polo's orcamento_mensal or sum of its items
-  // If no polo selected -> sum of all active polos' orcamento_mensal
-  let previstoTotal = 0;
-  if (poloId) {
-    const selPolo = polosList.find((p) => String(p['id']) === poloId);
-    if (selPolo && Number(selPolo['orcamento_mensal']) > 0) {
-      previstoTotal = Number(selPolo['orcamento_mensal']);
-    } else {
-      previstoTotal = itens
-        .filter((i) => String(i['polo_id']) === poloId)
-        .reduce((s, i) => s + Number(i['custo_mensal']), 0);
-    }
-  } else {
-    const sumPolosOrcamento = polosList
-      .filter((p) => p['ativo'])
-      .reduce((s, p) => s + Number(p['orcamento_mensal'] || 0), 0);
+  // Calculate Despesas Previstas (Orçamento Mensal) from official dataset with flexible polo matching
+  const poloObjPrev = polosList.find((p) => String(p['id']) === poloId);
+  const poloNomePrev = poloObjPrev ? String(poloObjPrev['nome']).toLowerCase() : "";
 
-    if (sumPolosOrcamento > 0) {
-      previstoTotal = sumPolosOrcamento;
-    } else {
-      previstoTotal = itens.reduce((s, i) => s + Number(i['custo_mensal']), 0);
-    }
-  }
+  const poloItensPrevisto = itensOrcamentoOFICIAIS.filter((item) => {
+    if (!poloId || poloId === "todos") return true;
+    if (item.poloId === poloId) return true;
+    if (poloNomePrev.includes("penha") && item.poloId === "penha") return true;
+    if (poloNomePrev.includes("madureira") && item.poloId === "madureira") return true;
+    if ((poloNomePrev.includes("paraisópolis") || poloNomePrev.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+    return false;
+  });
+
+  const previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
 
   const previstoPorCategoria = categorias
     .filter((c) => c['tipo'] === "despesa")

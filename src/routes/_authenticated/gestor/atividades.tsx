@@ -70,10 +70,26 @@ function AtividadesPage() {
   const fail = (e: Error) => toast.error("Erro", { description: e.message });
 
   const mAtividade = useMutation({
-    mutationFn: (v: Row) => salvar({ data: v }),
+    mutationFn: (v: Row) => {
+      const payload: Row = {
+        nome: v['nome'],
+        slug: v['slug'],
+        polo_id: v['polo_id'],
+        descricao: v['descricao'],
+        dias: v['dias'],
+        vagas: Number(v['vagas'] || 0),
+        beneficiarios_projetados: Number(v['beneficiarios_projetados'] || 0),
+        custo_mensal: Number(v['custo_mensal'] || 0),
+        ativo: Boolean(v['ativo'] ?? true),
+      };
+      if (v['id']) {
+        payload['id'] = v['id'];
+      }
+      return salvar({ data: payload });
+    },
     onSuccess: () => {
       setForm(null);
-      ok("Atividade salva");
+      ok("Atividade salva com sucesso");
     },
     onError: fail,
   });
