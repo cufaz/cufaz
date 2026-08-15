@@ -28,12 +28,12 @@ type Row = Record<string, any>;
 function Linha({ label, valor, forte }: { label: string; valor: number; forte?: boolean }) {
   return (
     <div
-      className={`flex items-center justify-between border-b border-border/60 px-3 py-2 text-sm ${
+      className={`flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 text-xs sm:text-sm ${
         forte ? "font-bold" : ""
       }`}
     >
-      <span className={forte ? "" : "text-muted-foreground"}>{label}</span>
-      <span className={forte ? "text-primary" : ""}>{brl(valor)}</span>
+      <span className={`min-w-0 break-words ${forte ? "" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`whitespace-nowrap tabular-nums ${forte ? "text-primary" : ""}`}>{brl(valor)}</span>
     </div>
   );
 }
