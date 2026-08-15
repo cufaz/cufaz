@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Building2,
@@ -9,6 +9,7 @@ import {
   Users,
   GraduationCap,
   LogOut,
+  Loader2,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -16,6 +17,7 @@ import logo from "@/assets/cufa-z-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 
 const nav = [
   { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
