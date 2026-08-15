@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export function db(supabase: SupabaseClient): SupabaseClient {
+  return supabase;
+}
+
 export async function assertGestor(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase.rpc("has_role", {
     _user_id: userId,
