@@ -199,7 +199,7 @@ export const getFinanceiro = createServerFn({ method: "POST" })
         )
       : [];
 
-    let lancQuery = supabase
+    let lancQuery = db(supabase)
       .from("lancamentos_financeiros")
       .select("*")
       .eq("competencia", competencia);
