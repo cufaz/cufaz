@@ -201,7 +201,25 @@ function PolosPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Orçamento mensal (R$)</Label>
-                <Input type="number" step="0.01" value={Number(form['orcamento_mensal'] ?? 0)} onChange={(e) => set("orcamento_mensal", Number(e.target.value))} />
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-sm font-bold text-muted-foreground">R$</span>
+                  <Input
+                    type="text"
+                    required
+                    value={
+                      Number(form['orcamento_mensal'] ?? 0).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      const val = raw ? parseFloat(raw) / 100 : 0;
+                      set("orcamento_mensal", val);
+                    }}
+                    className="pl-9 font-extrabold text-foreground"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
