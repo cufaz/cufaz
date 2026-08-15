@@ -168,7 +168,7 @@ function AtividadesPage() {
                 {String(a['descricao'] ?? "")}
               </p>
 
-              <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
                 <div>
                   <p className="text-[11px] text-muted-foreground">Vagas</p>
                   <p className="font-bold">{String(a['vagas'])}</p>

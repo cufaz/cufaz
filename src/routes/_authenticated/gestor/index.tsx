@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
 
 import { getResumoGestor } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
+import { Kpi } from "@/components/admin/Kpi";
+import { Skeleton } from "@/components/ui/skeleton";
 import { brl } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/gestor/")({
@@ -13,27 +14,22 @@ export const Route = createFileRoute("/_authenticated/gestor/")({
 
 const TETO = 2_000_000;
 
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-foreground">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
 function DashboardPage() {
   const fetchResumo = useServerFn(getResumoGestor);
   const { data, isLoading } = useQuery({ queryKey: ["resumo"], queryFn: () => fetchResumo({}) });
 
   if (isLoading || !data) {
     return (
-      <GestorShell title="Dashboard">
-        <Loader2 className="size-6 animate-spin text-primary" />
+      <GestorShell title="Dashboard" description="Carregando indicadores do projeto...">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
       </GestorShell>
     );
   }
+
 
   const polos = data.polos ?? [];
   const atividades = data.atividades ?? [];
@@ -90,18 +86,18 @@ function DashboardPage() {
               <p className="text-xs text-muted-foreground">
                 {p.cidade} / {p.uf}
               </p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Atividades</dt>
-                  <dd className="font-bold">{ativs.length}</dd>
+                  <dd className="break-words font-bold tabular-nums">{ativs.length}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Vagas</dt>
-                  <dd className="font-bold">{p.vagas_totais}</dd>
+                  <dd className="break-words font-bold tabular-nums">{p.vagas_totais}</dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-xs text-muted-foreground">Custo mensal</dt>
-                  <dd className="font-bold text-primary">{brl(custo)}</dd>
+                  <dd className="break-words font-bold tabular-nums text-primary">{brl(custo)}</dd>
                 </div>
               </dl>
             </div>

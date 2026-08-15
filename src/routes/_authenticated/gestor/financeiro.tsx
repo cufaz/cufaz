@@ -28,12 +28,12 @@ type Row = Record<string, any>;
 function Linha({ label, valor, forte }: { label: string; valor: number; forte?: boolean }) {
   return (
     <div
-      className={`flex items-center justify-between border-b border-border/60 px-3 py-2 text-sm ${
+      className={`flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 text-xs sm:text-sm ${
         forte ? "font-bold" : ""
       }`}
     >
-      <span className={forte ? "" : "text-muted-foreground"}>{label}</span>
-      <span className={forte ? "text-primary" : ""}>{brl(valor)}</span>
+      <span className={`min-w-0 break-words ${forte ? "" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`whitespace-nowrap tabular-nums ${forte ? "text-primary" : ""}`}>{brl(valor)}</span>
     </div>
   );
 }
@@ -179,9 +179,9 @@ function FinanceiroPage() {
             ) : (
               receitas.map((l) => (
                 <div key={String(l['id'])} className="flex items-center justify-between border-b border-border/60 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">{String(l['descricao'])}</span>
+                  <span className="min-w-0 break-words pr-2 text-muted-foreground">{String(l['descricao'])}</span>
                   <span className="flex items-center gap-2">
-                    <span className="font-bold">{brl(l['valor'])}</span>
+                    <span className="whitespace-nowrap font-bold tabular-nums">{brl(l['valor'])}</span>
                     <button type="button" className="text-destructive" onClick={() => mApagar.mutate(String(l['id']))}>
                       <Trash2 className="size-3.5" />
                     </button>
@@ -207,7 +207,7 @@ function FinanceiroPage() {
             <h2 className="border-b border-border bg-muted/40 px-3 py-2 text-sm font-bold uppercase tracking-wide">
               2. Despesas por categoria
             </h2>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-[11px] font-bold uppercase text-muted-foreground">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2 sm:gap-x-4 px-3 py-2 text-[11px] font-bold uppercase text-muted-foreground">
               <span>Categoria</span>
               <span className="text-right">Previsto</span>
               <span className="text-right">Realizado</span>
@@ -215,14 +215,14 @@ function FinanceiroPage() {
             {previstoPorCategoria.map((r) => (
               <div
                 key={String(r.categoria['id'])}
-                className="grid grid-cols-[1fr_auto_auto] gap-x-4 border-t border-border/60 px-3 py-2 text-sm"
+                className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2 sm:gap-x-4 border-t border-border/60 px-3 py-2 text-xs sm:text-sm"
               >
-                <span>{String(r.categoria['nome'])}</span>
-                <span className="text-right text-muted-foreground">{brl(r.previsto)}</span>
-                <span className="text-right font-bold">{brl(r.realizado)}</span>
+                <span className="min-w-0 break-words pr-1">{String(r.categoria['nome'])}</span>
+                <span className="whitespace-nowrap text-right tabular-nums text-muted-foreground">{brl(r.previsto)}</span>
+                <span className="whitespace-nowrap text-right font-bold tabular-nums">{brl(r.realizado)}</span>
               </div>
             ))}
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 border-t border-border px-3 py-2 text-sm font-bold">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2 sm:gap-x-4 border-t border-border px-3 py-2 text-sm font-bold">
               <span>Total</span>
               <span className="text-right">{brl(previstoTotal)}</span>
               <span className="text-right text-primary">{brl(totalDespesas)}</span>
@@ -238,9 +238,9 @@ function FinanceiroPage() {
             ) : (
               despesas.map((l) => (
                 <div key={String(l['id'])} className="flex items-center justify-between border-b border-border/60 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">{String(l['descricao'])}</span>
+                  <span className="min-w-0 break-words pr-2 text-muted-foreground">{String(l['descricao'])}</span>
                   <span className="flex items-center gap-2">
-                    <span className="font-bold">{brl(l['valor'])}</span>
+                    <span className="whitespace-nowrap font-bold tabular-nums">{brl(l['valor'])}</span>
                     <button type="button" className="text-destructive" onClick={() => mApagar.mutate(String(l['id']))}>
                       <Trash2 className="size-3.5" />
                     </button>
