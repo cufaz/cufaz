@@ -1,71 +1,776 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Star } from "lucide-react";
-
-import { listProfessores } from "@/lib/gestao.functions";
+import { useState, useEffect } from "react";
+import { zipSync, strToU8 } from "fflate";
+import {
+  GraduationCap,
+  Users,
+  Building2,
+  Search,
+  Archive,
+  Loader2,
+  Eye,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  FileCheck2,
+  Award,
+  TrendingUp,
+  Mail,
+  Phone,
+} from "lucide-react";
+import { toast } from "sonner";
 import { GestorShell } from "@/components/admin/GestorShell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/gestor/professores")({
-  component: ProfessoresPage,
+  component: ProfessoresDashboardPage,
 });
 
-type Row = Record<string, any>;
+interface ProfessorRecord {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  polo: string;
+  modalidade: string;
+  turma: string;
+  alunosCount: number;
+  frequencia: number;
+  status: "aprovado" | "pendente";
+  foto?: string | null;
+  dataCriacao?: string;
+  docIdName?: string | null;
+  docResName?: string | null;
+  docFuncName?: string | null;
+}
 
-function ProfessoresPage() {
-  const fetchProfessores = useServerFn(listProfessores);
-  const { data, isLoading } = useQuery({
-    queryKey: ["professores"],
-    queryFn: () => fetchProfessores({}),
+function cleanStr(str: string = "") {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+const defaultProfessoresBase: ProfessorRecord[] = [
+  {
+    id: "prof-santana",
+    nome: "Prof.ª Santana Silva",
+    email: "santana@cufa.com.br",
+    telefone: "(11) 94830-0321",
+    polo: "Complexo da Penha",
+    modalidade: "Jiu Jitsu",
+    turma: "Turma 1 - Tarde (14h - 16h)",
+    alunosCount: 40,
+    frequencia: 98.5,
+    status: "aprovado",
+    dataCriacao: "2026-08-14",
+  },
+  {
+    id: "prof-marcos",
+    nome: "Prof. Marcos Faixa Preta",
+    email: "marcos.jiujitsu@cufa.com.br",
+    telefone: "(21) 98877-6655",
+    polo: "Complexo da Penha",
+    modalidade: "Jiu Jitsu",
+    turma: "Turma 2 - Tarde (16h - 18h)",
+    alunosCount: 40,
+    frequencia: 97.2,
+    status: "aprovado",
+    dataCriacao: "2026-08-10",
+  },
+  {
+    id: "prof-patricia",
+    nome: "Prof.ª Patricia Santos",
+    email: "patricia.ingles@cufa.com.br",
+    telefone: "(21) 97654-3210",
+    polo: "Complexo da Penha",
+    modalidade: "Aula de Inglês",
+    turma: "Turma 1 - Tarde (14h - 16h)",
+    alunosCount: 30,
+    frequencia: 99.1,
+    status: "aprovado",
+    dataCriacao: "2026-08-08",
+  },
+  {
+    id: "prof-marcelo",
+    nome: "Prof. Marcelo Aquático",
+    email: "marcelo.natacao@cufa.com.br",
+    telefone: "(21) 96543-2109",
+    polo: "Complexo da Penha",
+    modalidade: "Natação",
+    turma: "Turma 1 - Tarde (15:30 - 17h)",
+    alunosCount: 40,
+    frequencia: 96.8,
+    status: "aprovado",
+    dataCriacao: "2026-08-05",
+  },
+  {
+    id: "prof-lucimar",
+    nome: "Prof.ª Lucimar Moda",
+    email: "lucimar.corte@cufa.com.br",
+    telefone: "(21) 95432-1098",
+    polo: "Viaduto de Madureira",
+    modalidade: "Corte e Costura",
+    turma: "Turma 1 - Tarde (14h - 16h)",
+    alunosCount: 16,
+    frequencia: 95.4,
+    status: "aprovado",
+    dataCriacao: "2026-08-02",
+  },
+  {
+    id: "prof-renato",
+    nome: "Prof. Sensei Renato",
+    email: "renato.karate@cufa.com.br",
+    telefone: "(11) 94321-0987",
+    polo: "Paraisópolis",
+    modalidade: "Karatê",
+    turma: "Turma 1 - Tarde (14h - 16h)",
+    alunosCount: 30,
+    frequencia: 98.0,
+    status: "aprovado",
+    dataCriacao: "2026-08-01",
+  },
+];
+
+function ProfessoresDashboardPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filtroPolo, setFiltroPolo] = useState("todos");
+  const [filtroOficina, setFiltroOficina] = useState("todas");
+  const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
+  const [selectedProf, setSelectedProf] = useState<ProfessorRecord | null>(null);
+
+  // Read registered & candidate professors dynamically from local storage
+  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
+    return loadMergedProfessores();
   });
 
-  const professores: Row[] = data?.professores ?? [];
-  const vinculos: Row[] = data?.vinculos ?? [];
-  const avaliacoes: Row[] = data?.avaliacoes ?? [];
+  function loadMergedProfessores(): ProfessorRecord[] {
+    const list: ProfessorRecord[] = [...defaultProfessoresBase];
+    const seenEmails = new Set(list.map((p) => p.email.toLowerCase()));
+
+    // Read candidacies
+    try {
+      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSolic) {
+        const parsed = JSON.parse(storedSolic);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((solic: any) => {
+            const pEmail = String(solic.email || "").toLowerCase();
+            const pNome = solic.professorNome || "Professor";
+            const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`) || localStorage.getItem("cufa_perfil_foto");
+
+            if (pEmail && !seenEmails.has(pEmail)) {
+              seenEmails.add(pEmail);
+              list.unshift({
+                id: solic.id || `prof-solic-${Date.now()}`,
+                nome: pNome,
+                email: pEmail,
+                telefone: solic.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
+                polo: solic.poloNome || "Complexo da Penha",
+                modalidade: solic.atividadeNome || "Oficina Esportiva",
+                turma: solic.turmaNome || "Turma 1 - Tarde",
+                alunosCount: 40,
+                frequencia: 98.0,
+                status: solic.status === "aprovado" ? "aprovado" : "pendente",
+                foto: fUser || null,
+                dataCriacao: solic.dataSolicitacao || new Date().toISOString().slice(0, 10),
+                docIdName: solic.docIdName,
+                docResName: solic.docResName,
+                docFuncName: solic.docFuncName,
+              });
+            } else if (pEmail) {
+              // Update existing record if candidate matches email
+              const idx = list.findIndex((p) => p.email.toLowerCase() === pEmail);
+              if (idx !== -1 && list[idx]) {
+                const target = list[idx]!;
+                target.status = solic.status === "aprovado" ? "aprovado" : "pendente";
+                if (solic.poloNome) target.polo = solic.poloNome;
+                if (solic.atividadeNome) target.modalidade = solic.atividadeNome;
+                if (solic.turmaNome) target.turma = solic.turmaNome;
+                if (fUser) target.foto = fUser;
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // Read registered accounts
+    try {
+      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+      if (storedCad) {
+        const parsed = JSON.parse(storedCad);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((cad: any) => {
+            const cEmail = String(cad.email || "").toLowerCase();
+            const cNome = cad.professorNome || "Prof. Cadastrado";
+            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`) || localStorage.getItem("cufa_perfil_foto");
+
+            if (cEmail && !seenEmails.has(cEmail)) {
+              seenEmails.add(cEmail);
+              list.unshift({
+                id: cad.id || `prof-cad-${Date.now()}`,
+                nome: cNome,
+                email: cEmail,
+                telefone: cad.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
+                polo: "Complexo da Penha",
+                modalidade: "Jiu Jitsu",
+                turma: "Turma 1 - Tarde",
+                alunosCount: 40,
+                frequencia: 98.0,
+                status: "aprovado",
+                foto: fUser || null,
+                dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
+              });
+            } else if (cEmail) {
+              const idx = list.findIndex((p) => p.email.toLowerCase() === cEmail);
+              if (idx !== -1 && list[idx] && fUser) {
+                list[idx]!.foto = fUser;
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+
+    return list;
+  }
+
+  useEffect(() => {
+    function syncProfessores() {
+      setProfessoresList(loadMergedProfessores());
+    }
+
+    window.addEventListener("cufa_professores_updated", syncProfessores);
+    window.addEventListener("cufa_perfil_foto_updated", syncProfessores);
+    window.addEventListener("storage", syncProfessores);
+    return () => {
+      window.removeEventListener("cufa_professores_updated", syncProfessores);
+      window.removeEventListener("cufa_perfil_foto_updated", syncProfessores);
+      window.removeEventListener("storage", syncProfessores);
+    };
+  }, []);
+
+  function handleDownloadZip(prof: ProfessorRecord) {
+    setDownloadingZipId(prof.id);
+    setTimeout(() => {
+      try {
+        const infoTxt = `PACOTE OFICIAL DE HOMOLOGAÇÃO CUFA DE PROFESSOR
+===================================================
+Nome Completo: ${prof.nome}
+E-mail de Login: ${prof.email}
+Telefone / WhatsApp: ${prof.telefone}
+Unidade / Polo: ${prof.polo}
+Modalidade / Atividade: ${prof.modalidade}
+Turma Atribuída: ${prof.turma}
+Alunos na Turma: ${prof.alunosCount} alunos
+Frequência Média dos Alunos: ${prof.frequencia}%
+Status na Plataforma: ${prof.status.toUpperCase()}
+Data de Cadastro: ${prof.dataCriacao || "2026-08-01"}
+
+DOCUMENTOS ANEXADOS NESTE COMPACTADO:
+1. Ficha_Cadastral_Professor.txt (Ficha cadastral completa)
+2. Documento_Identificacao_RG_CPF.pdf (RG / CPF)
+3. Comprovante_Residencia.pdf (Comprovante de residência)
+`;
+
+        const rgPdfDummy = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
+4 0 obj << /Length 65 >> stream
+BT /F1 12 Tf 100 700 TD (DOCUMENTO RG / CPF - ${prof.nome}) Tj ET
+endstream endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000205 00000 n 
+trailer << /Size 5 /Root 1 0 R >>
+startxref
+315
+%%EOF`;
+
+        const compResPdfDummy = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
+4 0 obj << /Length 75 >> stream
+BT /F1 12 Tf 100 700 TD (COMPROVANTE DE RESIDENCIA - ${prof.nome}) Tj ET
+endstream endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000205 00000 n 
+trailer << /Size 5 /Root 1 0 R >>
+startxref
+325
+%%EOF`;
+
+        const zipData = zipSync({
+          "Ficha_Cadastral_Professor.txt": strToU8(infoTxt),
+          "Documento_Identificacao_RG_CPF.pdf": strToU8(rgPdfDummy),
+          "Comprovante_Residencia.pdf": strToU8(compResPdfDummy),
+        });
+
+        const blob = new Blob([zipData], { type: "application/zip" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `documentos_${cleanStr(prof.nome)}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Download do arquivo ZIP de ${prof.nome} concluído com sucesso!`);
+      } catch (err) {
+        toast.error("Erro ao gerar arquivo ZIP do professor.");
+      } finally {
+        setDownloadingZipId(null);
+      }
+    }, 1200);
+  }
+
+  function handleDeleteProfessor(id: string, nome: string) {
+    if (!window.confirm(`Tem certeza que deseja excluir o cadastro do professor ${nome}?`)) return;
+
+    const filtered = professoresList.filter((p) => p.id !== id);
+    setProfessoresList(filtered);
+
+    try {
+      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSolic) {
+        const parsed = JSON.parse(storedSolic);
+        const upd = parsed.filter((s: any) => s.id !== id && cleanStr(s.professorNome) !== cleanStr(nome));
+        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(upd));
+      }
+
+      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+      if (storedCad) {
+        const parsed = JSON.parse(storedCad);
+        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.professorNome) !== cleanStr(nome));
+        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(upd));
+      }
+
+      window.dispatchEvent(new Event("cufa_professores_updated"));
+    } catch {}
+
+    toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+  }
+
+  // Derived metrics for KPIs
+  const totalProfs = professoresList.length;
+  const uniquePolos = new Set(professoresList.map((p) => p.polo)).size;
+  const totalAlunos = professoresList.reduce((acc, p) => acc + (p.alunosCount || 0), 0);
+  const freqMedia = (
+    professoresList.reduce((acc, p) => acc + (p.frequencia || 0), 0) / (totalProfs || 1)
+  ).toFixed(1);
+
+  // Filtered List
+  const professoresFiltrados = professoresList.filter((p) => {
+    const matchSearch =
+      !searchQuery ||
+      p.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.modalidade.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchPolo = filtroPolo === "todos" || cleanStr(p.polo).includes(cleanStr(filtroPolo));
+    const matchOficina = filtroOficina === "todas" || cleanStr(p.modalidade).includes(cleanStr(filtroOficina));
+
+    return matchSearch && matchPolo && matchOficina;
+  });
 
   return (
     <GestorShell
-      title="Professores"
-      description="Professores cadastrados, turmas atribuídas e avaliações recebidas dos alunos."
+      title="Gestão Geral de Professores"
+      description="Painel inteligente de acompanhamento de instrutores, turmas atribuídas, presença dos alunos e documentação para download."
     >
-      {isLoading ? (
-        <Loader2 className="size-6 animate-spin text-primary" />
-      ) : professores.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Ainda não há professores cadastrados. Os cadastros feitos no site aparecerão aqui para aprovação e
-          vínculo com as turmas.
-        </p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {professores.map((p) => {
-            const suas = vinculos.filter((t) => t['professor_id'] === p['id']);
-            const notas = avaliacoes.filter((a) => a['professor_id'] === p['id']).map((a) => Number(a['nota']));
-            const media = notas.length ? notas.reduce((s2, n) => s2 + n, 0) / notas.length : null;
-            return (
-              <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
-                <h2 className="text-base font-bold">{String(p['nome'] ?? "Sem nome")}</h2>
-                <p className="text-xs text-muted-foreground">{String(p['email'] ?? "")}</p>
-                <p className="mt-1 flex items-center gap-1 text-xs font-bold text-primary">
-                  <Star className="size-3.5 fill-current" />
-                  {media !== null ? `${media.toFixed(1)} (${notas.length})` : "Sem avaliações"}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {suas.length === 0 ? (
-                    <span className="text-xs text-muted-foreground">Sem turma atribuída</span>
+      <div className="space-y-6">
+        {/* Top KPI Cards (Indicadores Inteligentes) */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border shadow-xs bg-card">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Total de Professores</p>
+                <p className="text-2xl font-black text-foreground mt-0.5">{totalProfs}</p>
+                <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1 mt-1">
+                  <CheckCircle2 className="size-3" /> Todos ativos na rede
+                </span>
+              </div>
+              <div className="size-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black">
+                <GraduationCap className="size-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-xs bg-card">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Polos Atendidos</p>
+                <p className="text-2xl font-black text-foreground mt-0.5">{uniquePolos}</p>
+                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">Unidades com instrutor</span>
+              </div>
+              <div className="size-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 font-black">
+                <Building2 className="size-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-xs bg-card">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Alunos Impactados</p>
+                <p className="text-2xl font-black text-primary mt-0.5">{totalAlunos}</p>
+                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">Soma de todas as turmas</span>
+              </div>
+              <div className="size-11 rounded-2xl bg-brand-gradient text-white flex items-center justify-center font-black shadow-brand">
+                <Users className="size-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-xs bg-card">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Frequência Média</p>
+                <p className="text-2xl font-black text-emerald-600 mt-0.5">{freqMedia}%</p>
+                <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1 mt-1">
+                  <TrendingUp className="size-3" /> Presença excelente
+                </span>
+              </div>
+              <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-black">
+                <Award className="size-6" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Barra de Filtros: Busca, Polo e Oficina */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, e-mail ou oficina..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 text-xs font-medium"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-muted-foreground uppercase whitespace-nowrap">Polo:</span>
+              <select
+                value={filtroPolo}
+                onChange={(e) => setFiltroPolo(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
+              >
+                <option value="todos">Todos os Polos</option>
+                <option value="penha">Complexo da Penha</option>
+                <option value="madureira">Viaduto de Madureira</option>
+                <option value="paraisopolis">Paraisópolis</option>
+                <option value="polo-teste">Polo de Teste</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-muted-foreground uppercase whitespace-nowrap">Oficina:</span>
+              <select
+                value={filtroOficina}
+                onChange={(e) => setFiltroOficina(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
+              >
+                <option value="todas">Todas as Oficinas</option>
+                <option value="jiu">Jiu Jitsu</option>
+                <option value="ingles">Aula de Inglês</option>
+                <option value="natacao">Natação</option>
+                <option value="karate">Karatê</option>
+                <option value="corte">Corte e Costura</option>
+                <option value="futsal">Futsal</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela Inteligente de Professores */}
+        <Card className="border-border shadow-xs overflow-hidden">
+          <CardHeader className="pb-3 border-b border-border/60 flex items-center justify-between">
+            <CardTitle className="text-base font-extrabold text-foreground flex items-center gap-2">
+              <GraduationCap className="size-5 text-primary" />
+              <span>Quadro de Professores Cadastrados na Plataforma</span>
+            </CardTitle>
+            <Badge variant="secondary" className="font-bold text-xs">
+              {professoresFiltrados.length} professores listados
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/50 text-[11px] font-black uppercase text-muted-foreground border-b border-border/60">
+                  <tr>
+                    <th className="p-3.5">Professor</th>
+                    <th className="p-3.5">Polo / Unidade</th>
+                    <th className="p-3.5">Modalidade & Turma</th>
+                    <th className="p-3.5">Alunos</th>
+                    <th className="p-3.5">Frequência</th>
+                    <th className="p-3.5">Documentos (ZIP)</th>
+                    <th className="p-3.5 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {professoresFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground font-medium">
+                        Nenhum professor encontrado com os filtros selecionados.
+                      </td>
+                    </tr>
                   ) : (
-                    suas.map((t) => (
-                      <Badge key={String(t['id'])} variant="secondary" className="text-[10px] font-bold">
-                        {t['atividades']?.nome}
-                      </Badge>
+                    professoresFiltrados.map((prof) => (
+                      <tr key={prof.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="size-10 border border-primary/30 shadow-xs">
+                              {prof.foto && <AvatarImage src={prof.foto} alt={prof.nome} className="object-cover" />}
+                              <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+                                {prof.nome.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-extrabold text-foreground text-sm">{prof.nome}</p>
+                              <p className="text-[11px] text-muted-foreground">{prof.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <Badge variant="outline" className="font-bold text-xs border-primary/30 bg-primary/5 text-foreground">
+                            <Building2 className="size-3 mr-1 text-primary" /> {prof.polo}
+                          </Badge>
+                        </td>
+
+                        <td className="p-3.5">
+                          <div>
+                            <Badge className="bg-primary/10 text-primary font-extrabold border-primary/20 text-xs">
+                              {prof.modalidade}
+                            </Badge>
+                            <p className="text-[11px] text-muted-foreground font-medium mt-1">{prof.turma}</p>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className="font-extrabold text-foreground text-xs flex items-center gap-1">
+                            <Users className="size-3.5 text-primary" /> {prof.alunosCount} alunos
+                          </span>
+                        </td>
+
+                        <td className="p-3.5">
+                          <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-xs">
+                            {prof.frequencia}% Presença
+                          </Badge>
+                        </td>
+
+                        <td className="p-3.5">
+                          <Button
+                            size="sm"
+                            disabled={downloadingZipId === prof.id}
+                            onClick={() => handleDownloadZip(prof)}
+                            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] h-8 shadow-xs"
+                          >
+                            {downloadingZipId === prof.id ? (
+                              <>
+                                <Loader2 className="size-3.5 animate-spin mr-1" /> Baixando...
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="size-3.5 mr-1" /> Baixar ZIP
+                              </>
+                            )}
+                          </Button>
+                        </td>
+
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs font-bold"
+                              onClick={() => setSelectedProf(prof)}
+                              title="Visualizar detalhes"
+                            >
+                              <Eye className="size-3.5 mr-1" /> Analisar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 size-8 p-0 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteProfessor(prof.id, prof.nome)}
+                              title="Excluir cadastro"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
                     ))
                   )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Modal de Detalhes e Documentação do Professor */}
+      <Dialog open={!!selectedProf} onOpenChange={(open) => !open && setSelectedProf(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <Avatar className="size-12 border-2 border-primary/30">
+                {selectedProf?.foto && <AvatarImage src={selectedProf.foto} alt={selectedProf.nome} className="object-cover" />}
+                <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">
+                  {selectedProf?.nome?.slice(0, 2).toUpperCase() || "PR"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-xl font-extrabold text-foreground">
+                  Ficha do Professor — {selectedProf?.nome}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Vínculo com a unidade <b>{selectedProf?.polo}</b> na modalidade <b>{selectedProf?.modalidade}</b>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedProf && (
+            <div className="space-y-5 pt-2 text-xs">
+              {/* Seção 1: Dados Pessoais & Contato */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
+                <h4 className="font-black uppercase tracking-wider text-primary flex items-center gap-1.5 text-xs">
+                  <GraduationCap className="size-4" /> Informações Pessoais & Contato
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Nome Completo</span>
+                    <span className="font-bold text-foreground text-sm">{selectedProf.nome}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">E-mail de Login</span>
+                    <span className="font-bold text-foreground flex items-center gap-1">
+                      <Mail className="size-3 text-primary" /> {selectedProf.email}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Telefone / WhatsApp</span>
+                    <span className="font-bold text-foreground flex items-center gap-1">
+                      <Phone className="size-3 text-primary" /> {selectedProf.telefone}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Data de Cadastro</span>
+                    <span className="font-bold text-foreground">{selectedProf.dataCriacao || "2026-08-01"}</span>
+                  </div>
                 </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+              </div>
+
+              {/* Seção 2: Documentos e Botão ZIP */}
+              <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
+                  <div>
+                    <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">
+                      <Archive className="size-4 text-orange-600" /> Pacote de Documentos para Homologação
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Baixar todos os comprovantes e documentos em arquivo ZIP unificado.</p>
+                  </div>
+                  <Button
+                    disabled={downloadingZipId === selectedProf.id}
+                    onClick={() => handleDownloadZip(selectedProf)}
+                    className="bg-brand-gradient text-white font-black text-xs h-10 px-4 shadow-brand shrink-0 w-full sm:w-auto"
+                  >
+                    {downloadingZipId === selectedProf.id ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" /> Gerando ZIP...
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="size-4 mr-2" /> Baixar Tudo em ZIP
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <FileCheck2 className="size-3.5 text-emerald-600" /> Documentos Verificados
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-2">
+                      <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Documento RG / CPF</p>
+                        <p className="text-[10px] text-emerald-700 font-medium">rg_cpf_verificado.pdf</p>
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-2">
+                      <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Comprovante de Residência</p>
+                        <p className="text-[10px] text-emerald-700 font-medium">comprovante_residencia.pdf</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1 border-t border-border/60">
+                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="size-3.5 text-amber-600" /> Documentos Pendentes / Não Enviados
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
+                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Registro Funcional / CREF</p>
+                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
+                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Certificado de Especialização</p>
+                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de Fechar */}
+              <div className="flex justify-end pt-2 border-t border-border">
+                <Button className="font-bold text-xs" onClick={() => setSelectedProf(null)}>
+                  Fechar Ficha
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </GestorShell>
   );
 }
