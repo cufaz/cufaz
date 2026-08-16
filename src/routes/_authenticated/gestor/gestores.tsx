@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { UserCheck, Plus, Lock, Mail, User, ShieldCheck } from "lucide-react";
+import { UserCheck, Plus, Lock, Mail, User, ShieldCheck, Key, Building2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { GestorShell } from "@/components/admin/GestorShell";
@@ -24,7 +24,9 @@ interface GestorItem {
   id: string;
   nome: string;
   email: string;
-  funcao: string;
+  senha: string;
+  tipo: "geral" | "polo";
+  poloNome: string;
   dataCriacao: string;
   ativo: boolean;
 }
@@ -33,9 +35,11 @@ export function GestoresPage() {
   const [gestores, setGestores] = useState<GestorItem[]>([
     {
       id: "g1",
-      nome: "Gestor Principal CUFA",
+      nome: "Gestor Geral CUFA",
       email: "gestor@cufa.com.br",
-      funcao: "Gestor Geral",
+      senha: "gestao26",
+      tipo: "geral",
+      poloNome: "Todos os Polos (Acesso Geral)",
       dataCriacao: "2026-08-01",
       ativo: true,
     },
@@ -43,7 +47,9 @@ export function GestoresPage() {
       id: "g2",
       nome: "Alessandra Vieira",
       email: "alessandra.penha@cufa.com.br",
-      funcao: "Gestor de Polo (Penha)",
+      senha: "penha2026",
+      tipo: "polo",
+      poloNome: "Complexo da Penha",
       dataCriacao: "2026-08-05",
       ativo: true,
     },
@@ -51,17 +57,31 @@ export function GestoresPage() {
       id: "g3",
       nome: "Aline Góes",
       email: "aline.madureira@cufa.com.br",
-      funcao: "Gestor de Polo (Madureira)",
+      senha: "madureira2026",
+      tipo: "polo",
+      poloNome: "Viaduto de Madureira",
       dataCriacao: "2026-08-08",
+      ativo: true,
+    },
+    {
+      id: "g4",
+      nome: "Renato Silva",
+      email: "renato.paraisopolis@cufa.com.br",
+      senha: "paraisopolis2026",
+      tipo: "polo",
+      poloNome: "Paraisópolis",
+      dataCriacao: "2026-08-10",
       ativo: true,
     },
   ]);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(true);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [funcao, setFuncao] = useState("Gestor de Polo");
+  const [tipo, setTipo] = useState<"geral" | "polo">("polo");
+  const [poloNome, setPoloNome] = useState("Complexo da Penha");
 
   function handleCriarGestor(e: React.FormEvent) {
     e.preventDefault();
@@ -74,14 +94,16 @@ export function GestoresPage() {
       id: `g-${Date.now()}`,
       nome,
       email,
-      funcao,
+      senha,
+      tipo,
+      poloNome: tipo === "geral" ? "Todos os Polos (Acesso Geral)" : poloNome,
       dataCriacao: new Date().toISOString().slice(0, 10),
       ativo: true,
     };
 
     setGestores([...gestores, novo]);
-    toast.success("Gestor cadastrado com sucesso!", {
-      description: `Acesso criado para ${email}`,
+    toast.success("Acesso de gestor cadastrado com sucesso!", {
+      description: `E-mail: ${email} | Polo: ${novo.poloNome}`,
     });
     setModalOpen(false);
     setNome("");
@@ -89,66 +111,174 @@ export function GestoresPage() {
     setSenha("");
   }
 
+  function handleResetSenha(g: GestorItem) {
+    const novaSenha = `${g.senha.split("2026")[0] || "cufa"}2026!`;
+    setGestores(
+      gestores.map((item) =>
+        item.id === g.id ? { ...item, senha: novaSenha } : item
+      )
+    );
+    toast.success(`Senha resetada para ${g.nome}`, {
+      description: `Nova senha: ${novaSenha}`,
+    });
+  }
+
+  const gestorGeral = gestores.filter((g) => g.tipo === "geral");
+  const gestoresPolos = gestores.filter((g) => g.tipo === "polo");
+
   return (
     <GestorShell
       title="Acessos de Gestores"
-      description="Gerencie os usuários e administradores com acesso ao Painel do Gestor."
+      description="Gestão de credenciais, senhas e permissões — Gestor Geral e Gestores por Polo."
       actions={
-        <Button
-          className="bg-brand-gradient font-bold text-white shadow-brand"
-          onClick={() => setModalOpen(true)}
-        >
-          <Plus className="mr-1.5 size-4" /> Novo Gestor
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPasswords(!showPasswords)}
+            className="font-bold text-xs"
+          >
+            {showPasswords ? <EyeOff className="mr-1.5 size-3.5" /> : <Eye className="mr-1.5 size-3.5" />}
+            {showPasswords ? "Ocultar Senhas" : "Ver Senhas"}
+          </Button>
+          <Button
+            className="bg-brand-gradient font-bold text-white shadow-brand"
+            onClick={() => setModalOpen(true)}
+          >
+            <Plus className="mr-1.5 size-4" /> Novo Gestor
+          </Button>
+        </div>
       }
     >
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <ShieldCheck className="size-5 text-primary" /> Lista de Gestores Cadastrados
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Usuários autorizados a administrar polos, atividades e demonstrativos financeiros.
-            </p>
+      <div className="space-y-6">
+        {/* SEÇÃO 1: GESTOR GERAL DA PLATAFORMA (Anexo 2) */}
+        <div className="rounded-2xl border border-amber-500/30 bg-card p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-9 place-items-center rounded-xl bg-amber-500/10 text-amber-600">
+                <ShieldCheck className="size-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-extrabold text-foreground uppercase tracking-wide">
+                  1. Gestor Geral da Plataforma CUFA (Administração Global)
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Acesso único com controle total sobre todos os polos, demonstrativos e cadastros gerais.
+                </p>
+              </div>
+            </div>
+            <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30 font-bold">
+              Gestor Único Geral
+            </Badge>
           </div>
-          <Badge variant="secondary" className="font-bold">
-            {gestores.length} gestores
-          </Badge>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  <th className="pb-3">Nome</th>
+                  <th className="pb-3">E-mail de Login</th>
+                  <th className="pb-3">Senha de Acesso</th>
+                  <th className="pb-3">Abrangência</th>
+                  <th className="pb-3 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {gestorGeral.map((g) => (
+                  <tr key={g.id} className="hover:bg-muted/30">
+                    <td className="py-3.5 font-bold text-foreground flex items-center gap-2">
+                      <span className="grid size-8 place-items-center rounded-full bg-amber-500/10 text-amber-600 font-bold shrink-0">
+                        <User className="size-4" />
+                      </span>
+                      <span>{g.nome}</span>
+                    </td>
+                    <td className="py-3.5 text-muted-foreground font-medium">{g.email}</td>
+                    <td className="py-3.5">
+                      <span className="font-mono text-xs font-bold text-amber-700 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 inline-block">
+                        {showPasswords ? g.senha : "••••••••"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 font-semibold text-amber-700">{g.poloNome}</td>
+                    <td className="py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs font-bold border-amber-500/30 text-amber-700 hover:bg-amber-500/10"
+                        onClick={() => handleResetSenha(g)}
+                      >
+                        <Key className="size-3.5 mr-1" /> Resetar Senha
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                <th className="pb-3">Nome / Gestor</th>
-                <th className="pb-3">E-mail de Acesso</th>
-                <th className="pb-3">Perfil / Função</th>
-                <th className="pb-3">Data de Criação</th>
-                <th className="pb-3 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {gestores.map((g) => (
-                <tr key={g.id} className="hover:bg-muted/30">
-                  <td className="py-3.5 font-bold text-foreground flex items-center gap-2">
-                    <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary shrink-0">
-                      <User className="size-4" />
-                    </span>
-                    <span>{g.nome}</span>
-                  </td>
-                  <td className="py-3.5 text-muted-foreground font-medium">{g.email}</td>
-                  <td className="py-3.5 font-semibold text-foreground">{g.funcao}</td>
-                  <td className="py-3.5 text-muted-foreground">{g.dataCriacao}</td>
-                  <td className="py-3.5 text-right">
-                    <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border-emerald-500/30">
-                      Ativo
-                    </Badge>
-                  </td>
+        {/* SEÇÃO 2: GESTORES DE POLOS E UNIDADES (Anexo 2) */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Building2 className="size-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-extrabold text-foreground uppercase tracking-wide">
+                  2. Gestores Locais de Polos e Unidades (Visão Restrita por Polo)
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Cada gestor de polo acessa estritamente as atividades, vagas e custos da sua unidade.
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="font-bold">
+              {gestoresPolos.length} gestores de polo
+            </Badge>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  <th className="pb-3">Nome do Gestor</th>
+                  <th className="pb-3">E-mail de Login</th>
+                  <th className="pb-3">Senha de Acesso</th>
+                  <th className="pb-3">Unidade / Polo Responsável</th>
+                  <th className="pb-3 text-right">Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {gestoresPolos.map((g) => (
+                  <tr key={g.id} className="hover:bg-muted/30">
+                    <td className="py-3.5 font-bold text-foreground flex items-center gap-2">
+                      <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary shrink-0">
+                        <User className="size-4" />
+                      </span>
+                      <span>{g.nome}</span>
+                    </td>
+                    <td className="py-3.5 text-muted-foreground font-medium">{g.email}</td>
+                    <td className="py-3.5">
+                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 inline-block">
+                        {showPasswords ? g.senha : "••••••••"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 font-semibold text-foreground">{g.poloNome}</td>
+                    <td className="py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs font-bold"
+                        onClick={() => handleResetSenha(g)}
+                      >
+                        <Key className="size-3.5 mr-1" /> Resetar Senha
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -156,10 +286,22 @@ export function GestoresPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Cadastrar Novo Gestor</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Cadastrar Acesso de Gestor</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleCriarGestor} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Tipo de Gestor</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as "geral" | "polo")}
+              >
+                <option value="polo">Gestor de Polo / Unidade (Visão Restrita)</option>
+                <option value="geral">Gestor Geral CUFA (Visão Global)</option>
+              </select>
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Nome Completo</Label>
               <div className="relative">
@@ -175,7 +317,7 @@ export function GestoresPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">E-mail de Acesso</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">E-mail de Login</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
@@ -190,34 +332,35 @@ export function GestoresPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Senha Inicial</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Senha de Acesso</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
-                  type="password"
+                  type="text"
                   required
-                  placeholder="••••••••"
+                  placeholder="ex.: penha2026"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  className="pl-9 font-medium"
+                  className="pl-9 font-mono font-bold text-primary"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Função / Polo</Label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                value={funcao}
-                onChange={(e) => setFuncao(e.target.value)}
-              >
-                <option value="Gestor Geral">Gestor Geral</option>
-                <option value="Gestor de Polo (Penha)">Gestor de Polo (Penha)</option>
-                <option value="Gestor de Polo (Madureira)">Gestor de Polo (Madureira)</option>
-                <option value="Gestor de Polo (Paraisópolis)">Gestor de Polo (Paraisópolis)</option>
-                <option value="Coordenador Financeiro">Coordenador Financeiro</option>
-              </select>
-            </div>
+            {tipo === "polo" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Unidade / Polo Responsável</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={poloNome}
+                  onChange={(e) => setPoloNome(e.target.value)}
+                >
+                  <option value="Complexo da Penha">Complexo da Penha</option>
+                  <option value="Viaduto de Madureira">Viaduto de Madureira</option>
+                  <option value="Paraisópolis">Paraisópolis</option>
+                  <option value="Polo de Teste">Polo de Teste</option>
+                </select>
+              </div>
+            )}
 
             <DialogFooter className="pt-2">
               <Button type="submit" className="w-full bg-brand-gradient text-white font-bold shadow-brand">
