@@ -43,20 +43,56 @@ function ProfessorChamadaPage() {
   const [busca, setBusca] = useState("");
 
   const [alunos, setAlunos] = useState<any[]>(() => {
+    return loadAlunosList();
+  });
+
+  function loadAlunosList() {
+    const listMap = new Map<string, any>();
+
+    // 1. Read registered students in platform
     try {
-      const stored = localStorage.getItem("cufa_alunos_polo");
-      if (stored) {
-        const list = JSON.parse(stored);
-        return list.map((a: any, idx: number) => ({
-          id: a.id || `aluno-${idx}`,
-          nome: a.nome,
-          presente: true,
-          presencaPct: "100%",
-        }));
+      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
+      if (storedCad) {
+        const parsed = JSON.parse(storedCad);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const key = (a.nome || `Aluno ${idx}`).toLowerCase();
+            if (!listMap.has(key)) {
+              listMap.set(key, {
+                id: a.id || `aluno-cad-${idx}`,
+                nome: a.nome,
+                presente: true,
+                presencaPct: "100%",
+              });
+            }
+          });
+        }
       }
     } catch {}
-    return [];
-  });
+
+    // 2. Read polo students
+    try {
+      const storedPolo = localStorage.getItem("cufa_alunos_polo");
+      if (storedPolo) {
+        const parsed = JSON.parse(storedPolo);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const key = (a.nome || `Aluno ${idx}`).toLowerCase();
+            if (!listMap.has(key)) {
+              listMap.set(key, {
+                id: a.id || `aluno-polo-${idx}`,
+                nome: a.nome,
+                presente: true,
+                presencaPct: "100%",
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    return Array.from(listMap.values());
+  }
 
   function togglePresenca(id: string) {
     setAlunos((prev) =>

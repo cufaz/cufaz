@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -39,15 +39,15 @@ export function ProfessorShell({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [profNome] = useState(() => {
-    return localStorage.getItem("cufa_professor_nome") || "Prof. Marcos Faixa Preta";
+  const [profNome, setProfNome] = useState(() => {
+    return localStorage.getItem("cufa_professor_nome") || "Prof.ª Santana Silva";
   });
 
   const [profPolo] = useState(() => {
     return localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
   });
 
-  const [profFoto] = useState(() => {
+  const [profFoto, setProfFoto] = useState<string>(() => {
     const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
     const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
     if (fUser && !fUser.includes("unsplash.com")) return fUser;
@@ -55,6 +55,24 @@ export function ProfessorShell({
     if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
     return "";
   });
+
+  useEffect(() => {
+    function loadProfState() {
+      const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+      const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
+      const fGlobal = localStorage.getItem("cufa_perfil_foto");
+      setProfFoto((fUser && !fUser.includes("unsplash.com")) ? fUser : ((fGlobal && !fGlobal.includes("unsplash.com")) ? fGlobal : ""));
+
+      const savedName = localStorage.getItem("cufa_professor_nome");
+      if (savedName) setProfNome(savedName);
+    }
+
+    loadProfState();
+    window.addEventListener("cufa_perfil_foto_updated", loadProfState);
+    return () => {
+      window.removeEventListener("cufa_perfil_foto_updated", loadProfState);
+    };
+  }, []);
 
   const [notifOpen, setNotifOpen] = useState(false);
 

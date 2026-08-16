@@ -292,6 +292,21 @@ function DashboardPage() {
     ? percUtilizadoNum.toFixed(2) + "%"
     : percUtilizadoNum.toFixed(1) + "%";
 
+  // Calculate real student enrollments and total household members (Pessoas Impactadas)
+  const alunosCadastrados: any[] = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_alunos_cadastrados");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  })();
+
+  const totalMatriculadosReal = alunosCadastrados.length;
+  const totalPessoasImpactadas = alunosCadastrados.reduce((acc, a) => {
+    const qtd = Number(a.qtdPessoasResidencia || 0);
+    return acc + (qtd > 0 ? qtd : 1);
+  }, 0);
+
   const turmasVagas = turmas.reduce((s: number, t: { vagas: number }) => s + Number(t.vagas || 0), 0);
   const totalVagas = Math.max(totalBeneficiarios, turmasVagas);
   const pendentes = pedidos.filter((p: { status: string }) => p.status === "pendente");
@@ -371,14 +386,15 @@ function DashboardPage() {
           </div>
         </div>
       </div>
-      {/* Cards de KPIs Principais (Anexo 1, 2 & 3) */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      {/* Cards de KPIs Principais (Anexo 1, 2, 3 & 4) */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
         <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
         <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint={`Período do Projeto (${duracaoProjetoMeses} meses)`} />
         <Kpi label="Valores já utilizados" value={brl(despesasRealizadas)} hint="Despesas realizadas" />
         <Kpi label="% Orçamento utilizado" value={percUtilizadoStr} hint="Em relação ao previsto" />
         <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma de todos os polos" />
-        <Kpi label="Vagas / matrículas" value={`${matriculas.length} / ${totalVagas}`} />
+        <Kpi label="Pessoas impactadas" value={String(totalPessoasImpactadas)} hint="Soma de residentes dos alunos" />
+        <Kpi label="Vagas / matrículas" value={`${totalMatriculadosReal} / ${totalBeneficiarios}`} hint={`${totalMatriculadosReal} alunos matriculados`} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

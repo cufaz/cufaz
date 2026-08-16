@@ -41,7 +41,14 @@ function ProfessorPerfilPage() {
   const [linkedin, setLinkedin] = useState(() => localStorage.getItem("cufa_professor_linkedin") || "");
 
   // Photo state
-  const [foto, setFoto] = useState<string | null>(() => localStorage.getItem("cufa_perfil_foto"));
+  const [foto, setFoto] = useState<string | null>(() => {
+    const pEmail = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`);
+    if (fUser && !fUser.includes("unsplash.com")) return fUser;
+    const fGlobal = localStorage.getItem("cufa_perfil_foto");
+    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
+    return null;
+  });
   const [fotoNome, setFotoNome] = useState<string | null>(() => localStorage.getItem("cufa_perfil_foto_name"));
 
   function handleFotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -54,6 +61,10 @@ function ProfessorPerfilPage() {
         const res = evt.target?.result as string;
         setFoto(res);
         localStorage.setItem("cufa_perfil_foto", res);
+        if (email) {
+          localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, res);
+        }
+        window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
       };
       reader.readAsDataURL(file);
     }
