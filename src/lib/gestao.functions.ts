@@ -427,7 +427,8 @@ export const decidirPedido = createServerFn({ method: "POST" })
         })
         .eq("id", data.id)
         .select()
-        .single(),
+        .maybeSingle(),
+
     );
 
     await db(supabase).from("lancamentos_financeiros").delete().eq("pedido_id", data.id);
