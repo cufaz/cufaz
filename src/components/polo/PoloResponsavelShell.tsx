@@ -43,7 +43,7 @@ export function PoloResponsavelShell({
 
   async function handleSair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 650));
+    await new Promise((r) => setTimeout(r, 8200));
     try {
       localStorage.removeItem("cufa_logged_user");
       localStorage.removeItem("cufa_logged_role");
