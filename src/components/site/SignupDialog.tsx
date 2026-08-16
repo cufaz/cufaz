@@ -104,6 +104,11 @@ export function SignupDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [unidade, setUnidade] = useState("Complexo da Penha");
+
   const atual = perfis.find((p) => p.id === perfil);
 
   function fechar(v: boolean) {
@@ -113,9 +118,52 @@ export function SignupDialog({
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
-    toast.success("Cadastro enviado!", {
-      description: "Sua solicitação será analisada pela equipe CUFA.",
-    });
+    if (perfil === "responsavel") {
+      const uNome = unidade || "Complexo da Penha";
+      const gNome = nome.trim() || "Novo Responsável CUFA";
+      const gEmail = email.trim().toLowerCase() || "responsavel@cufa.com.br";
+      const sPrefix = uNome.toLowerCase().replace(/[^a-z0-9]/g, "") || "cufa";
+      const gSenha = `${sPrefix}2026`;
+
+      const novoGestor = {
+        id: `g-${Date.now()}`,
+        nome: gNome,
+        email: gEmail,
+        senha: gSenha,
+        tipo: "polo",
+        poloNome: uNome,
+        dataCriacao: new Date().toISOString().slice(0, 10),
+        ativo: true,
+      };
+
+      try {
+        const stored = localStorage.getItem("cufa_gestores_lista");
+        let list = stored ? JSON.parse(stored) : [
+          {
+            id: "g1",
+            nome: "Gestor Geral CUFA",
+            email: "gestor@cufa.com.br",
+            senha: "gestao26",
+            tipo: "geral",
+            poloNome: "Todos os Polos (Acesso Geral)",
+            dataCriacao: "2026-08-01",
+            ativo: true,
+          },
+        ];
+        list.push(novoGestor);
+        localStorage.setItem("cufa_gestores_lista", JSON.stringify(list));
+        window.dispatchEvent(new Event("cufa_gestores_updated"));
+      } catch {}
+
+      toast.success("Cadastro de Responsável liberado com sucesso!", {
+        description: `Acesso ativado para a unidade ${uNome}. Credencial: ${gEmail}`,
+      });
+    } else {
+      toast.success("Cadastro realizado com sucesso!", {
+        description: "Seu acesso à plataforma foi liberado imediatamente.",
+      });
+    }
+
     fechar(false);
   }
 
@@ -128,7 +176,7 @@ export function SignupDialog({
           </DialogTitle>
           <DialogDescription>
             {atual
-              ? "Preencha os dados abaixo para enviar sua solicitação."
+              ? "Preencha os dados abaixo para cadastrar seu acesso imediatamente."
               : "Escolha o seu perfil na plataforma CUFA."}
           </DialogDescription>
         </DialogHeader>
@@ -156,16 +204,30 @@ export function SignupDialog({
 
         {perfil && (
           <form className="grid gap-4" onSubmit={enviar}>
-            <Campo id="nome" label="Nome completo" required placeholder="Seu nome" />
+            <Campo id="nome" label="Nome completo" required placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Campo id="email" label="E-mail" type="email" required placeholder="voce@email.com" />
-              <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" />
+              <Campo id="email" label="E-mail" type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
             </div>
 
             {perfil === "responsavel" && (
               <>
                 <Campo id="cpf" label="CPF" required placeholder="000.000.000-00" />
-                <SeletorComunidade />
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade / Polo Responsável</Label>
+                  <Select value={unidade} onValueChange={setUnidade}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {comunidades.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </>
             )}
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserCheck, Plus, Lock, Mail, User, ShieldCheck, Key, Building2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,18 +32,42 @@ interface GestorItem {
 }
 
 export function GestoresPage() {
-  const [gestores, setGestores] = useState<GestorItem[]>([
-    {
-      id: "g1",
-      nome: "Gestor Geral CUFA",
-      email: "gestor@cufa.com.br",
-      senha: "gestao26",
-      tipo: "geral",
-      poloNome: "Todos os Polos (Acesso Geral)",
-      dataCriacao: "2026-08-01",
-      ativo: true,
-    },
-  ]);
+  const [gestores, setGestores] = useState<GestorItem[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_gestores_lista");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [
+      {
+        id: "g1",
+        nome: "Gestor Geral CUFA",
+        email: "gestor@cufa.com.br",
+        senha: "gestao26",
+        tipo: "geral",
+        poloNome: "Todos os Polos (Acesso Geral)",
+        dataCriacao: "2026-08-01",
+        ativo: true,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cufa_gestores_lista", JSON.stringify(gestores));
+    } catch {}
+  }, [gestores]);
+
+  useEffect(() => {
+    function syncGestores() {
+      try {
+        const stored = localStorage.getItem("cufa_gestores_lista");
+        if (stored) setGestores(JSON.parse(stored));
+      } catch {}
+    }
+
+    window.addEventListener("cufa_gestores_updated", syncGestores);
+    return () => window.removeEventListener("cufa_gestores_updated", syncGestores);
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [showPasswords, setShowPasswords] = useState(true);

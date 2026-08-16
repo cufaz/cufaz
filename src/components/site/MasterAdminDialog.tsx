@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Crown, Lock, ShieldCheck, Users, GraduationCap, UserCheck, Key, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,10 +29,49 @@ export function MasterAdminDialog({
   });
   const [activeTab, setActiveTab] = useState<"gestores" | "alunos" | "professores">("gestores");
 
-  // Mock Master Data for inspection of credentials and accounts
-  const [gestoresData, setGestoresData] = useState([
-    { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
-  ]);
+  const [gestoresData, setGestoresData] = useState(() => {
+    try {
+      const stored = localStorage.getItem("cufa_gestores_lista");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.map((g: any) => ({
+          id: g.id,
+          nome: g.nome,
+          email: g.email,
+          senha: g.senha,
+          polo: g.poloNome,
+          status: g.ativo ? "Ativo" : "Inativo",
+        }));
+      }
+    } catch {}
+    return [
+      { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
+    ];
+  });
+
+  useEffect(() => {
+    function syncMasterGestores() {
+      try {
+        const stored = localStorage.getItem("cufa_gestores_lista");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setGestoresData(
+            parsed.map((g: any) => ({
+              id: g.id,
+              nome: g.nome,
+              email: g.email,
+              senha: g.senha,
+              polo: g.poloNome,
+              status: g.ativo ? "Ativo" : "Inativo",
+            }))
+          );
+        }
+      } catch {}
+    }
+
+    window.addEventListener("cufa_gestores_updated", syncMasterGestores);
+    return () => window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
+  }, []);
 
   const [alunosData, setAlunosData] = useState([
     { id: "a1", nome: "Carlos Eduardo Silva", email: "carlos.silva@email.com", senha: "aluno123", polo: "Complexo da Penha", atividade: "Jiu Jitsu" },
@@ -230,7 +269,7 @@ export function MasterAdminDialog({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {gestoresData.map((g) => (
+                        {gestoresData.map((g: any) => (
                           <tr key={g.id} className="hover:bg-muted/30">
                             <td className="py-3 font-bold text-foreground">{g.nome}</td>
                             <td className="py-3 text-muted-foreground">{g.email}</td>
