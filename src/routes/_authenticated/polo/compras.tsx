@@ -25,6 +25,11 @@ interface PedidoItem {
   item: string;
   categoria: string;
   quantidade: string;
+  valor_total?: number;
+  valor_unitario?: number;
+  polo_nome?: string;
+  polo_id?: string;
+  competencia?: string;
   observacao: string;
   status: "pendente" | "aprovado" | "recusado";
   dataSolicitacao: string;
@@ -90,6 +95,7 @@ export function PoloComprasPage() {
   const [itemNome, setItemNome] = useState("");
   const [categoria, setCategoria] = useState(categoriasLista[0] || "Materiais esportivos");
   const [quantidade, setQuantidade] = useState("");
+  const [valorTotalStr, setValorTotalStr] = useState("");
   const [observacao, setObservacao] = useState("");
 
   function handleEnviarPedido(e: React.FormEvent) {
@@ -99,12 +105,22 @@ export function PoloComprasPage() {
       return;
     }
 
+    const currentPoloNome = localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
+    const qtdNum = parseFloat(quantidade.replace(/\D/g, "")) || 1;
+    const vTotalNum = parseFloat(valorTotalStr.replace(/\D/g, "")) / 100 || 0;
+    const vUnitNum = vTotalNum > 0 ? vTotalNum / qtdNum : 0;
+
     const novo: PedidoItem = {
       id: `ped-${Date.now()}`,
       item: itemNome,
       categoria,
-      quantidade,
+      quantidade: String(qtdNum),
+      valor_total: vTotalNum,
+      valor_unitario: vUnitNum,
       observacao,
+      polo_nome: currentPoloNome,
+      polo_id: currentPoloNome.toLowerCase().includes("penha") ? "penha" : currentPoloNome.toLowerCase().includes("madureira") ? "madureira" : currentPoloNome.toLowerCase().includes("paraisopolis") ? "paraisopolis" : "polo-teste",
+      competencia: "2026-08-01",
       status: "pendente",
       dataSolicitacao: new Date().toLocaleDateString("pt-BR"),
     };
@@ -113,14 +129,16 @@ export function PoloComprasPage() {
     setPedidos(atualizados);
     try {
       localStorage.setItem("cufa_compras_polo", JSON.stringify(atualizados));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
     } catch {}
 
     toast.success("Solicitação de compra enviada ao Gestor Geral!", {
-      description: `Item: ${itemNome} (${quantidade}) - Encaminhado para a fila de Pedidos.`,
+      description: `Polo: ${currentPoloNome} | Item: ${itemNome} (${quantidade})`,
     });
     setModalOpen(false);
     setItemNome("");
     setQuantidade("");
+    setValorTotalStr("");
     setObservacao("");
   }
 
@@ -240,15 +258,28 @@ export function PoloComprasPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Quantidade Necessária</Label>
-              <Input
-                required
-                placeholder="ex.: 15 unidades, 2 galões..."
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-                className="font-medium"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Quantidade</Label>
+                <Input
+                  required
+                  placeholder="ex.: 15"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="font-medium"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total Estimado (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={valorTotalStr}
+                  onChange={(e) => setValorTotalStr(e.target.value)}
+                  className="font-medium"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

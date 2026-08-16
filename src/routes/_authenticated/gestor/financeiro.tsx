@@ -168,16 +168,20 @@ function FinanceiroPage() {
     .map((p) => String(p['nome']).toLowerCase());
 
   // 1. Official Preset Items for Penha, Madureira, Paraisópolis
-  const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
-    if (isAllSelected) return true;
-    if (selectedPoloIds.includes(item.poloId)) return true;
-    return selectedPoloNames.some((pName) => {
-      if (pName.includes("penha") && item.poloId === "penha") return true;
-      if (pName.includes("madureira") && item.poloId === "madureira") return true;
-      if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-      return false;
-    });
-  });
+  const isPoloTesteOnly = !isAllSelected && selectedPoloNames.length > 0 && selectedPoloNames.every((pName) => pName.includes("teste"));
+
+  const presetItems = isPoloTesteOnly
+    ? []
+    : itensOrcamentoOFICIAIS.filter((item) => {
+        if (isAllSelected) return true;
+        if (selectedPoloIds.includes(item.poloId)) return true;
+        return selectedPoloNames.some((pName) => {
+          if (pName.includes("penha") && item.poloId === "penha") return true;
+          if (pName.includes("madureira") && item.poloId === "madureira") return true;
+          if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+          return false;
+        });
+      });
 
   const officialAtivNames = new Set(itensOrcamentoOFICIAIS.map((i) => i.atividade.toLowerCase()));
 
@@ -196,7 +200,8 @@ function FinanceiroPage() {
     const matchPolo =
       isAllSelected ||
       selectedPoloIds.includes(itemPoloId) ||
-      selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome) || (pName.includes("teste") && (itemPoloId.includes("teste") || itemPoloNome.includes("teste"))));
+      (itemPoloNome !== "" && selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome))) ||
+      (selectedPoloNames.some((pName) => pName.includes("teste")) && (itemPoloId.includes("teste") || itemPoloNome.includes("teste")));
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
@@ -231,7 +236,8 @@ function FinanceiroPage() {
     const matchPolo =
       isAllSelected ||
       selectedPoloIds.includes(aPoloId) ||
-      selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome) || (pName.includes("teste") && (aPoloId.includes("teste") || aPoloNome.includes("teste") || ativNome.toLowerCase().includes("vôlei") || ativNome.toLowerCase().includes("volei"))));
+      (aPoloNome !== "" && selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome))) ||
+      (selectedPoloNames.some((pName) => pName.includes("teste")) && (aPoloId.includes("teste") || aPoloNome.includes("teste") || ativNome.toLowerCase().includes("vôlei") || ativNome.toLowerCase().includes("volei")));
 
     if (matchPolo && Number(a['custo_mensal'] || 0) > 0) {
       const alreadyInDbCustom = dbCustomItems.some((di) => di.atividade.toLowerCase() === ativNome.toLowerCase());

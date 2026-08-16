@@ -188,6 +188,81 @@ function PedidosPage() {
     };
   }, []);
 
+  const [approveModalPedido, setApproveModalPedido] = useState<Row | null>(null);
+  const [aprovPoloNome, setAprovPoloNome] = useState<string>("Complexo da Penha");
+  const [aprovCategoria, setAprovCategoria] = useState<string>("Materiais / consumo");
+  const [aprovValorTotal, setAprovValorTotal] = useState<string>("0");
+
+  function openApprovalModal(p: Row) {
+    const currentPolo = p['polo_nome'] || p['polos']?.nome || "Complexo da Penha";
+    const currentCat = p['categoria'] || p['categorias_custo']?.nome || categorias[0] || "Materiais / consumo";
+    const currentVal = String(p['valor_total'] || p['valor'] || "0");
+
+    setApproveModalPedido(p);
+    setAprovPoloNome(currentPolo);
+    setAprovCategoria(currentCat);
+    setAprovValorTotal(currentVal);
+  }
+
+  function handleConfirmarAprovacao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!approveModalPedido) return;
+
+    const pId = String(approveModalPedido['id']);
+    const valNum = parseFloat(aprovValorTotal) || Number(approveModalPedido['valor_total']) || 0;
+    const poloIdCode = aprovPoloNome.toLowerCase().includes("penha")
+      ? "penha"
+      : aprovPoloNome.toLowerCase().includes("madureira")
+      ? "madureira"
+      : aprovPoloNome.toLowerCase().includes("paraisopolis") || aprovPoloNome.toLowerCase().includes("paraisópolis")
+      ? "paraisopolis"
+      : "polo-teste";
+
+    const updatedP = {
+      ...approveModalPedido,
+      polo_nome: aprovPoloNome,
+      polo_id: poloIdCode,
+      categoria: aprovCategoria,
+      valor_total: valNum,
+      status: "aprovado",
+    };
+
+    let updated = localPedidos.map((p) => (String(p['id']) === pId ? updatedP : p));
+    if (!localPedidos.some((p) => String(p['id']) === pId)) {
+      updated = [updatedP, ...localPedidos];
+    }
+
+    setLocalPedidos(updated);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+    } catch {}
+
+    // Register expense in financeiro!
+    const novoLanc = {
+      id: `lanc-ped-${Date.now()}`,
+      polo_id: poloIdCode,
+      descricao: `[Compra Aprovada] ${approveModalPedido['item'] || approveModalPedido['descricao'] || 'Pedido de Compra'}`,
+      valor: valNum,
+      tipo: "despesa",
+      natureza: "realizado",
+      categoria_id: aprovCategoria,
+      categoria_nome: aprovCategoria,
+      competencia: "2026-08-01",
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+      const listLanc = storedLanc ? JSON.parse(storedLanc) : [];
+      localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
+    } catch {}
+
+    mDecidir.mutate({ id: pId, status: "aprovado" });
+    toast.success(`Pedido APROVADO! Lançado R$ ${valNum.toFixed(2)} no Polo ${aprovPoloNome}!`);
+    setApproveModalPedido(null);
+  }
+
   function handleDecidirLocal(id: string, novoStatus: "aprovado" | "reprovado", pObj: Row) {
     let updated = localPedidos.map((p) => {
       if (String(p['id']) === String(id)) {
@@ -206,29 +281,8 @@ function PedidosPage() {
       window.dispatchEvent(new Event("cufa_pedidos_updated"));
     } catch {}
 
-    // If approved, add as a realized despesa in financeiro!
-    if (novoStatus === "aprovado") {
-      const novoLanc = {
-        id: `lanc-ped-${Date.now()}`,
-        polo_id: pObj['polo_id'] || "penha",
-        descricao: `[Compra Aprovada] ${pObj['item'] || pObj['descricao'] || 'Pedido de Compra'}`,
-        valor: Number(pObj['valor_total'] || pObj['valor'] || 0),
-        tipo: "despesa",
-        natureza: "realizado",
-        categoria_id: pObj['categoria_id'] || "cat-7",
-        categoria_nome: pObj['categoria'] || "Materiais / consumo",
-        competencia: "2026-08-01",
-        created_at: new Date().toISOString(),
-      };
-      try {
-        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-        const listLanc = storedLanc ? JSON.parse(storedLanc) : [];
-        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
-      } catch {}
-    }
-
     mDecidir.mutate({ id, status: novoStatus });
-    toast.success(novoStatus === "aprovado" ? "Pedido APROVADO e lançado no financeiro!" : "Pedido rejeitado!");
+    toast.success(novoStatus === "reprovado" ? "Pedido reprovado!" : "Pedido atualizado!");
   }
 
   const serverPedidos: Row[] = data ?? [];
@@ -286,48 +340,61 @@ function PedidosPage() {
         </p>
       ) : (
         <div className="grid gap-3">
-          {pedidos.map((p) => (
-            <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <Badge className={`mb-1 text-[10px] font-bold ${cor[String(p['status'])]}`} variant="secondary">
-                    {String(p['status']).toUpperCase()}
-                  </Badge>
-                  <h2 className="text-base font-bold">{String(p['item'])}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {p['polo_nome'] ?? p['polos']?.nome ?? "Geral"} · {p['categoria'] ?? p['categorias_custo']?.nome ?? "Sem categoria"} ·{" "}
-                    {competenciaLabel(String(p['competencia']))}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">{String(p['descricao'] ?? p['observacao'] ?? "")}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-primary">{brl(p['valor_total'])}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {String(p['quantidade'])} × {brl(p['valor_unitario'])}
-                  </p>
-                  {p['status'] === "pendente" ? (
-                    <div className="mt-2 flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
-                        onClick={() => handleDecidirLocal(String(p['id']), "aprovado", p)}
-                      >
-                        <Check className="mr-1 size-4" /> Aprovar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="font-bold text-destructive"
-                        onClick={() => handleDecidirLocal(String(p['id']), "reprovado", p)}
-                      >
-                        <X className="mr-1 size-4" /> Reprovar
-                      </Button>
+          {pedidos.map((p) => {
+            const pNomeStr = p['polo_nome'] ?? p['polos']?.nome ?? "Complexo da Penha";
+            const pCatStr = p['categoria'] ?? p['categorias_custo']?.nome ?? "Sem categoria";
+            const compStr = p['competencia'] ? competenciaLabel(String(p['competencia'])) : "Agosto / 2026";
+            const valNum = Number(p['valor_total'] || p['valor'] || 0);
+
+            return (
+              <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className={`text-[10px] font-bold ${cor[String(p['status'])]}`} variant="secondary">
+                        {String(p['status']).toUpperCase()}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] font-bold border-primary/30 text-primary">
+                        Polo: {pNomeStr}
+                      </Badge>
                     </div>
-                  ) : null}
+                    <h2 className="text-base font-bold">{String(p['item'])}</h2>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Categoria: <span className="text-foreground font-bold">{pCatStr}</span> · Competência: {compStr}
+                    </p>
+                    {p['descricao'] || p['observacao'] ? (
+                      <p className="mt-2 text-xs text-muted-foreground italic">"{String(p['descricao'] ?? p['observacao'])}"</p>
+                    ) : null}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">{brl(valNum)}</p>
+                    <p className="text-[11px] text-muted-foreground font-medium">
+                      Qtd: {String(p['quantidade'] || 1)}
+                    </p>
+                    {p['status'] === "pendente" ? (
+                      <div className="mt-2 flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 font-bold text-white hover:bg-emerald-700 shadow-sm"
+                          onClick={() => openApprovalModal(p)}
+                        >
+                          <Check className="mr-1 size-4" /> Aprovar / Definir Valores
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="font-bold text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDecidirLocal(String(p['id']), "reprovado", p)}
+                        >
+                          <X className="mr-1 size-4" /> Reprovar
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -549,6 +616,71 @@ function PedidosPage() {
               Concluir
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog para Aprovar / Definir Polo, Categoria e Valor (Anexo 5) */}
+      <Dialog open={Boolean(approveModalPedido)} onOpenChange={(v) => !v && setApproveModalPedido(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground">Aprovar e Lançar Pedido no Financeiro</DialogTitle>
+          </DialogHeader>
+          {approveModalPedido && (
+            <form onSubmit={handleConfirmarAprovacao} className="space-y-4 mt-2">
+              <div className="rounded-lg bg-muted/40 p-3 text-xs space-y-1">
+                <p className="font-bold text-foreground">Item Solicitado: {String(approveModalPedido['item'])}</p>
+                <p className="text-muted-foreground">Qtd: {String(approveModalPedido['quantidade'] || 1)}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Polo de Destino</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={aprovPoloNome}
+                  onChange={(e) => setAprovPoloNome(e.target.value)}
+                >
+                  <option value="Complexo da Penha">Complexo da Penha</option>
+                  <option value="Viaduto de Madureira">Viaduto de Madureira</option>
+                  <option value="Paraisópolis">Paraisópolis</option>
+                  <option value="Polo de Teste">Polo de Teste</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Categoria do Custo</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={aprovCategoria}
+                  onChange={(e) => setAprovCategoria(e.target.value)}
+                >
+                  {categorias.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total do Pedido (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={aprovValorTotal}
+                  onChange={(e) => setAprovValorTotal(e.target.value)}
+                  className="font-bold text-base text-primary"
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md">
+                  <Check className="mr-1.5 size-4" /> Confirmar Aprovação e Lançar
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </GestorShell>
