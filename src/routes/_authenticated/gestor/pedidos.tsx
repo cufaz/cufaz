@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Loader2, Check, X, Plus, Pencil, Trash2, Settings, Tag } from "lucide-react";
 import { toast } from "sonner";
 
-import { listPedidos, decidirPedido, criarPedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
+import { listPedidos, decidirPedido, criarPedido, deletePedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
