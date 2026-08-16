@@ -18,16 +18,21 @@ function ProfessorChamadaPage() {
   const [turmaSelecionada, setTurmaSelecionada] = useState("Jiu Jitsu — Turma Tarde A");
   const [busca, setBusca] = useState("");
 
-  const [alunos, setAlunos] = useState([
-    { id: "1", nome: "Gabriel Silva", presente: true, presencaPct: "95%" },
-    { id: "2", nome: "Lucas Souza", presente: true, presencaPct: "100%" },
-    { id: "3", nome: "Mariana Oliveira", presente: false, presencaPct: "85%" },
-    { id: "4", nome: "Enzo Santos", presente: true, presencaPct: "90%" },
-    { id: "5", nome: "Sophia Ferreira", presente: true, presencaPct: "95%" },
-    { id: "6", nome: "Matheus Pereira", presente: true, presencaPct: "100%" },
-    { id: "7", nome: "Beatriz Lima", presente: false, presencaPct: "80%" },
-    { id: "8", nome: "Cauã Alves", presente: true, presencaPct: "90%" },
-  ]);
+  const [alunos, setAlunos] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_alunos_polo");
+      if (stored) {
+        const list = JSON.parse(stored);
+        return list.map((a: any, idx: number) => ({
+          id: a.id || `aluno-${idx}`,
+          nome: a.nome,
+          presente: true,
+          presencaPct: "100%",
+        }));
+      }
+    } catch {}
+    return [];
+  });
 
   function togglePresenca(id: string) {
     setAlunos((prev) =>
@@ -132,39 +137,47 @@ function ProfessorChamadaPage() {
               />
             </div>
 
-            <div className="divide-y divide-border/60 rounded-xl border border-border overflow-hidden">
-              {alunosFiltrados.map((aluno) => (
-                <div
-                  key={aluno.id}
-                  onClick={() => togglePresenca(aluno.id)}
-                  className={`flex items-center justify-between p-3.5 text-xs transition-colors cursor-pointer ${
-                    aluno.presente ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "bg-card hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={aluno.presente}
-                      onCheckedChange={() => togglePresenca(aluno.id)}
-                    />
-                    <div>
-                      <span className="font-bold text-foreground block text-sm">{aluno.nome}</span>
-                      <span className="text-[10px] text-muted-foreground">Frequência acumulada: {aluno.presencaPct}</span>
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className={
-                      aluno.presente
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold"
-                        : "border-red-500/30 bg-red-500/10 text-red-600 font-bold"
-                    }
+            {alunos.length === 0 ? (
+              <div className="p-8 text-center border border-dashed border-border rounded-xl">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Nenhum aluno inscrito nesta oficina no momento. Cadastre alunos na aba 'Alunos Matriculados' para realizar a chamada.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/60 rounded-xl border border-border overflow-hidden">
+                {alunosFiltrados.map((aluno) => (
+                  <div
+                    key={aluno.id}
+                    onClick={() => togglePresenca(aluno.id)}
+                    className={`flex items-center justify-between p-3.5 text-xs transition-colors cursor-pointer ${
+                      aluno.presente ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "bg-card hover:bg-muted/50"
+                    }`}
                   >
-                    {aluno.presente ? "Presente" : "Ausente"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={aluno.presente}
+                        onCheckedChange={() => togglePresenca(aluno.id)}
+                      />
+                      <div>
+                        <span className="font-bold text-foreground block text-sm">{aluno.nome}</span>
+                        <span className="text-[10px] text-muted-foreground">Frequência acumulada: {aluno.presencaPct}</span>
+                      </div>
+                    </div>
+
+                    <Badge
+                      variant="outline"
+                      className={
+                        aluno.presente
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold"
+                          : "border-red-500/30 bg-red-500/10 text-red-600 font-bold"
+                      }
+                    >
+                      {aluno.presente ? "Presente" : "Ausente"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

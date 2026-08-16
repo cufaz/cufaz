@@ -60,6 +60,10 @@ export function PoloResponsavelShell({
     return localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
   });
 
+  const [loggedUserEmail] = useState(() => {
+    return (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+  });
+
   const [responsavelNome, setResponsavelNome] = useState(() => {
     try {
       const stored = localStorage.getItem("cufa_responsavel_perfil");
@@ -69,8 +73,10 @@ export function PoloResponsavelShell({
   });
 
   const [responsavelFoto, setResponsavelFoto] = useState(() => {
-    return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150";
+    return localStorage.getItem(`cufa_perfil_foto_${loggedUserEmail}`) || "";
   });
+
+  const [pendingProfCount, setPendingProfCount] = useState(0);
 
   // Notification Bell Popover State with localStorage persistence
   const [notifOpen, setNotifOpen] = useState(false);
@@ -99,6 +105,7 @@ export function PoloResponsavelShell({
               poloNome.toLowerCase().includes(s.poloNome?.toLowerCase() || ""))
         );
 
+        setPendingProfCount(pendingProf.length);
         pendingProf.forEach((s: any) => {
           list.push({
             id: `notif-prof-${s.id}`,
@@ -426,7 +433,12 @@ export function PoloResponsavelShell({
                   }`}
                 >
                   <Icon className="size-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {item.to === "/polo/atividades" && pendingProfCount > 0 && (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-amber-600 text-[10px] font-black text-white shadow-xs animate-pulse">
+                      {pendingProfCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

@@ -10,8 +10,42 @@ export const Route = createFileRoute("/_authenticated/professor/")({
 });
 
 function ProfessorDashboardPage() {
-  const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "Prof. Marcos Faixa Preta");
+  const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "Prof. Instrutor");
   const [profPolo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "").toLowerCase());
+
+  // Real activities for this professor
+  const minhasAtividades = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_professores_solicitacoes");
+      if (stored) {
+        const list = JSON.parse(stored);
+        return list.filter(
+          (s: any) =>
+            (profEmail && s.email && String(s.email).toLowerCase() === profEmail) ||
+            (profNome && s.professorNome && String(s.professorNome).toLowerCase() === profNome.toLowerCase())
+        );
+      }
+    } catch {}
+    return [];
+  })();
+
+  const temAprovada = minhasAtividades.some((a: any) => a.status === "aprovado");
+  const temPendente = minhasAtividades.some((a: any) => a.status === "pendente");
+
+  const alunosRealCount = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_alunos_polo");
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (minhasAtividades.length > 0) {
+          const ativNomes = minhasAtividades.map((a: any) => a.atividadeNome);
+          return list.filter((aluno: any) => ativNomes.includes(aluno.atividade)).length;
+        }
+      }
+    } catch {}
+    return 0;
+  })();
 
   return (
     <ProfessorShell
@@ -23,23 +57,29 @@ function ProfessorDashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="Minhas Atividades"
-            value="1"
-            hint="Jiu Jitsu (Aprovado)"
+            value={String(minhasAtividades.length)}
+            hint={
+              temAprovada
+                ? "Modalidade Aprovada"
+                : temPendente
+                ? "Aguardando Aprovação do Polo"
+                : "Sem atividade vinculada"
+            }
           />
           <Kpi
             label="Alunos na Turma"
-            value="35"
-            hint="Matriculados ativos"
+            value={String(alunosRealCount)}
+            hint={alunosRealCount > 0 ? "Matriculados ativos" : "Nenhum aluno inscrito"}
           />
           <Kpi
             label="Frequência Média"
-            value="92%"
-            hint="Últimas 4 semanas"
+            value="0%"
+            hint="Sem registros anteriores"
           />
           <Kpi
             label="Chamadas Realizadas"
-            value="18"
-            hint="Aulas registradas"
+            value="0"
+            hint="Aulas registradas no sistema"
           />
         </div>
 

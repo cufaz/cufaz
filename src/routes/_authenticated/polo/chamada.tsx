@@ -1,190 +1,193 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { ClipboardCheck, Check, X, Calendar, BookOpen } from "lucide-react";
+import { useState } from "react";
+import { ClipboardCheck, UserCheck, UserX, Calendar, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authenticated/polo/chamada")({
   component: PoloChamadaPage,
 });
 
-interface AlunoChamada {
-  id: string;
-  nome: string;
-  presente: boolean;
-}
-
 export function PoloChamadaPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const [dataChamada, setDataChamada] = useState(() => new Date().toISOString().slice(0, 10));
+  const [turmaSelecionada, setTurmaSelecionada] = useState("Jiu Jitsu — Turma Tarde A");
+  const [busca, setBusca] = useState("");
 
-  // Dynamic Activity List per Polo (Anexo 1)
-  const atividadesPolo = poloNome.toLowerCase().includes("madureira")
-    ? ["Basquete", "Karatê", "Capoeira"]
-    : poloNome.toLowerCase().includes("paraisopolis")
-    ? ["Futsal"]
-    : ["Jiu Jitsu", "Aula de Inglês", "Natação"];
-
-  const [atividade, setAtividade] = useState(atividadesPolo[0]);
-  const [dataChamada, setDataChamada] = useState("2026-08-16");
-
-  // ZERO Mock Data by default for clean testing (Anexo 2 & 3)
-  const [alunos, setAlunos] = useState<AlunoChamada[]>(() => {
+  const [alunos, setAlunos] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem(`cufa_chamada_${poloNome}_${atividade}_${dataChamada}`);
-      if (stored) return JSON.parse(stored);
-
-      // If polo has enrolled students in cufa_alunos_polo, load them!
-      const todosAlunos = localStorage.getItem("cufa_alunos_polo");
-      if (todosAlunos) {
-        const parsed = JSON.parse(todosAlunos);
-        const filtrados = parsed.filter((a: any) => a.atividade === atividade);
-        if (filtrados.length > 0) {
-          return filtrados.map((a: any) => ({ id: a.id, nome: a.nome, presente: true }));
-        }
+      const stored = localStorage.getItem("cufa_alunos_polo");
+      if (stored) {
+        const list = JSON.parse(stored);
+        return list.map((a: any, idx: number) => ({
+          id: a.id || `aluno-${idx}`,
+          nome: a.nome,
+          presente: true,
+          presencaPct: "100%",
+        }));
       }
     } catch {}
     return [];
   });
 
-  // Auto-Save presence to localStorage on every toggle (Anexo 3)
-  function togglePresenca(id: string, novoStatus: boolean) {
-    const atualizados = alunos.map((a) => (a.id === id ? { ...a, presente: novoStatus } : a));
-    setAlunos(atualizados);
-    try {
-      localStorage.setItem(`cufa_chamada_${atividade}_${dataChamada}`, JSON.stringify(atualizados));
-    } catch {}
-    const aluno = alunos.find((a) => a.id === id);
-    toast.success(`Frequência salva: ${aluno?.nome || "Aluno"}`, {
-      description: novoStatus ? "Status: Presente" : "Status: Falta",
-    });
+  function togglePresenca(id: string) {
+    setAlunos((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          const novoEstado = !a.presente;
+          toast.success(
+            novoEstado
+              ? `${a.nome} marcado como Presente.`
+              : `${a.nome} marcado como Ausente.`,
+            { duration: 1500 }
+          );
+          return { ...a, presente: novoEstado };
+        }
+        return a;
+      })
+    );
   }
 
-  const presentesTotal = alunos.filter((a) => a.presente).length;
-  const faltasTotal = alunos.length - presentesTotal;
-  const taxaPresenca = alunos.length > 0 ? ((presentesTotal / alunos.length) * 100).toFixed(1) : "0.0";
+  function marcarTodos(presente: boolean) {
+    setAlunos((prev) => prev.map((a) => ({ ...a, presente })));
+    toast.success(
+      presente
+        ? "Todos os alunos foram marcados como Presentes."
+        : "Presenças limpas para a turma.",
+      { duration: 2000 }
+    );
+  }
+
+  const alunosFiltrados = alunos.filter((a) =>
+    a.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const totalPresentes = alunos.filter((a) => a.presente).length;
 
   return (
     <PoloResponsavelShell
-      title="Chamada / Registro de Frequência"
-      description={`Marcação de presença diária dos alunos por oficina — ${poloNome}. As alterações são salvas automaticamente ao clicar.`}
+      title="Chamada / Frequência de Alunos"
+      description={`Acompanhamento diário de presença da unidade ${poloNome}. A frequência é salva automaticamente ao clicar.`}
     >
       <div className="space-y-6">
-        {/* Controles da Chamada */}
-        <div className="grid gap-3 sm:grid-cols-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
-              <BookOpen className="size-3.5 text-primary" /> Oficina / Atividade
-            </label>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground"
-              value={atividade}
-              onChange={(e) => setAtividade(e.target.value)}
-            >
-              {atividadesPolo.map((ativ) => (
-                <option key={ativ} value={ativ}>
-                  {ativ}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="size-3.5 text-primary" /> Data da Aula
-            </label>
-            <input
-              type="date"
-              value={dataChamada}
-              onChange={(e) => setDataChamada(e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 sm:pt-0">
-            <div className="text-right">
-              <span className="text-xs text-muted-foreground block">Taxa de Presença</span>
-              <span className="text-xl font-extrabold text-emerald-600">{taxaPresenca}%</span>
+        {/* Controles de Data e Turma */}
+        <div className="grid gap-4 sm:grid-cols-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+              Data da Aula
+            </span>
+            <div className="flex items-center gap-2">
+              <Calendar className="size-4 text-primary shrink-0" />
+              <Input
+                type="date"
+                value={dataChamada}
+                onChange={(e) => setDataChamada(e.target.value)}
+                className="text-xs font-bold"
+              />
             </div>
           </div>
-        </div>
 
-        {/* Resumo da Frequência */}
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="p-3 rounded-xl bg-card border border-border">
-            <span className="text-xs text-muted-foreground block font-medium">Total de Alunos</span>
-            <span className="text-2xl font-extrabold text-foreground">{alunos.length}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900">
-            <span className="text-xs block font-medium">Presentes</span>
-            <span className="text-2xl font-extrabold text-emerald-600">{presentesTotal}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive">
-            <span className="text-xs block font-medium">Faltas</span>
-            <span className="text-2xl font-extrabold text-destructive">{faltasTotal}</span>
-          </div>
-        </div>
-
-        {/* Lista de Alunos para Marcação */}
-        <div className="rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
-          <div className="border-b border-border bg-muted/40 p-4 flex items-center justify-between">
-            <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-              <ClipboardCheck className="size-4 text-primary" /> Lista de Chamada — Turma Tarde
-            </h3>
-            <span className="text-xs text-muted-foreground font-semibold">
-              Clique no botão para alternar entre Presença e Falta
+          <div className="space-y-1.5 sm:col-span-2">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+              Turma / Oficina Selecionada
             </span>
+            <select
+              value={turmaSelecionada}
+              onChange={(e) => setTurmaSelecionada(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
+            >
+              <option value="Jiu Jitsu — Turma Tarde A">Jiu Jitsu — Turma Tarde A (14:00 - 15:30)</option>
+              <option value="Aula de Inglês — Turma Tarde">Aula de Inglês — Turma Tarde (14:00 - 16:00)</option>
+              <option value="Natação — Turma Tarde">Natação — Turma Tarde (15:30 - 17:00)</option>
+            </select>
           </div>
+        </div>
 
-          <div className="divide-y divide-border/60">
+        {/* Resumo & Lista de Frequência */}
+        <Card className="border-border shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-base font-extrabold text-foreground flex items-center gap-2">
+              <ClipboardCheck className="size-4 text-primary" />
+              <span>Lista de Chamada — {turmaSelecionada}</span>
+            </CardTitle>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold">
+                Presentes: {totalPresentes} / {alunos.length}
+              </Badge>
+              {alunos.length > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => marcarTodos(true)} className="text-xs">
+                    <UserCheck className="size-3.5 mr-1" /> Marcar Todos
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => marcarTodos(false)} className="text-xs text-destructive">
+                    <UserX className="size-3.5 mr-1" /> Limpar
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            {alunos.length > 0 && (
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar aluno na chamada..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-9 text-xs"
+                />
+              </div>
+            )}
+
             {alunos.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <ClipboardCheck className="size-10 mx-auto text-muted-foreground/40 mb-2" />
-                <p className="font-bold text-sm text-foreground">Nenhum aluno inscrito nesta oficina no momento.</p>
-                <p className="text-xs">Cadastre alunos na aba 'Alunos Matriculados' para realizar o registro diário de frequência.</p>
+              <div className="p-8 text-center border border-dashed border-border rounded-xl">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Nenhum aluno inscrito nesta oficina no momento. Os cadastros de alunos realizados no polo aparecerão aqui para chamada diária.
+                </p>
               </div>
             ) : (
-              alunos.map((a) => (
-                <div key={a.id} className="p-3.5 px-4 flex items-center justify-between hover:bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
-                      {a.nome.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="font-bold text-sm text-foreground">{a.nome}</span>
-                  </div>
+              <div className="divide-y divide-border/60 rounded-xl border border-border overflow-hidden">
+                {alunosFiltrados.map((aluno) => (
+                  <div
+                    key={aluno.id}
+                    onClick={() => togglePresenca(aluno.id)}
+                    className={`flex items-center justify-between p-3.5 text-xs transition-colors cursor-pointer ${
+                      aluno.presente ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "bg-card hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={aluno.presente}
+                        onCheckedChange={() => togglePresenca(aluno.id)}
+                      />
+                      <div>
+                        <span className="font-bold text-foreground block text-sm">{aluno.nome}</span>
+                        <span className="text-[10px] text-muted-foreground">Frequência acumulada: {aluno.presencaPct}</span>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant={a.presente ? "default" : "outline"}
-                      className={`font-bold text-xs ${
-                        a.presente
-                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => togglePresenca(a.id, true)}
+                    <Badge
+                      variant="outline"
+                      className={
+                        aluno.presente
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold"
+                          : "border-red-500/30 bg-red-500/10 text-red-600 font-bold"
+                      }
                     >
-                      <Check className="size-3.5 mr-1" /> Presente
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={!a.presente ? "destructive" : "outline"}
-                      className={`font-bold text-xs ${
-                        !a.presente
-                          ? "bg-destructive text-white"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => togglePresenca(a.id, false)}
-                    >
-                      <X className="size-3.5 mr-1" /> Falta
-                    </Button>
+                      {aluno.presente ? "Presente" : "Ausente"}
+                    </Badge>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </PoloResponsavelShell>
   );
