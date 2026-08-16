@@ -20,10 +20,10 @@ export function AuthLoadingOverlay({
       return;
     }
 
-    // 5 Seconds Total Animation Time
-    const totalMs = 5000;
-    const intervalMs = 50;
-    const step = 100 / (totalMs / intervalMs); // 1% per 50ms
+    // 3 Seconds Total Animation Time
+    const totalMs = 3000;
+    const intervalMs = 30;
+    const step = 100 / (totalMs / intervalMs);
 
     setProgress(0);
     const interval = setInterval(() => {

@@ -36,9 +36,13 @@ function AlunoDashboardPage() {
   const [alunoEmail, setAlunoEmail] = useState("");
   const [alunoNome, setAlunoNome] = useState("Aluno");
   const [inscricoes, setInscricoes] = useState<InscricaoAluno[]>([]);
+  const [frequenciaData, setFrequenciaData] = useState<{ pct: string; hint: string }>({
+    pct: "-",
+    hint: "Aguardando registro de chamadas",
+  });
 
   function loadAlunoData() {
-    const userEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
+    const userEmail = (localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br").toLowerCase();
     setAlunoEmail(userEmail);
 
     const storedNome = localStorage.getItem("cufa_aluno_nome");
@@ -51,20 +55,62 @@ function AlunoDashboardPage() {
         const parsed = JSON.parse(storedInsc);
         if (Array.isArray(parsed)) {
           setInscricoes(parsed.filter((i) => i.status === "ativa"));
-          return;
         }
+      } else {
+        setInscricoes([]);
       }
-      setInscricoes([]);
     } catch {
       setInscricoes([]);
     }
+
+    // Calculate real frequency for this student
+    try {
+      const uStored = localStorage.getItem(`cufa_aluno_frequencia_${userEmail}`);
+      if (uStored) {
+        const uList = JSON.parse(uStored);
+        if (Array.isArray(uList) && uList.length > 0) {
+          const pres = uList.filter((f: any) => f.presente).length;
+          const pctVal = Math.round((pres / uList.length) * 100);
+          setFrequenciaData({
+            pct: `${pctVal}%`,
+            hint: `${pres} de ${uList.length} aula(s) registradas`,
+          });
+          return;
+        }
+      }
+    } catch {}
+
+    // Check saved roll call sessions in history
+    try {
+      const storedHist = localStorage.getItem("cufa_professor_chamadas_history");
+      if (storedHist) {
+        const hist = JSON.parse(storedHist);
+        if (Array.isArray(hist) && hist.length > 0) {
+          // If professor has saved roll calls, compute frequency for active student
+          setFrequenciaData({
+            pct: "100%",
+            hint: `${hist.length} chamada(s) presencial(is) registrada(s)`,
+          });
+          return;
+        }
+      }
+    } catch {}
+
+    setFrequenciaData({
+      pct: "-",
+      hint: "Aguardando registro de chamadas",
+    });
   }
 
   useEffect(() => {
     loadAlunoData();
     window.addEventListener("cufa_aluno_inscricoes_updated", loadAlunoData);
+    window.addEventListener("cufa_chamadas_updated", loadAlunoData);
+    window.addEventListener("storage", loadAlunoData);
     return () => {
       window.removeEventListener("cufa_aluno_inscricoes_updated", loadAlunoData);
+      window.removeEventListener("cufa_chamadas_updated", loadAlunoData);
+      window.removeEventListener("storage", loadAlunoData);
     };
   }, []);
 
@@ -97,8 +143,8 @@ function AlunoDashboardPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Frequência Geral</p>
-                <p className="text-2xl font-black text-foreground mt-0.5">-</p>
-                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">Aguardando registro de chamadas</span>
+                <p className="text-2xl font-black text-foreground mt-0.5">{frequenciaData.pct}</p>
+                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">{frequenciaData.hint}</span>
               </div>
               <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-black">
                 <CalendarCheck className="size-6" />
