@@ -34,26 +34,14 @@ export function PoloComprasPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [pedidos, setPedidos] = useState<PedidoItem[]>([
-    {
-      id: "ped-1",
-      item: "Kimonos infantis tamanho M",
-      categoria: "Materiais esportivos",
-      quantidade: "15 unidades",
-      observacao: "Reposição para novos alunos inscritos na turma da tarde de Jiu Jitsu.",
-      status: "pendente",
-      dataSolicitacao: "14/08/2026",
-    },
-    {
-      id: "ped-2",
-      item: "Kits de higiene para tatame",
-      categoria: "Materiais / consumo",
-      quantidade: "2 galões de desinfetante",
-      observacao: "Manutenção da limpeza preventiva.",
-      status: "aprovado",
-      dataSolicitacao: "10/08/2026",
-    },
-  ]);
+  // Zeroed mock by default for clean testing (Anexo 2 & 3)
+  const [pedidos, setPedidos] = useState<PedidoItem[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_compras_polo");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
 
   const [itemNome, setItemNome] = useState("");
   const [categoria, setCategoria] = useState("Materiais esportivos");
@@ -77,7 +65,12 @@ export function PoloComprasPage() {
       dataSolicitacao: new Date().toLocaleDateString("pt-BR"),
     };
 
-    setPedidos([novo, ...pedidos]);
+    const atualizados = [novo, ...pedidos];
+    setPedidos(atualizados);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(atualizados));
+    } catch {}
+
     toast.success("Solicitação de compra enviada ao Gestor Geral!", {
       description: `Item: ${itemNome} (${quantidade}) - Encaminhado para a fila de Pedidos.`,
     });
@@ -121,42 +114,50 @@ export function PoloComprasPage() {
           </div>
 
           <div className="divide-y divide-border/60">
-            {pedidos.map((p) => (
-              <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-sm text-foreground">{p.item}</span>
-                    <Badge variant="outline" className="text-[11px] font-bold">
-                      {p.categoria}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    Quantidade: <b className="text-foreground">{p.quantidade}</b> | Solicitado em {p.dataSolicitacao}
-                  </p>
-                  {p.observacao && (
-                    <p className="text-xs text-muted-foreground italic">"{p.observacao}"</p>
-                  )}
-                </div>
-
-                <div>
-                  {p.status === "pendente" && (
-                    <Badge className="bg-amber-500/10 text-amber-700 font-bold border-amber-500/20">
-                      <Clock className="size-3 mr-1" /> Aguardando Gestor Geral
-                    </Badge>
-                  )}
-                  {p.status === "aprovado" && (
-                    <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20">
-                      <CheckCircle2 className="size-3 mr-1" /> Aprovado pela Gestão
-                    </Badge>
-                  )}
-                  {p.status === "recusado" && (
-                    <Badge className="bg-destructive/10 text-destructive font-bold border-destructive/20">
-                      Recusado
-                    </Badge>
-                  )}
-                </div>
+            {pedidos.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <ShoppingCart className="size-10 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="font-bold text-sm text-foreground">Nenhuma solicitação de compra por enquanto.</p>
+                <p className="text-xs">Clique no botão 'Nova Solicitação' acima para fazer um pedido de materiais para seu polo.</p>
               </div>
-            ))}
+            ) : (
+              pedidos.map((p) => (
+                <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-foreground">{p.item}</span>
+                      <Badge variant="outline" className="text-[11px] font-bold">
+                        {p.categoria}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Quantidade: <b className="text-foreground">{p.quantidade}</b> | Solicitado em {p.dataSolicitacao}
+                    </p>
+                    {p.observacao && (
+                      <p className="text-xs text-muted-foreground italic">"{p.observacao}"</p>
+                    )}
+                  </div>
+
+                  <div>
+                    {p.status === "pendente" && (
+                      <Badge className="bg-amber-500/10 text-amber-700 font-bold border-amber-500/20">
+                        <Clock className="size-3 mr-1" /> Aguardando Gestor Geral
+                      </Badge>
+                    )}
+                    {p.status === "aprovado" && (
+                      <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20">
+                        <CheckCircle2 className="size-3 mr-1" /> Aprovado pela Gestão
+                      </Badge>
+                    )}
+                    {p.status === "recusado" && (
+                      <Badge className="bg-destructive/10 text-destructive font-bold border-destructive/20">
+                        Recusado
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

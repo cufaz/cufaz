@@ -17,16 +17,28 @@ export const Route = createFileRoute("/_authenticated/polo/perfil")({
 export function PoloPerfilPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
 
-  const [nome, setNome] = useState("Alessandra Vieira");
-  const [email, setEmail] = useState("alessandra.penha@cufa.com.br");
-  const [telefone, setTelefone] = useState("(21) 98888-9999");
-  const [dataNascimento, setDataNascimento] = useState("1988-05-14");
-  const [fotoUrl, setFotoUrl] = useState(() => {
-    return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300";
+  const [perfil, setPerfil] = useState(() => {
+    try {
+      const stored = localStorage.getItem("cufa_responsavel_perfil");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    const loggedEmail = localStorage.getItem("cufa_logged_user") || "britonascimento@hotmail.com.br";
+    return {
+      nome: "Ricardo Brito",
+      email: loggedEmail,
+      telefone: "11951012933",
+      dataNascimento: "1996-01-24",
+      fotoUrl: localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300",
+      biografia: "Coordenador operacional da CUFA com mais de 8 anos de atuação em projetos sociais de esporte, cultura e educação para jovens periféricos.",
+    };
   });
-  const [biografia, setBiografia] = useState(
-    "Coordenadora operacional da CUFA com mais de 8 anos de atuação em projetos sociais de esporte, cultura e educação para jovens periféricos."
-  );
+
+  const [nome, setNome] = useState(perfil.nome);
+  const [email, setEmail] = useState(perfil.email);
+  const [telefone, setTelefone] = useState(perfil.telefone);
+  const [dataNascimento, setDataNascimento] = useState(perfil.dataNascimento);
+  const [fotoUrl, setFotoUrl] = useState(perfil.fotoUrl);
+  const [biografia, setBiografia] = useState(perfil.biografia);
 
   function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -46,11 +58,23 @@ export function PoloPerfilPage() {
 
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
+    const novoPerfil = {
+      nome,
+      email,
+      telefone,
+      dataNascimento,
+      fotoUrl,
+      biografia,
+    };
+    setPerfil(novoPerfil);
     try {
+      localStorage.setItem("cufa_responsavel_perfil", JSON.stringify(novoPerfil));
       localStorage.setItem("cufa_perfil_foto", fotoUrl);
+      window.dispatchEvent(new Event("cufa_perfil_updated"));
     } catch {}
+
     toast.success("Perfil do Responsável atualizado com sucesso!", {
-      description: "Suas informações pessoais e foto foram salvas na plataforma.",
+      description: "Suas informações pessoais e foto foram salvas permanentemente na plataforma.",
     });
   }
 

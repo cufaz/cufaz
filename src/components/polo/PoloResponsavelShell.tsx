@@ -39,6 +39,18 @@ export function PoloResponsavelShell({
     return localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
   });
 
+  const [responsavelNome, setResponsavelNome] = useState(() => {
+    try {
+      const stored = localStorage.getItem("cufa_responsavel_perfil");
+      if (stored) return JSON.parse(stored).nome;
+    } catch {}
+    return "Ricardo Brito";
+  });
+
+  const [responsavelFoto, setResponsavelFoto] = useState(() => {
+    return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150";
+  });
+
   // Notification Bell Popover State
   const [notifOpen, setNotifOpen] = useState(false);
   const [notificacoes, setNotificacoes] = useState([
@@ -206,11 +218,13 @@ export function PoloResponsavelShell({
 
             <div className="flex items-center gap-2">
               <Avatar className="size-9 border border-primary/20">
-                <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold">RP</AvatarFallback>
+                <AvatarImage src={responsavelFoto} />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {responsavelNome.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left leading-none">
-                <span className="block text-xs font-bold text-foreground">Responsável de Polo</span>
+                <span className="block text-xs font-bold text-foreground">{responsavelNome}</span>
                 <span className="text-[10px] text-muted-foreground font-medium">{poloNome}</span>
               </div>
             </div>

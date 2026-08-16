@@ -33,6 +33,12 @@ export function PoloAlunosPage() {
     } catch {}
   }, [alunosMock]);
 
+  const atividadesPolo = poloNome.toLowerCase().includes("madureira")
+    ? ["Basquete", "Karatê", "Capoeira"]
+    : poloNome.toLowerCase().includes("paraisopolis")
+    ? ["Futsal"]
+    : ["Jiu Jitsu", "Aula de Inglês", "Natação"];
+
   const alunosFiltrados = alunosMock.filter((a) => {
     const matchBusca = a.nome.toLowerCase().includes(busca.toLowerCase()) || String(a.responsavel || "").toLowerCase().includes(busca.toLowerCase());
     const matchAtiv = atividadeFiltro === "todas" || a.atividade === atividadeFiltro;
@@ -77,13 +83,11 @@ export function PoloAlunosPage() {
               }}
             >
               <option value="todas">Todas as Oficinas</option>
-              <option value="Jiu Jitsu">Jiu Jitsu</option>
-              <option value="Aula de Inglês">Aula de Inglês</option>
-              <option value="Natação">Natação</option>
-              <option value="Corte e Costura">Corte e Costura</option>
-              <option value="Futsal">Futsal</option>
-              <option value="Basquete">Basquete</option>
-              <option value="Karatê">Karatê</option>
+              {atividadesPolo.map((ativ) => (
+                <option key={ativ} value={ativ}>
+                  {ativ}
+                </option>
+              ))}
             </select>
           </div>
         </div>

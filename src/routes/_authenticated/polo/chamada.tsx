@@ -18,24 +18,34 @@ interface AlunoChamada {
 
 export function PoloChamadaPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
-  const [atividade, setAtividade] = useState("Jiu Jitsu");
+
+  // Dynamic Activity List per Polo (Anexo 1)
+  const atividadesPolo = poloNome.toLowerCase().includes("madureira")
+    ? ["Basquete", "Karatê", "Capoeira"]
+    : poloNome.toLowerCase().includes("paraisopolis")
+    ? ["Futsal"]
+    : ["Jiu Jitsu", "Aula de Inglês", "Natação"];
+
+  const [atividade, setAtividade] = useState(atividadesPolo[0]);
   const [dataChamada, setDataChamada] = useState("2026-08-16");
 
+  // ZERO Mock Data by default for clean testing (Anexo 2 & 3)
   const [alunos, setAlunos] = useState<AlunoChamada[]>(() => {
     try {
-      const stored = localStorage.getItem(`cufa_chamada_${atividade}_${dataChamada}`);
+      const stored = localStorage.getItem(`cufa_chamada_${poloNome}_${atividade}_${dataChamada}`);
       if (stored) return JSON.parse(stored);
+
+      // If polo has enrolled students in cufa_alunos_polo, load them!
+      const todosAlunos = localStorage.getItem("cufa_alunos_polo");
+      if (todosAlunos) {
+        const parsed = JSON.parse(todosAlunos);
+        const filtrados = parsed.filter((a: any) => a.atividade === atividade);
+        if (filtrados.length > 0) {
+          return filtrados.map((a: any) => ({ id: a.id, nome: a.nome, presente: true }));
+        }
+      }
     } catch {}
-    return [
-      { id: "1", nome: "Carlos Eduardo Silva", presente: true },
-      { id: "2", nome: "Ana Clara Souza", presente: true },
-      { id: "3", nome: "Gabriel Santos", presente: true },
-      { id: "4", nome: "Beatriz Oliveira", presente: false },
-      { id: "5", nome: "Lucas Rodrigues", presente: true },
-      { id: "6", nome: "Mariana Costa", presente: true },
-      { id: "7", nome: "Pedro Henrique Lima", presente: true },
-      { id: "8", nome: "Sophia Alves", presente: false },
-    ];
+    return [];
   });
 
   // Auto-Save presence to localStorage on every toggle (Anexo 3)
@@ -72,13 +82,11 @@ export function PoloChamadaPage() {
               value={atividade}
               onChange={(e) => setAtividade(e.target.value)}
             >
-              <option value="Jiu Jitsu">Jiu Jitsu</option>
-              <option value="Aula de Inglês">Aula de Inglês</option>
-              <option value="Natação">Natação</option>
-              <option value="Corte e Costura">Corte e Costura</option>
-              <option value="Futsal">Futsal</option>
-              <option value="Basquete">Basquete</option>
-              <option value="Karatê">Karatê</option>
+              {atividadesPolo.map((ativ) => (
+                <option key={ativ} value={ativ}>
+                  {ativ}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -130,43 +138,51 @@ export function PoloChamadaPage() {
           </div>
 
           <div className="divide-y divide-border/60">
-            {alunos.map((a) => (
-              <div key={a.id} className="p-3.5 px-4 flex items-center justify-between hover:bg-muted/20">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
-                    {a.nome.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span className="font-bold text-sm text-foreground">{a.nome}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant={a.presente ? "default" : "outline"}
-                    className={`font-bold text-xs ${
-                      a.presente
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => togglePresenca(a.id, true)}
-                  >
-                    <Check className="size-3.5 mr-1" /> Presente
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={!a.presente ? "destructive" : "outline"}
-                    className={`font-bold text-xs ${
-                      !a.presente
-                        ? "bg-destructive text-white"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => togglePresenca(a.id, false)}
-                  >
-                    <X className="size-3.5 mr-1" /> Falta
-                  </Button>
-                </div>
+            {alunos.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <ClipboardCheck className="size-10 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="font-bold text-sm text-foreground">Nenhum aluno inscrito nesta oficina no momento.</p>
+                <p className="text-xs">Cadastre alunos na aba 'Alunos Matriculados' para realizar o registro diário de frequência.</p>
               </div>
-            ))}
+            ) : (
+              alunos.map((a) => (
+                <div key={a.id} className="p-3.5 px-4 flex items-center justify-between hover:bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
+                      {a.nome.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="font-bold text-sm text-foreground">{a.nome}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant={a.presente ? "default" : "outline"}
+                      className={`font-bold text-xs ${
+                        a.presente
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => togglePresenca(a.id, true)}
+                    >
+                      <Check className="size-3.5 mr-1" /> Presente
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={!a.presente ? "destructive" : "outline"}
+                      className={`font-bold text-xs ${
+                        !a.presente
+                          ? "bg-destructive text-white"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => togglePresenca(a.id, false)}
+                    >
+                      <X className="size-3.5 mr-1" /> Falta
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -32,35 +32,20 @@ export function PoloGaleriaPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Persistent Fotos in localStorage (Anexo 5)
+  // Dynamic Activity List per Polo (Anexo 1)
+  const atividadesPolo = poloNome.toLowerCase().includes("madureira")
+    ? ["Basquete", "Karatê", "Capoeira"]
+    : poloNome.toLowerCase().includes("paraisopolis")
+    ? ["Futsal"]
+    : ["Jiu Jitsu", "Aula de Inglês", "Natação"];
+
+  // ZERO Mock Data by default for clean testing (Anexo 2)
   const [fotos, setFotos] = useState<FotoItem[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_galeria_fotos");
       if (stored) return JSON.parse(stored);
     } catch {}
-    return [
-      {
-        id: "f1",
-        atividade: "Jiu Jitsu",
-        titulo: "Treino de Graduação e Gradiente",
-        url: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600",
-        dataUpload: "12/08/2026",
-      },
-      {
-        id: "f2",
-        atividade: "Natação",
-        titulo: "Aula Prática de Adaptação Aquática",
-        url: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600",
-        dataUpload: "10/08/2026",
-      },
-      {
-        id: "f3",
-        atividade: "Corte e Costura",
-        titulo: "Oficina de Modelagem e Peças Piloto",
-        url: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600",
-        dataUpload: "08/08/2026",
-      },
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -69,7 +54,7 @@ export function PoloGaleriaPage() {
     } catch {}
   }, [fotos]);
 
-  const [atividade, setAtividade] = useState("Jiu Jitsu");
+  const [atividade, setAtividade] = useState(atividadesPolo[0]);
   const [titulo, setTitulo] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -92,9 +77,9 @@ export function PoloGaleriaPage() {
         const base64Url = event.target?.result as string;
         newItems.push({
           id: `f-${Date.now()}-${index}`,
-          atividade,
+          atividade: atividade || atividadesPolo[0] || "Jiu Jitsu",
           titulo: titulo ? `${titulo} (${index + 1})` : file.name.replace(/\.[^/.]+$/, ""),
-          url: base64Url,
+          url: base64Url || "",
           dataUpload: new Date().toLocaleDateString("pt-BR"),
         });
 
@@ -135,45 +120,53 @@ export function PoloGaleriaPage() {
     >
       <div className="space-y-6">
         {/* Grid de Fotos */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {fotos.map((f) => (
-            <Card key={f.id} className="overflow-hidden border-border shadow-xs group">
-              <div className="relative aspect-video bg-muted overflow-hidden">
-                <img
-                  src={f.url}
-                  alt={f.titulo}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <Badge className="absolute top-3 left-3 bg-background/90 text-foreground font-bold text-xs backdrop-blur-xs">
-                  <BookOpen className="size-3 mr-1 text-primary" /> {f.atividade}
-                </Badge>
-              </div>
-
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <h4 className="font-bold text-sm text-foreground line-clamp-1">{f.titulo}</h4>
-                  <span className="text-[11px] text-muted-foreground font-medium">
-                    Adicionada em {f.dataUpload}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <Badge variant="secondary" className="text-[10px] font-bold">
-                    Fixa na Plataforma
+        {fotos.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground bg-card rounded-2xl border border-border">
+            <ImageIcon className="size-12 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="font-bold text-base text-foreground">Nenhuma foto enviada para a galeria do polo.</p>
+            <p className="text-xs max-w-sm mx-auto mt-1">Clique em 'Upload de Fotos' para enviar imagens das oficinas do seu polo diretamente do computador.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {fotos.map((f) => (
+              <Card key={f.id} className="overflow-hidden border-border shadow-xs group">
+                <div className="relative aspect-video bg-muted overflow-hidden">
+                  <img
+                    src={f.url}
+                    alt={f.titulo}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <Badge className="absolute top-3 left-3 bg-background/90 text-foreground font-bold text-xs backdrop-blur-xs">
+                    <BookOpen className="size-3 mr-1 text-primary" /> {f.atividade}
                   </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs text-destructive hover:bg-destructive/10 font-bold"
-                    onClick={() => handleRemoverFoto(f.id)}
-                  >
-                    <Trash2 className="size-3.5 mr-1" /> Excluir
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+                <CardContent className="p-4 space-y-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground line-clamp-1">{f.titulo}</h4>
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      Adicionada em {f.dataUpload}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <Badge variant="secondary" className="text-[10px] font-bold">
+                      Fixa na Plataforma
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-destructive hover:bg-destructive/10 font-bold"
+                      onClick={() => handleRemoverFoto(f.id)}
+                    >
+                      <Trash2 className="size-3.5 mr-1" /> Excluir
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal Upload de Fotos (Sem campo de URL, suporte a seleção múltipla - Anexo 4 & 5) */}
@@ -193,13 +186,11 @@ export function PoloGaleriaPage() {
                 value={atividade}
                 onChange={(e) => setAtividade(e.target.value)}
               >
-                <option value="Jiu Jitsu">Jiu Jitsu</option>
-                <option value="Aula de Inglês">Aula de Inglês</option>
-                <option value="Natação">Natação</option>
-                <option value="Corte e Costura">Corte e Costura</option>
-                <option value="Futsal">Futsal</option>
-                <option value="Basquete">Basquete</option>
-                <option value="Karatê">Karatê</option>
+                {atividadesPolo.map((ativ) => (
+                  <option key={ativ} value={ativ}>
+                    {ativ}
+                  </option>
+                ))}
               </select>
             </div>
 
