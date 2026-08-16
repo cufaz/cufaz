@@ -108,22 +108,44 @@ export function SignupDialog({
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [unidade, setUnidade] = useState("Complexo da Penha");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
 
   const atual = perfis.find((p) => p.id === perfil);
 
   function fechar(v: boolean) {
     onOpenChange(v);
-    if (!v) setTimeout(() => setPerfil(null), 200);
+    if (!v) {
+      setTimeout(() => {
+        setPerfil(null);
+        setNome("");
+        setEmail("");
+        setTelefone("");
+        setSenha("");
+        setConfirmarSenha("");
+      }, 200);
+    }
   }
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
+    if (senha !== confirmarSenha) {
+      toast.error("As senhas digitadas não coincidem!", {
+        description: "Verifique o campo de confirmação de senha.",
+      });
+      return;
+    }
+
+    if (senha.length < 4) {
+      toast.error("A senha deve ter pelo menos 4 caracteres.");
+      return;
+    }
+
     if (perfil === "responsavel") {
       const uNome = unidade || "Complexo da Penha";
       const gNome = nome.trim() || "Novo Responsável CUFA";
       const gEmail = email.trim().toLowerCase() || "responsavel@cufa.com.br";
-      const sPrefix = uNome.toLowerCase().replace(/[^a-z0-9]/g, "") || "cufa";
-      const gSenha = `${sPrefix}2026`;
+      const gSenha = senha || `${uNome.toLowerCase().replace(/[^a-z0-9]/g, "")}2026`;
 
       const novoGestor = {
         id: `g-${Date.now()}`,
@@ -156,7 +178,7 @@ export function SignupDialog({
       } catch {}
 
       toast.success("Cadastro de Responsável liberado com sucesso!", {
-        description: `Acesso ativado para a unidade ${uNome}. Credencial: ${gEmail}`,
+        description: `Acesso liberado para a unidade ${uNome}. E-mail: ${gEmail}`,
       });
     } else {
       toast.success("Cadastro realizado com sucesso!", {
@@ -176,7 +198,7 @@ export function SignupDialog({
           </DialogTitle>
           <DialogDescription>
             {atual
-              ? "Preencha os dados abaixo para cadastrar seu acesso imediatamente."
+              ? "Preencha os dados e defina sua senha para cadastrar seu acesso imediatamente."
               : "Escolha o seu perfil na plataforma CUFA."}
           </DialogDescription>
         </DialogHeader>
@@ -208,6 +230,27 @@ export function SignupDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo id="email" label="E-mail" type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo
+                id="senha"
+                label="Criar Senha de Acesso"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+              />
+              <Campo
+                id="confirmarSenha"
+                label="Confirmar Senha"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+              />
             </div>
 
             {perfil === "responsavel" && (
