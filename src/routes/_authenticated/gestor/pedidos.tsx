@@ -84,26 +84,23 @@ function PedidosPage() {
     "Custos Extras",
   ];
 
-  const [categorias, setCategorias] = useState<string[]>(() => {
+  function getCleanCategorias(): string[] {
     try {
+      const deletedStored = localStorage.getItem("cufa_deleted_categorias");
+      const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
       const stored = localStorage.getItem("cufa_categorias_pedidos");
-      if (stored) {
-        const parsed: string[] = JSON.parse(stored);
-        return Array.from(new Set([...BASE_CATEGORIAS, ...parsed]));
-      }
-    } catch {}
-    return BASE_CATEGORIAS;
-  });
+      const baseCombined: string[] = stored ? JSON.parse(stored) : BASE_CATEGORIAS;
+      return Array.from(new Set(baseCombined)).filter((c) => !deletedList.includes(String(c)));
+    } catch {
+      return BASE_CATEGORIAS;
+    }
+  }
+
+  const [categorias, setCategorias] = useState<string[]>(getCleanCategorias);
 
   useEffect(() => {
     function syncCats() {
-      try {
-        const stored = localStorage.getItem("cufa_categorias_pedidos");
-        if (stored) {
-          const parsed: string[] = JSON.parse(stored);
-          setCategorias(Array.from(new Set([...BASE_CATEGORIAS, ...parsed])));
-        }
-      } catch {}
+      setCategorias(getCleanCategorias());
     }
     window.addEventListener("cufa_categorias_updated", syncCats);
     return () => window.removeEventListener("cufa_categorias_updated", syncCats);
@@ -151,7 +148,7 @@ function PedidosPage() {
   }
 
   function handleExcluirCategoria(idx: number) {
-    const catRemovida = categorias[idx];
+    const catRemovida = categorias[idx] ?? "";
     if (categorias.length <= 1) {
       toast.error("É necessário manter ao menos uma categoria cadastrada.");
       return;
@@ -160,9 +157,14 @@ function PedidosPage() {
     setCategorias(atualizadas);
     try {
       localStorage.setItem("cufa_categorias_pedidos", JSON.stringify(atualizadas));
+      const deletedStored = localStorage.getItem("cufa_deleted_categorias");
+      const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
+      if (catRemovida && !deletedList.includes(catRemovida)) {
+        localStorage.setItem("cufa_deleted_categorias", JSON.stringify([...deletedList, catRemovida]));
+      }
       window.dispatchEvent(new Event("cufa_categorias_updated"));
     } catch {}
-    toast.success(`Categoria "${catRemovida}" removida!`);
+    toast.success(`Categoria "${catRemovida}" removida permanentemente!`);
   }
 
   const [localPedidos, setLocalPedidos] = useState<Row[]>(() => {
@@ -192,6 +194,70 @@ function PedidosPage() {
   const [aprovPoloNome, setAprovPoloNome] = useState<string>("Complexo da Penha");
   const [aprovCategoria, setAprovCategoria] = useState<string>("Materiais / consumo");
   const [aprovValorTotal, setAprovValorTotal] = useState<string>("0");
+
+  const [editModalPedido, setEditModalPedido] = useState<Row | null>(null);
+
+  function openEditModal(p: Row) {
+    setEditModalPedido({
+      ...p,
+      polo_nome: p['polo_nome'] || p['polos']?.nome || "Complexo da Penha",
+      categoria: p['categoria'] || p['categorias_custo']?.nome || categorias[0] || "Materiais / consumo",
+      valor_total: p['valor_total'] || p['valor'] || 0,
+      quantidade: p['quantidade'] || 1,
+    });
+  }
+
+  function handleSalvarEdicaoPedido(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editModalPedido) return;
+
+    const pId = String(editModalPedido['id']);
+    let updated = localPedidos.map((p) => (String(p['id']) === pId ? editModalPedido : p));
+    if (!localPedidos.some((p) => String(p['id']) === pId)) {
+      updated = [editModalPedido, ...localPedidos];
+    }
+
+    setLocalPedidos(updated);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+    } catch {}
+
+    if (editModalPedido['status'] === "aprovado") {
+      const valNum = Number(editModalPedido['valor_total'] || editModalPedido['valor'] || 0);
+      const poloNome = String(editModalPedido['polo_nome'] || "Complexo da Penha");
+      const poloIdCode = poloNome.toLowerCase().includes("penha")
+        ? "penha"
+        : poloNome.toLowerCase().includes("madureira")
+        ? "madureira"
+        : poloNome.toLowerCase().includes("paraisopolis") || poloNome.toLowerCase().includes("paraisópolis")
+        ? "paraisopolis"
+        : "polo-teste";
+
+      const novoLanc = {
+        id: `lanc-ped-${pId}`,
+        polo_id: poloIdCode,
+        descricao: `[Compra Aprovada] ${editModalPedido['item'] || 'Pedido de Compra'}`,
+        valor: valNum,
+        tipo: "despesa",
+        natureza: "realizado",
+        categoria_id: editModalPedido['categoria'],
+        categoria_nome: editModalPedido['categoria'],
+        competencia: "2026-08-01",
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+        let listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
+        listLanc = listLanc.filter((l) => l.id !== `lanc-ped-${pId}`);
+        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
+      } catch {}
+    }
+
+    toast.success("Pedido de compra editado com sucesso!");
+    setEditModalPedido(null);
+  }
 
   function openApprovalModal(p: Row) {
     const currentPolo = p['polo_nome'] || p['polos']?.nome || "Complexo da Penha";
@@ -366,8 +432,18 @@ function PedidosPage() {
                       <p className="mt-2 text-xs text-muted-foreground italic">"{String(p['descricao'] ?? p['observacao'])}"</p>
                     ) : null}
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-primary">{brl(valNum)}</p>
+                    <div className="flex items-center gap-1.5 justify-end mt-1">
+                      <p className="text-lg font-bold text-primary">{brl(valNum)}</p>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-muted-foreground hover:text-primary hover:bg-muted"
+                        title="Editar Pedido"
+                        onClick={() => openEditModal(p)}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    </div>
                     <p className="text-[11px] text-muted-foreground font-medium">
                       Qtd: {String(p['quantidade'] || 1)}
                     </p>
@@ -391,10 +467,9 @@ function PedidosPage() {
                       </div>
                     ) : null}
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                </article>
+              );
+            })}
         </div>
       )}
 
@@ -677,6 +752,98 @@ function PedidosPage() {
               <DialogFooter className="pt-2">
                 <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md">
                   <Check className="mr-1.5 size-4" /> Confirmar Aprovação e Lançar
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog para Editar Pedido (Lápis) */}
+      <Dialog open={Boolean(editModalPedido)} onOpenChange={(v) => !v && setEditModalPedido(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground">Editar Pedido de Compra</DialogTitle>
+          </DialogHeader>
+          {editModalPedido && (
+            <form onSubmit={handleSalvarEdicaoPedido} className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Item ou Serviço</Label>
+                <Input
+                  required
+                  value={String(editModalPedido['item'] || "")}
+                  onChange={(e) => setEditModalPedido({ ...editModalPedido, item: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Quantidade</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={Number(editModalPedido['quantidade'] || 1)}
+                    onChange={(e) => setEditModalPedido({ ...editModalPedido, quantidade: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={Number(editModalPedido['valor_total'] || editModalPedido['valor'] || 0)}
+                    onChange={(e) => setEditModalPedido({ ...editModalPedido, valor_total: Number(e.target.value), valor: Number(e.target.value) })}
+                    className="font-bold text-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Polo de Destino</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(editModalPedido['polo_nome'] || "Complexo da Penha")}
+                  onChange={(e) => setEditModalPedido({ ...editModalPedido, polo_nome: e.target.value })}
+                >
+                  <option value="Complexo da Penha">Complexo da Penha</option>
+                  <option value="Viaduto de Madureira">Viaduto de Madureira</option>
+                  <option value="Paraisópolis">Paraisópolis</option>
+                  <option value="Polo de Teste">Polo de Teste</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Categoria do Custo</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(editModalPedido['categoria'] || categorias[0])}
+                  onChange={(e) => setEditModalPedido({ ...editModalPedido, categoria: e.target.value })}
+                >
+                  {categorias.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Status do Pedido</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(editModalPedido['status'] || "pendente")}
+                  onChange={(e) => setEditModalPedido({ ...editModalPedido, status: e.target.value })}
+                >
+                  <option value="pendente">PENDENTE</option>
+                  <option value="aprovado">APROVADO</option>
+                  <option value="recusado">RECUSADO</option>
+                </select>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="submit" className="w-full bg-primary text-primary-foreground font-bold shadow-md">
+                  Salvar Alterações
                 </Button>
               </DialogFooter>
             </form>

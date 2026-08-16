@@ -48,6 +48,7 @@ export function generateProfessionalPdf({
     if (poloNomeClean.includes("penha") && item.poloId === "penha") return true;
     if (poloNomeClean.includes("madureira") && item.poloId === "madureira") return true;
     if ((poloNomeClean.includes("paraisópolis") || poloNomeClean.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+    if (poloNomeClean.includes("teste") && (item.poloId === "polo-teste" || item.poloId === "teste")) return true;
     return false;
   });
 
