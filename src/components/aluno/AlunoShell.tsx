@@ -84,14 +84,17 @@ export function AlunoShell({ children, title, description }: AlunoShellProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             
-            {/* Brand Logo & Title */}
+            {/* Student Avatar & Brand Title */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="size-9 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-black shadow-brand">
-                <Sparkles className="size-4" />
-              </div>
+              <Avatar className="size-10 border-2 border-primary/40 shadow-xs">
+                {fotoPerfil && <AvatarImage src={fotoPerfil} alt={alunoNome} className="object-cover" />}
+                <AvatarFallback className="bg-brand-gradient text-white font-black text-xs shadow-brand">
+                  {alunoNome.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-primary block leading-none">PAINEL DO ALUNO</span>
-                <span className="text-sm font-black text-foreground">Central CUFA</span>
+                <span className="text-sm font-black text-foreground">{alunoNome}</span>
               </div>
             </div>
 
