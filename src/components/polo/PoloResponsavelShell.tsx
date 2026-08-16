@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -68,7 +68,7 @@ export function PoloResponsavelShell({
     return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150";
   });
 
-  // Notification Bell Popover State with localStorage persistence (Anexo 2, 3, 4)
+  // Notification Bell Popover State with localStorage persistence
   const [notifOpen, setNotifOpen] = useState(false);
   const [lidasIds, setLidasIds] = useState<string[]>(() => {
     try {
@@ -78,28 +78,86 @@ export function PoloResponsavelShell({
     return [];
   });
 
-  const baseNotificacoes = [
-    {
-      id: "n1",
-      titulo: "Nova Matrícula no Polo",
-      desc: "Nova inscrição registrada para a turma do turno da tarde.",
-      tempo: "Há 15 minutos",
-    },
-    {
-      id: "n2",
-      titulo: "Lembrete de Chamada Diária",
-      desc: "Registre a frequência das turmas de hoje para manter os indicadores atualizados.",
-      tempo: "Há 1 hora",
-    },
-    {
-      id: "n3",
-      titulo: "Atualização de Solicitação",
-      desc: "Pedido de materiais e compras encaminhado para validação.",
-      tempo: "Há 3 horas",
-    },
-  ];
+  const [dynamicNotificacoes, setDynamicNotificacoes] = useState<any[]>([]);
 
-  const notificacoes = baseNotificacoes.map((n) => ({
+  useEffect(() => {
+    function loadNotifications() {
+      const list: any[] = [];
+
+      // 1. Check pending professor requests
+      try {
+        const storedProf = localStorage.getItem("cufa_professores_solicitacoes");
+        const listProf: any[] = storedProf ? JSON.parse(storedProf) : [];
+        const pendingProf = listProf.filter(
+          (s: any) =>
+            s.status === "pendente" &&
+            (s.poloNome?.toLowerCase().includes(poloNome.toLowerCase()) ||
+              poloNome.toLowerCase().includes(s.poloNome?.toLowerCase() || ""))
+        );
+
+        pendingProf.forEach((s: any) => {
+          list.push({
+            id: `notif-prof-${s.id}`,
+            titulo: "👨‍🏫 Professor Aguardando Aprovação",
+            desc: `${s.professorNome} solicitou vínculo para a atividade ${s.atividadeNome}. Acesse "Atividades do Polo" para aprovar ou recusar.`,
+            tempo: "Pendente",
+          });
+        });
+      } catch {}
+
+      // 2. Check approved purchase requests
+      try {
+        const storedPed = localStorage.getItem("cufa_compras_polo");
+        const listPed: any[] = storedPed ? JSON.parse(storedPed) : [];
+        const approvedPed = listPed.filter(
+          (p: any) =>
+            p.status === "aprovado" &&
+            (p.polo_nome?.toLowerCase().includes(poloNome.toLowerCase()) ||
+              poloNome.toLowerCase().includes(p.polo_nome?.toLowerCase() || ""))
+        );
+
+        approvedPed.forEach((p: any) => {
+          list.push({
+            id: `notif-ped-${p.id}`,
+            titulo: "🛒 Pedido de Compra Aprovado",
+            desc: `O pedido de "${p.item}" (R$ ${Number(p.valor_total || p.valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}) foi APROVADO pelo Gestor Geral!`,
+            tempo: "Aprovado",
+          });
+        });
+      } catch {}
+
+      // 3. Add base reminders
+      list.push(
+        {
+          id: "n1",
+          titulo: "📋 Lembrete de Chamada Diária",
+          desc: "Registre a frequência das turmas de hoje para manter os indicadores atualizados.",
+          tempo: "Hoje",
+        },
+        {
+          id: "n2",
+          titulo: "🎓 Indicadores de Turmas",
+          desc: "Acompanhe as matrículas ativas e a ocupação das vagas nas oficinas do polo.",
+          tempo: "Ativo",
+        }
+      );
+
+      setDynamicNotificacoes(list);
+    }
+
+    loadNotifications();
+
+    window.addEventListener("cufa_professores_updated", loadNotifications);
+    window.addEventListener("cufa_pedidos_updated", loadNotifications);
+    window.addEventListener("storage", loadNotifications);
+    return () => {
+      window.removeEventListener("cufa_professores_updated", loadNotifications);
+      window.removeEventListener("cufa_pedidos_updated", loadNotifications);
+      window.removeEventListener("storage", loadNotifications);
+    };
+  }, [poloNome]);
+
+  const notificacoes = dynamicNotificacoes.map((n) => ({
     ...n,
     lida: lidasIds.includes(n.id),
   }));
@@ -107,12 +165,12 @@ export function PoloResponsavelShell({
   const unreadCount = notificacoes.filter((n) => !n.lida).length;
 
   function marcarTodasLidas() {
-    const todosIds = baseNotificacoes.map((n) => n.id);
+    const todosIds = dynamicNotificacoes.map((n) => n.id);
     setLidasIds(todosIds);
     try {
       localStorage.setItem("cufa_notificacoes_lidas", JSON.stringify(todosIds));
     } catch {}
-    setNotifOpen(false); // Auto-oculta a caixa (Anexo 2)
+    setNotifOpen(false);
   }
 
   function marcarLida(id: string) {
