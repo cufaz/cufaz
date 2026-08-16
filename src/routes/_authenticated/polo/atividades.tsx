@@ -36,7 +36,11 @@ function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao
   const cleanList: ProfessorSolicitacao[] = [];
 
   for (const item of list) {
-    const key = `${cleanStr(item.professorNome)}-${cleanStr(item.atividadeNome)}-${cleanStr(item.poloNome)}`;
+    if (!item) continue;
+    const pName = item.professorNome || item.email || "prof";
+    const aName = item.atividadeNome || "ativ";
+    const tName = item.turmaNome || "";
+    const key = `${cleanStr(pName)}-${cleanStr(aName)}-${cleanStr(tName)}`;
     if (!seen.has(key)) {
       seen.add(key);
       cleanList.push(item);
@@ -297,24 +301,24 @@ export function PoloAtividadesPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {atividadesFiltradas.map((ativ) => {
             const pMatch = solicitacoes.find((s) => {
-              const ativMatch =
-                cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
-                cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome));
-              if (!ativMatch) return false;
+              if (!s) return false;
+              const sAtiv = cleanStr(s.atividadeNome);
+              const aAtiv = cleanStr(ativ.nome);
+              if (!sAtiv.includes(aAtiv) && !aAtiv.includes(sAtiv)) return false;
 
-              if (s.turmaNome) {
-                const sTurmaClean = cleanStr(s.turmaNome);
-                const ativTurmaClean = cleanStr(ativ.turmaNome);
+              const sTurma = cleanStr(s.turmaNome);
+              const aTurma = cleanStr(ativ.turmaNome);
 
-                if (sTurmaClean.includes("2") || sTurmaClean.includes("t2") || sTurmaClean.includes("tardeb")) {
-                  return ativTurmaClean.includes("2");
+              if (sTurma) {
+                if (sTurma.includes("2") || sTurma.includes("t2")) {
+                  return aTurma.includes("2");
                 }
-                if (sTurmaClean.includes("1") || sTurmaClean.includes("t1") || sTurmaClean.includes("tardea")) {
-                  return ativTurmaClean.includes("1");
+                if (sTurma.includes("1") || sTurma.includes("t1")) {
+                  return aTurma.includes("1");
                 }
               }
 
-              return cleanStr(ativ.turmaNome).includes("1");
+              return aTurma.includes("1") || aTurma.length === 0;
             });
 
             return (
