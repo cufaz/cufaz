@@ -410,6 +410,12 @@ export const decidirPedido = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id);
+    if (!isUuid) {
+      // Pedido local/demonstração (id "ped-...") — não existe no banco.
+      return { ok: true, local: true };
+    }
+
     const pedido = unwrap(
       await db(supabase)
         .from("pedidos_compra")
