@@ -43,8 +43,33 @@ export function PoloComprasPage() {
     return [];
   });
 
+  const DEFAULT_CATEGORIAS_CUFA = [
+    "Pessoal",
+    "Materiais esportivos",
+    "Materiais / consumo",
+    "Comunicação",
+    "Evento pedagógico / esportivo",
+    "Encargos",
+    "Infraestrutura",
+    "Administrativo / RH essencial",
+    "Serviços técnicos essenciais",
+    "Material didático e apostilas",
+    "Uniformes e vestuário",
+    "Insumos, lanche e apoio operacional",
+    "Kit Lanche",
+    "Custos Extras",
+  ];
+
+  const [categoriasLista] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_categorias_pedidos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_CATEGORIAS_CUFA;
+  });
+
   const [itemNome, setItemNome] = useState("");
-  const [categoria, setCategoria] = useState("Materiais esportivos e equipamentos");
+  const [categoria, setCategoria] = useState(categoriasLista[0] || "Materiais esportivos");
   const [quantidade, setQuantidade] = useState("");
   const [observacao, setObservacao] = useState("");
 
@@ -177,12 +202,11 @@ export function PoloComprasPage() {
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
               >
-                <option value="Materiais esportivos e equipamentos">Materiais esportivos e equipamentos</option>
-                <option value="Insumos, lanche e apoio operacional">Insumos, lanche e apoio operacional</option>
-                <option value="Uniformes e vestuário">Uniformes e vestuário</option>
-                <option value="Infraestrutura, manutenção e limpeza">Infraestrutura, manutenção e limpeza</option>
-                <option value="Material didático e apostilas">Material didático e apostilas</option>
-                <option value="Recursos Humanos / Equipe Operacional">Recursos Humanos / Equipe Operacional</option>
+                {categoriasLista.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
               </select>
             </div>
 

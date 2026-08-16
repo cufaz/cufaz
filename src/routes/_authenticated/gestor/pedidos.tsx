@@ -65,6 +65,52 @@ function PedidosPage() {
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
+  const DEFAULT_CATEGORIAS = [
+    "Pessoal",
+    "Materiais esportivos",
+    "Materiais / consumo",
+    "Comunicação",
+    "Evento pedagógico / esportivo",
+    "Encargos",
+    "Infraestrutura",
+    "Administrativo / RH essencial",
+    "Serviços técnicos essenciais",
+    "Material didático e apostilas",
+    "Uniformes e vestuário",
+    "Insumos, lanche e apoio operacional",
+    "Kit Lanche",
+    "Custos Extras",
+  ];
+
+  const [categorias, setCategorias] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_categorias_pedidos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_CATEGORIAS;
+  });
+
+  const [novaCatModalOpen, setNovaCatModalOpen] = useState(false);
+  const [novaCatNome, setNovaCatNome] = useState("");
+
+  function handleCriarCategoria(e: React.FormEvent) {
+    e.preventDefault();
+    if (!novaCatNome.trim()) return;
+    const itemLimpo = novaCatNome.trim();
+    if (categorias.includes(itemLimpo)) {
+      toast.error("Categoria já cadastrada.");
+      return;
+    }
+    const atualizadas = [...categorias, itemLimpo];
+    setCategorias(atualizadas);
+    try {
+      localStorage.setItem("cufa_categorias_pedidos", JSON.stringify(atualizadas));
+    } catch {}
+    toast.success(`Categoria "${itemLimpo}" criada com sucesso!`);
+    setNovaCatNome("");
+    setNovaCatModalOpen(false);
+  }
+
   const pedidos: Row[] = data ?? [];
 
   return (
@@ -72,24 +118,33 @@ function PedidosPage() {
       title="Pedidos de compra"
       description="Solicitações dos responsáveis CUFA. Ao aprovar, o valor entra no financeiro como despesa realizada."
       actions={
-        <Button
-          className="bg-brand-gradient font-bold text-white shadow-brand"
-          onClick={() =>
-            setForm({
-              item: "",
-              descricao: "",
-              quantidade: 1,
-              valor_unitario: 0,
-              valor_total: 0,
-              competencia: meses[0],
-              polo_id: (polos.data as Row[] | undefined)?.[0]?.['id'] ?? null,
-              categoria_id: null,
-              status: "pendente",
-            })
-          }
-        >
-          <Plus className="mr-1 size-4" /> Novo pedido
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="font-bold border-primary text-primary hover:bg-primary/10"
+            onClick={() => setNovaCatModalOpen(true)}
+          >
+            <Plus className="mr-1 size-4" /> Nova categoria
+          </Button>
+          <Button
+            className="bg-brand-gradient font-bold text-white shadow-brand"
+            onClick={() =>
+              setForm({
+                item: "",
+                descricao: "",
+                quantidade: 1,
+                valor_unitario: 0,
+                valor_total: 0,
+                competencia: meses[0],
+                polo_id: (polos.data as Row[] | undefined)?.[0]?.['id'] ?? null,
+                categoria_id: categorias[0] || "Materiais esportivos",
+                status: "pendente",
+              })
+            }
+          >
+            <Plus className="mr-1 size-4" /> Novo pedido
+          </Button>
+        </div>
       }
     >
       {isLoading ? (
@@ -197,24 +252,21 @@ function PedidosPage() {
               <div className="space-y-1.5">
                 <Label>Categoria</Label>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={String(form['categoria_id'] ?? "")}
-                  onChange={(e) => setForm({ ...form, categoria_id: e.target.value || null })}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(form['categoria_id'] ?? categorias[0])}
+                  onChange={(e) => setForm({ ...form, categoria_id: e.target.value })}
                 >
-                  <option value="">Sem categoria</option>
-                  {((fin.data?.categorias ?? []) as Row[])
-                    .filter((c) => c['tipo'] === "despesa")
-                    .map((c) => (
-                      <option key={String(c['id'])} value={String(c['id'])}>
-                        {String(c['nome'])}
-                      </option>
-                    ))}
+                  {categorias.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Competência</Label>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
                   value={String(form['competencia'])}
                   onChange={(e) => setForm({ ...form, competencia: e.target.value })}
                 >
@@ -232,6 +284,34 @@ function PedidosPage() {
               </DialogFooter>
             </form>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Criar Nova Categoria (Anexo 1) */}
+      <Dialog open={novaCatModalOpen} onOpenChange={setNovaCatModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Criar Nova Categoria de Pedido</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCriarCategoria} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Nome da Categoria</Label>
+              <Input
+                required
+                placeholder="ex.: Transporte e Logística, Premiação..."
+                value={novaCatNome}
+                onChange={(e) => setNovaCatNome(e.target.value)}
+                className="font-medium"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="submit" className="bg-brand-gradient font-bold text-white w-full">
+                Salvar Categoria
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </GestorShell>
