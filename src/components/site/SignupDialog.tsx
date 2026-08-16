@@ -400,7 +400,7 @@ export function SignupDialog({
                   <Campo id="cpf-prof" label="CPF" required placeholder="000.000.000-00" />
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground font-bold">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground font-bold block">
                       Foto de Perfil (Opcional)
                     </Label>
                     <div className="flex items-center gap-3">
@@ -415,22 +415,26 @@ export function SignupDialog({
                           <Camera className="size-4" />
                         </div>
                       )}
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        className="cursor-pointer text-xs h-9 flex-1"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const base64 = ev.target?.result as string;
-                              setFotoPerfil(base64);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
+                      <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 font-bold text-xs cursor-pointer shadow-xs transition-colors shrink-0">
+                        <Upload className="size-3.5" />
+                        <span>{fotoPerfil ? "Alterar Foto" : "Escolher arquivo"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                const base64 = ev.target?.result as string;
+                                setFotoPerfil(base64);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>

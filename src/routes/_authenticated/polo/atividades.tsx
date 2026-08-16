@@ -310,8 +310,21 @@ export function PoloAtividadesPage() {
         {/* Grid de Cards de Atividades Separadas por Turma */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {atividadesFiltradas.map((ativ) => {
-            let pMatch = solicitacoes.find((s) => {
-              if (!s) return false;
+            // Read latest list directly from localStorage to catch new candidacies instantly
+            let currentList: ProfessorSolicitacao[] = solicitacoes;
+            try {
+              const rawStored = localStorage.getItem("cufa_professores_solicitacoes");
+              if (rawStored) {
+                const parsed = JSON.parse(rawStored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  currentList = parsed;
+                }
+              }
+            } catch {}
+
+            // Find pending requests matching this activity
+            const pendingForAtiv = currentList.filter((s) => {
+              if (!s || s.status !== "pendente") return false;
               const sAtiv = cleanStr(s.atividadeNome);
               const aAtiv = cleanStr(ativ.nome);
               if (!sAtiv.includes(aAtiv) && !aAtiv.includes(sAtiv)) return false;
@@ -319,17 +332,28 @@ export function PoloAtividadesPage() {
               const sTurma = cleanStr(s.turmaNome);
               const aTurma = cleanStr(ativ.turmaNome);
 
-              if (sTurma) {
-                if (sTurma.includes("2") || sTurma.includes("t2")) {
-                  return aTurma.includes("2");
-                }
-                if (sTurma.includes("1") || sTurma.includes("t1")) {
-                  return aTurma.includes("1");
-                }
+              if (sTurma.includes("2") || sTurma.includes("t2")) {
+                return aTurma.includes("2");
               }
-
+              if (sTurma.includes("1") || sTurma.includes("t1")) {
+                return aTurma.includes("1");
+              }
               return aTurma.includes("1") || aTurma.length === 0;
             });
+
+            // Find approved request for this activity
+            const approvedForAtiv = currentList.find((s) => {
+              if (!s || s.status !== "aprovado") return false;
+              const sAtiv = cleanStr(s.atividadeNome);
+              const aAtiv = cleanStr(ativ.nome);
+              return sAtiv.includes(aAtiv) || aAtiv.includes(sAtiv);
+            });
+
+            // Pick latest pending request if available
+            let pMatch: ProfessorSolicitacao | undefined =
+              pendingForAtiv.length > 0
+                ? pendingForAtiv[pendingForAtiv.length - 1]
+                : approvedForAtiv;
 
             // Fallback for Jiu Jitsu Turma 1 if pending request exists in system
             if (!pMatch && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
@@ -358,27 +382,25 @@ export function PoloAtividadesPage() {
                   {(() => {
                     if (pMatch && pMatch.status === "pendente") {
                       return (
-                        <div className="mt-3 p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2">
+                        <div className="mt-3 p-3.5 rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 space-y-2 shadow-xs">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
                               Solicitação de Professor
                             </span>
-                            <Badge className="bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-[9px] px-1.5 py-0.5">
-                              Pendente
+                            <Badge className="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 shadow-xs">
+                              Pendente de Aprovação
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between gap-2 pt-0.5">
-                            <p className="text-xs font-extrabold text-foreground truncate">
-                              {pMatch.professorNome || "Prof. Vitoria Santana"}
-                            </p>
-                            <Button
-                              size="sm"
-                              className="h-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs shrink-0"
-                              onClick={() => setSelectedSolicitacao(pMatch)}
-                            >
-                              <Eye className="size-3.5 mr-1" /> Analisar
-                            </Button>
-                          </div>
+                          <p className="text-xs font-black text-foreground truncate">
+                            {pMatch.professorNome || "Prof. Santana Silva"}
+                          </p>
+                          <Button
+                            size="sm"
+                            className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs h-9 shadow-md transition-all active:scale-[0.98] mt-1"
+                            onClick={() => setSelectedSolicitacao(pMatch)}
+                          >
+                            <Eye className="size-4 mr-1.5" /> ANALISAR SOLICITAÇÃO (APROVAR / RECUSAR)
+                          </Button>
                         </div>
                       );
                     }
