@@ -274,6 +274,71 @@ export function GestoresPage() {
             </table>
           </div>
         </div>
+
+        {/* SEÇÃO 3: RESPONSÁVEIS CUFA / OPERACIONAIS DE POLO (Anexo 4) */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-9 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                <UserCheck className="size-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-extrabold text-foreground uppercase tracking-wide">
+                  3. Responsáveis CUFA de Polos (Operacional e Campo)
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Controle total de credenciais e senhas dos responsáveis cadastrados pelos polos da comunidade.
+                </p>
+              </div>
+            </div>
+            <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 font-bold">
+              {gestoresPolos.length} responsáveis registrados
+            </Badge>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  <th className="pb-3">Nome do Responsável</th>
+                  <th className="pb-3">E-mail de Login</th>
+                  <th className="pb-3">Senha de Acesso</th>
+                  <th className="pb-3">Unidade Atribuída</th>
+                  <th className="pb-3 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {gestoresPolos.map((g) => (
+                  <tr key={g.id} className="hover:bg-muted/30">
+                    <td className="py-3.5 font-bold text-foreground flex items-center gap-2">
+                      <span className="grid size-8 place-items-center rounded-full bg-emerald-500/10 text-emerald-600 shrink-0">
+                        <User className="size-4" />
+                      </span>
+                      <span>{g.nome}</span>
+                    </td>
+                    <td className="py-3.5 text-muted-foreground font-medium">{g.email}</td>
+                    <td className="py-3.5">
+                      <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 inline-block">
+                        {showPasswords ? g.senha : "••••••••"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 font-semibold text-foreground">{g.poloNome}</td>
+                    <td className="py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs font-bold border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10"
+                        onClick={() => handleResetSenha(g)}
+                      >
+                        <Key className="size-3.5 mr-1" /> Resetar Senha
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* Modal Criar Gestor */}

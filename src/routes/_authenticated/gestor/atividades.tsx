@@ -17,6 +17,7 @@ import {
 } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
+import { itensOrcamentoOFICIAIS } from "@/components/admin/dataDetalhada";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -573,56 +574,101 @@ export function AtividadesPage() {
               <p className="text-xs font-semibold text-muted-foreground">Carregando itens de orçamento...</p>
             </div>
           ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Total mensal:{" "}
-                  <span className="font-bold text-primary">
-                    {brl((orcamento.data?.itens ?? []).reduce((s: number, i: Row) => s + Number(i['custo_mensal']), 0))}
-                  </span>
-                </p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="font-bold"
-                  onClick={() =>
-                    setItemForm({
-                      atividade_id: orcamentoDe?.['id'],
-                      item: "",
-                      descricao: "",
-                      quantidade: "",
-                      custo_mensal: 0,
-                      categoria_id: orcamento.data?.categorias?.[0]?.id ?? null,
-                    })
-                  }
-                >
-                  <Plus className="mr-1 size-4" /> Item
-                </Button>
-              </div>
+            (() => {
+              const serverItens = (orcamento.data?.itens ?? []) as Row[];
+              const nomeAtiv = String(orcamentoDe?.['nome'] ?? "").toLowerCase();
 
-              <div className="mt-3 grid gap-1.5">
-                {(orcamento.data?.itens ?? []).map((i: Row) => (
-                  <div key={String(i['id'])} className="flex items-start justify-between gap-2 rounded-lg border border-border p-3">
-                    <div>
-                      <p className="text-sm font-bold">{String(i['item'])}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {i['categorias_custo']?.nome} · {String(i['quantidade'] ?? "")}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">{String(i['descricao'] ?? "")}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-sm font-bold text-primary">{brl(i['custo_mensal'])}</span>
-                      <button type="button" className="text-primary" onClick={() => setItemForm({ ...i, categorias_custo: undefined })}>
-                        <Pencil className="size-4" />
-                      </button>
-                      <button type="button" className="text-destructive" onClick={() => mDelItem.mutate(String(i['id']))}>
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
+              const fallbackItens = itensOrcamentoOFICIAIS
+                .filter(
+                  (i) =>
+                    i.atividade.toLowerCase().includes(nomeAtiv) ||
+                    nomeAtiv.includes(i.atividade.toLowerCase())
+                )
+                .map((i) => ({
+                  id: i.id,
+                  item: i.item,
+                  descricao: i.descricao,
+                  quantidade: i.quantidade,
+                  custo_mensal: i.previsto,
+                  categorias_custo: { nome: i.categoria },
+                }));
+
+              const itensExibidos = serverItens.length > 0 ? serverItens : fallbackItens;
+              const totalMensal = itensExibidos.reduce(
+                (s: number, i: Row) => s + Number(i['custo_mensal'] ?? 0),
+                0
+              );
+
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Total mensal:{" "}
+                      <span className="font-bold text-primary">{brl(totalMensal)}</span>
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="font-bold"
+                      onClick={() =>
+                        setItemForm({
+                          atividade_id: orcamentoDe?.['id'],
+                          item: "",
+                          descricao: "",
+                          quantidade: "",
+                          custo_mensal: 0,
+                          categoria_id: orcamento.data?.categorias?.[0]?.id ?? null,
+                        })
+                      }
+                    >
+                      <Plus className="mr-1 size-4" /> Item
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </>
+
+                  <div className="mt-3 grid gap-1.5 max-h-[60vh] overflow-y-auto pr-1">
+                    {itensExibidos.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6">
+                        Nenhum item de custo registrado para esta atividade.
+                      </p>
+                    ) : (
+                      itensExibidos.map((i: Row) => (
+                        <div
+                          key={String(i['id'])}
+                          className="flex items-start justify-between gap-2 rounded-lg border border-border p-3"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-foreground">{String(i['item'])}</p>
+                            <p className="text-[11px] text-muted-foreground font-medium">
+                              {i['categorias_custo']?.nome} · {String(i['quantidade'] ?? "")}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">{String(i['descricao'] ?? "")}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-sm font-bold text-primary">
+                              {brl(Number(i['custo_mensal']))}
+                            </span>
+                            <button
+                              type="button"
+                              className="text-primary hover:opacity-80"
+                              onClick={() => setItemForm({ ...i, categorias_custo: undefined })}
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="text-destructive hover:opacity-80"
+                              onClick={() => mDelItem.mutate(String(i['id']))}
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              );
+            })()
           )}
         </DialogContent>
       </Dialog>
