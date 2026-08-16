@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { ShoppingCart, Plus, CheckCircle2, Clock, PackageCheck, Send, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { formatBRLInput, parseBRLToNumber } from "@/lib/brl";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,7 @@ export function PoloComprasPage() {
 
     const currentPoloNome = localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
     const qtdNum = parseFloat(quantidade.replace(/\D/g, "")) || 1;
-    const vTotalNum = parseFloat(valorTotalStr.replace(/\D/g, "")) / 100 || 0;
+    const vTotalNum = parseBRLToNumber(valorTotalStr);
     const vUnitNum = vTotalNum > 0 ? vTotalNum / qtdNum : 0;
 
     const novo: PedidoItem = {
@@ -270,14 +271,13 @@ export function PoloComprasPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total Estimado (R$)</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total Estimado</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
+                  type="text"
+                  placeholder="R$ 0,00"
                   value={valorTotalStr}
-                  onChange={(e) => setValorTotalStr(e.target.value)}
-                  className="font-medium"
+                  onChange={(e) => setValorTotalStr(formatBRLInput(e.target.value))}
+                  className="font-bold text-primary"
                 />
               </div>
             </div>

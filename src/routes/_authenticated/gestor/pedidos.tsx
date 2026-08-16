@@ -6,6 +6,7 @@ import { Loader2, Check, X, Plus, Pencil, Trash2, Settings, Tag } from "lucide-r
 import { toast } from "sonner";
 
 import { listPedidos, decidirPedido, criarPedido, deletePedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
+import { formatBRLInput, parseBRLToNumber } from "@/lib/brl";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,12 +275,12 @@ function PedidosPage() {
   function openApprovalModal(p: Row) {
     const currentPolo = p['polo_nome'] || p['polos']?.nome || "Complexo da Penha";
     const currentCat = p['categoria'] || p['categorias_custo']?.nome || categorias[0] || "Materiais / consumo";
-    const currentVal = String(p['valor_total'] || p['valor'] || "0");
+    const currentVal = Number(p['valor_total'] || p['valor'] || 0);
 
     setApproveModalPedido(p);
     setAprovPoloNome(currentPolo);
     setAprovCategoria(currentCat);
-    setAprovValorTotal(currentVal);
+    setAprovValorTotal(formatBRLInput(currentVal));
   }
 
   function handleConfirmarAprovacao(e: React.FormEvent) {
@@ -287,7 +288,7 @@ function PedidosPage() {
     if (!approveModalPedido) return;
 
     const pId = String(approveModalPedido['id']);
-    const valNum = parseFloat(aprovValorTotal) || Number(approveModalPedido['valor_total']) || 0;
+    const valNum = parseBRLToNumber(aprovValorTotal);
     const poloIdCode = aprovPoloNome.toLowerCase().includes("penha")
       ? "penha"
       : aprovPoloNome.toLowerCase().includes("madureira")
@@ -554,8 +555,13 @@ function PedidosPage() {
                   <Input type="number" min={1} value={Number(form['quantidade'] ?? 1)} onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Valor unitário (R$)</Label>
-                  <Input type="number" step="0.01" value={Number(form['valor_unitario'] ?? 0)} onChange={(e) => setForm({ ...form, valor_unitario: Number(e.target.value) })} />
+                  <Label>Valor unitário</Label>
+                  <Input
+                    type="text"
+                    value={formatBRLInput(form['valor_unitario'])}
+                    onChange={(e) => setForm({ ...form, valor_unitario: parseBRLToNumber(e.target.value) })}
+                    className="font-bold text-primary"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -788,14 +794,13 @@ function PedidosPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total do Pedido (R$)</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total do Pedido</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   required
-                  placeholder="0.00"
+                  placeholder="R$ 0,00"
                   value={aprovValorTotal}
-                  onChange={(e) => setAprovValorTotal(e.target.value)}
+                  onChange={(e) => setAprovValorTotal(formatBRLInput(e.target.value))}
                   className="font-bold text-base text-primary"
                 />
               </div>
