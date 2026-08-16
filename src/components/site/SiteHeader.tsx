@@ -15,7 +15,6 @@ const links = [
   { href: "#projetos", label: "Projetos" },
   { href: "#comunidades", label: "Comunidades" },
   { href: "#contato", label: "Contato" },
-  { href: "#adm", label: "Adm", isAdm: true },
 ];
 
 export function SiteHeader() {
