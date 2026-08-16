@@ -98,23 +98,6 @@ export function GestorShell({
     window.location.href = "/";
   }
 
-  function handleLimparCache() {
-    try {
-      localStorage.removeItem("cufa_deleted_lancamentos");
-      localStorage.removeItem("cufa_lancamentos_custom");
-      localStorage.removeItem("cufa_deleted_categorias");
-      localStorage.removeItem("cufa_categorias_pedidos");
-      localStorage.removeItem("cufa_compras_polo");
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-      window.dispatchEvent(new Event("cufa_categorias_updated"));
-      window.dispatchEvent(new Event("storage"));
-    } catch {}
-    toast.success("Cache limpo! Dados oficiais do sistema restaurados.");
-    setTimeout(() => {
-      window.location.reload();
-    }, 400);
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans">
       <AuthLoadingOverlay open={isLoggingOut} message="Encerrando sessão com segurança..." />
@@ -230,16 +213,6 @@ export function GestorShell({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Top Limpar Cache Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLimparCache}
-              title="Restaurar dados originais do sistema e limpar cache"
-              className="border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500 hover:text-white font-bold text-xs"
-            >
-              <RotateCcw className="mr-1.5 size-3.5" /> Limpar Cache
-            </Button>
             {actions}
           </div>
         </div>
