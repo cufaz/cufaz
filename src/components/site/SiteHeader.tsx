@@ -59,39 +59,29 @@ export function SiteHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md shadow-xs">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:py-4">
-        <a href="#topo" onClick={handleLogoClick} className="flex items-center gap-3 group cursor-pointer" title="Clique 3x para Acesso Master Admin">
-          <img
-            src={logo}
-            alt="CUFA"
-            className="h-12 sm:h-16 md:h-18 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
-          />
-          <span className="sr-only">CUFA</span>
+    <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="#topo" onClick={handleLogoClick} className="flex items-center gap-2 font-bold tracking-tight text-foreground cursor-pointer">
+          <img src={logo} alt="CUFA" className="h-10 w-auto object-contain" />
         </a>
 
         <nav className="hidden items-center gap-6 lg:flex">
-          {links.map((l) =>
-            l.isAdm ? (
-              <button
-                key={l.href}
-                type="button"
-                onClick={() => navigate({ to: "/auth" })}
-                className="inline-flex items-center gap-1 text-sm font-bold text-primary transition-colors hover:text-primary/80 bg-primary/10 px-3 py-1 rounded-full border border-primary/20"
-              >
-                <ShieldCheck className="size-3.5" />
-                {l.label}
-              </button>
-            ) : (
-              <a
-                key={l.href}
-                href={l.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-              >
-                {l.label}
-              </a>
-            ),
-          )}
+          {links.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </a>
+          ))}
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/auth" })}
+            className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
+          >
+            <ShieldCheck className="size-4" /> Credenciado
+          </button>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -112,9 +102,17 @@ export function SiteHeader() {
           >
             Entrar
           </Button>
+          {/* Mobile Top Header Button: Entrar / Desktop: Cadastre-se */}
           <Button
             size="sm"
-            className="bg-brand-gradient font-semibold shadow-brand"
+            className="bg-brand-gradient font-semibold shadow-brand sm:hidden"
+            onClick={() => setLogin(true)}
+          >
+            Entrar
+          </Button>
+          <Button
+            size="sm"
+            className="bg-brand-gradient font-semibold shadow-brand hidden sm:inline-flex"
             onClick={() => setSignup(true)}
           >
             Cadastre-se
@@ -147,30 +145,27 @@ export function SiteHeader() {
             </li>
             {links.map((l) => (
               <li key={l.href}>
-                {l.isAdm ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenu(false);
-                      navigate({ to: "/auth" });
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-primary bg-primary/10"
-                  >
-                    <ShieldCheck className="size-4" />
-                    {l.label} — Painel do Gestor
-                  </button>
-                ) : (
-                  <a
-                    href={l.href}
-                    onClick={() => setMenu(false)}
-                    className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  >
-                    {l.label}
-                  </a>
-                )}
+                <a
+                  href={l.href}
+                  onClick={() => setMenu(false)}
+                  className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  {l.label}
+                </a>
               </li>
             ))}
-            <li className="pt-2 border-t border-border/40">
+            <li className="pt-2 border-t border-border/40 space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenu(false);
+                  navigate({ to: "/auth" });
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+              >
+                <ShieldCheck className="size-4" /> Credenciado
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -186,7 +181,7 @@ export function SiteHeader() {
         </nav>
       )}
 
-      <LoginDialog open={login} onOpenChange={setLogin} />
+      <LoginDialog open={login} onOpenChange={setLogin} onOpenSignup={() => setSignup(true)} />
       <SignupDialog open={signup} onOpenChange={setSignup} />
       <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
       <MasterAdminDialog open={masterAdminOpen} onOpenChange={setMasterAdminOpen} />

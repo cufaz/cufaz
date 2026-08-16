@@ -18,9 +18,11 @@ import { AuthLoadingOverlay } from "./AuthLoadingOverlay";
 export function LoginDialog({
   open,
   onOpenChange,
+  onOpenSignup,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onOpenSignup?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -247,10 +249,23 @@ export function LoginDialog({
                 onChange={(e) => setSenha(e.target.value)}
               />
             </div>
-            <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand">
+            <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand w-full">
               {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               Entrar
             </Button>
+            {onOpenSignup ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  onOpenSignup();
+                }}
+                className="w-full font-bold border-primary/30 text-primary hover:bg-primary/10"
+              >
+                Cadastre-se
+              </Button>
+            ) : null}
           </form>
         </DialogContent>
       </Dialog>
