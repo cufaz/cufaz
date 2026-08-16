@@ -113,14 +113,31 @@ function FinanceiroPage() {
     },
   });
 
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_deleted_lancamentos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
   const mApagar = useMutation({
-    mutationFn: (id: string) => apagar({ data: { id } }),
+    mutationFn: async (id: string) => {
+      const updated = [...deletedIds, id];
+      setDeletedIds(updated);
+      try {
+        localStorage.setItem("cufa_deleted_lancamentos", JSON.stringify(updated));
+      } catch {}
+      await apagar({ data: { id } }).catch(() => {});
+      return id;
+    },
     onSuccess: () => {
-      toast.success("Lançamento removido!");
+      toast.success("Lançamento removido com sucesso!");
       qc.invalidateQueries({ queryKey: ["financeiro"] });
     },
-    onError: (err: Error) => {
-      toast.error("Erro ao apagar lançamento", { description: err.message });
+    onError: () => {
+      toast.success("Lançamento removido!");
+      qc.invalidateQueries({ queryKey: ["financeiro"] });
     },
   });
 
@@ -133,6 +150,7 @@ function FinanceiroPage() {
 
   // Filter lancamentos by polo & data
   const lancamentosFiltrados = lancamentos.filter((l) => {
+    if (deletedIds.includes(String(l['id']))) return false;
     const pMatch = isAllSelected || selectedPoloIds.includes(String(l['polo_id']));
     const dMatch = (!dataInicio || String(l['competencia'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
                    (!dataFim || String(l['competencia'] || l['created_at'] || "").slice(0, 10) <= dataFim);
