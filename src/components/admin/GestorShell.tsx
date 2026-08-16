@@ -84,7 +84,7 @@ export function GestorShell({
 
   async function sair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 650));
     await queryClient.cancelQueries();
     queryClient.clear();
     try {
@@ -95,7 +95,7 @@ export function GestorShell({
       localStorage.removeItem("cufa_master_authenticated");
       await supabase.auth.signOut();
     } catch {}
-    navigate({ to: "/" });
+    window.location.href = "/";
   }
 
   function handleLimparCache() {

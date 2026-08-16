@@ -134,25 +134,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const routerState = useRouterState();
-  const isLoadingRoute = routerState.isLoading || routerState.status === "pending";
 
   return (
     <QueryClientProvider client={queryClient}>
-      {isLoadingRoute && (
-        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-background transition-opacity duration-200">
-          <div className="flex flex-col items-center space-y-4 animate-in fade-in-50">
-            <div className="relative">
-              <div className="absolute -inset-4 rounded-full bg-brand-gradient opacity-30 blur-xl animate-pulse" />
-              <img src={logo} alt="CUFA Logo" className="relative h-16 w-auto object-contain" />
-            </div>
-            <Loader2 className="size-10 animate-spin text-primary" />
-            <p className="text-xs font-black uppercase text-primary tracking-wider">
-              Carregando Ecossistema CUFA...
-            </p>
-          </div>
-        </div>
-      )}
       <Outlet />
       <Toaster />
     </QueryClientProvider>

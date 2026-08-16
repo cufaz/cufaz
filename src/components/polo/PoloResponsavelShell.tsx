@@ -43,7 +43,7 @@ export function PoloResponsavelShell({
 
   async function handleSair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 650));
     try {
       localStorage.removeItem("cufa_logged_user");
       localStorage.removeItem("cufa_logged_role");
@@ -52,7 +52,7 @@ export function PoloResponsavelShell({
       localStorage.removeItem("cufa_master_authenticated");
       await supabase.auth.signOut();
     } catch {}
-    navigate({ to: "/" });
+    window.location.href = "/";
   }
 
   // Active Polo assigned to this Responsável
