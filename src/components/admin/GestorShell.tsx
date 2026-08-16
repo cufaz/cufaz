@@ -84,7 +84,7 @@ export function GestorShell({
 
   async function sair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 8200));
+    await new Promise((r) => setTimeout(r, 5200));
     await queryClient.cancelQueries();
     queryClient.clear();
     try {

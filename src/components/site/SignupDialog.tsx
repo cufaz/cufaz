@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GraduationCap, ShieldCheck, UserRound, ArrowLeft } from "lucide-react";
+import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -337,15 +337,61 @@ export function SignupDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                <Campo id="formacao" label="Formação / Graduação" placeholder="Ex.: Faixa preta 2º dan" />
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="exp"
-                    className="text-xs uppercase tracking-wide text-muted-foreground"
-                  >
-                    Experiência com projetos sociais
-                  </Label>
-                  <Textarea id="exp" rows={3} placeholder="Conte um pouco da sua trajetória" />
+
+                {/* Upload de Documentação e Certificados do Professor (Anexo 3) */}
+                <div className="border-t border-border pt-4 mt-2 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-primary">
+                    <Upload className="size-4" />
+                    <span>Upload de Documentação (Opcional)</span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-muted-foreground">
+                        Documento de Identificação (RG / CPF)
+                      </Label>
+                      <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-muted-foreground">
+                        Comprovante de Residência
+                      </Label>
+                      <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-bold text-muted-foreground">
+                      Comprovante Funcional / Carteira Profissional (Opcional)
+                    </Label>
+                    <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                  </div>
+
+                  {/* Até 4 Certificados / Graduação */}
+                  <div className="space-y-2 pt-2 border-t border-border/60">
+                    <Label className="text-[11px] font-extrabold uppercase tracking-wider text-foreground">
+                      Certificados / Graduação (Até 4 arquivos)
+                    </Label>
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 1</span>
+                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 2</span>
+                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 3</span>
+                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 4</span>
+                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
