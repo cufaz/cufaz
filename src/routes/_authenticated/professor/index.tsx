@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, BookOpen, ClipboardCheck, Award, Calendar, CheckCircle2 } from "lucide-react";
 import { ProfessorShell } from "@/components/professor/ProfessorShell";
 import { Kpi } from "@/components/admin/Kpi";
@@ -44,19 +44,39 @@ function ProfessorDashboardPage() {
     return 0;
   })();
 
-  const chamadasHistory = (() => {
+  const [chamadasHistory, setChamadasHistory] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
-      if (stored) {
-        const list = JSON.parse(stored);
-        if (Array.isArray(list)) return list;
-      }
+      if (stored) return JSON.parse(stored);
     } catch {}
     return [];
-  })();
+  });
+
+  useEffect(() => {
+    function loadChamadas() {
+      try {
+        const stored = localStorage.getItem("cufa_professor_chamadas_history");
+        if (stored) setChamadasHistory(JSON.parse(stored));
+      } catch {}
+    }
+
+    loadChamadas();
+    window.addEventListener("cufa_chamadas_updated", loadChamadas);
+    window.addEventListener("storage", loadChamadas);
+    return () => {
+      window.removeEventListener("cufa_chamadas_updated", loadChamadas);
+      window.removeEventListener("storage", loadChamadas);
+    };
+  }, []);
 
   const chamadasCount = chamadasHistory.length;
-  const frequenciaMediaStr = chamadasCount > 0 ? "98.5%" : (alunosRealCount > 0 ? "100%" : "0%");
+  const frequenciaMediaNum = chamadasCount > 0
+    ? Math.round(
+        chamadasHistory.reduce((acc, c) => acc + (c.totalAlunos > 0 ? (c.totalPresentes / c.totalAlunos) * 100 : 100), 0) /
+          chamadasCount
+      )
+    : 0;
+  const frequenciaMediaStr = chamadasCount > 0 ? `${frequenciaMediaNum}%` : "0%";
 
   return (
     <ProfessorShell
@@ -85,7 +105,7 @@ function ProfessorDashboardPage() {
           <Kpi
             label="Frequência Média"
             value={frequenciaMediaStr}
-            hint={chamadasCount > 0 || alunosRealCount > 0 ? "Frequência registrada no sistema" : "Sem registros anteriores"}
+            hint={chamadasCount > 0 ? "Frequência registrada no sistema" : "Sem registros anteriores"}
           />
           <Kpi
             label="Chamadas Realizadas"

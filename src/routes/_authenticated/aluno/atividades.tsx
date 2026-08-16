@@ -87,7 +87,7 @@ function VitrineAtividadesAlunoPage() {
     linkedin?: string;
   } | null>(null);
 
-  // Expanded Vitrine Items across all CUFA Polos
+  // Expanded Vitrine Items across all official CUFA Polos
   const defaultVitrine: VitrineCardItem[] = [
     {
       id: "v-penha-jiu-t1",
@@ -198,19 +198,6 @@ function VitrineAtividadesAlunoPage() {
       descricao: "Fundamentos de passe, arremesso, táticas de quadra e torneios esportivos comunitários.",
       faixaEtaria: "08 a 17 anos",
       requisitos: "Calçado esportivo",
-    },
-    {
-      id: "v-cidade-de-deus-informatica",
-      nome: "Informática & Tecnologia",
-      polo: "Cidade de Deus",
-      turmaNome: "Turma 1 - Manhã (10h - 12h)",
-      horario: "Ter e Qui - 10:00 às 12:00",
-      professorNome: "Aguardando Instrutor",
-      vagasTotais: 25,
-      alunosMatriculados: 0,
-      descricao: "Lógica de programação básica, ferramentas de produtividade, navegação segura na internet e criação de projetos digitais.",
-      faixaEtaria: "10 a 18 anos",
-      requisitos: "Nenhum requisito prévio",
     },
   ];
 
@@ -354,6 +341,7 @@ function VitrineAtividadesAlunoPage() {
                 <option value="complexo-do-alemao">Complexo do Alemão</option>
                 <option value="realengo">Realengo</option>
                 <option value="bangu">Bangu</option>
+                <option value="teste">Polo de Teste</option>
               </select>
             </div>
 
@@ -374,7 +362,6 @@ function VitrineAtividadesAlunoPage() {
                 <option value="basquete">Basquete</option>
                 <option value="capoeira">Capoeira</option>
                 <option value="teatro">Teatro & Dança</option>
-                <option value="informatica">Informática & Tecnologia</option>
                 <option value="musica">Música & Percussão</option>
               </select>
             </div>
@@ -387,6 +374,20 @@ function VitrineAtividadesAlunoPage() {
             const isEnrolled = myInscricoes.includes(item.id);
             const isSubmitting = submittingId === item.id;
             const hasProf = item.professorNome && !item.professorNome.includes("Aguardando");
+
+            // Calculate exact remaining vagas dynamically
+            const totalAlunosCadastrados = (() => {
+              try {
+                const stored = localStorage.getItem("cufa_alunos_cadastrados");
+                if (stored) return JSON.parse(stored).length;
+              } catch {}
+              return 0;
+            })();
+
+            const matriculadosTurma = item.id === "v-penha-jiu-t1"
+              ? Math.max(totalAlunosCadastrados, item.alunosMatriculados)
+              : item.alunosMatriculados;
+            const vagasRestantes = Math.max(0, item.vagasTotais - matriculadosTurma);
 
             return (
               <Card key={item.id} className="border-border bg-card shadow-xs hover:border-primary/50 transition-colors flex flex-col justify-between">
@@ -432,7 +433,7 @@ function VitrineAtividadesAlunoPage() {
 
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                       <Users className="size-3.5 text-primary shrink-0" />
-                      <span>Vagas: <strong>{item.vagasTotais} vagas disponíveis</strong></span>
+                      <span>Vagas: <strong>{vagasRestantes} vagas disponíveis</strong></span>
                     </div>
 
                     {/* Detalhes da Oficina definidos pelo Gestor */}

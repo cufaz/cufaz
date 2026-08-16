@@ -94,7 +94,7 @@ function ProfessorChamadaPage() {
     return Array.from(listMap.values());
   }
 
-  function syncHistory(updatedAlunos: any[]) {
+  function handleSalvarChamada() {
     try {
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
       let history: any[] = stored ? JSON.parse(stored) : [];
@@ -102,47 +102,62 @@ function ProfessorChamadaPage() {
         id: `chamada-${Date.now()}`,
         data: dataChamada,
         turma: turmaSelecionada,
-        profEmail,
-        totalAlunos: updatedAlunos.length,
-        totalPresentes: updatedAlunos.filter((a) => a.presente).length,
+        profEmail: profEmail || "santana@cufa.com.br",
+        totalAlunos: alunos.length,
+        totalPresentes: alunos.filter((a) => a.presente).length,
       };
       history.push(session);
       localStorage.setItem("cufa_professor_chamadas_history", JSON.stringify(history));
+
+      // Also record frequency entries for individual student records
+      alunos.forEach((a) => {
+        if (a.email) {
+          const userFreqKey = `cufa_aluno_frequencia_${a.email.toLowerCase()}`;
+          const uStored = localStorage.getItem(userFreqKey);
+          let uList: any[] = uStored ? JSON.parse(uStored) : [];
+          uList.push({
+            data: dataChamada,
+            turma: turmaSelecionada,
+            presente: a.presente,
+          });
+          localStorage.setItem(userFreqKey, JSON.stringify(uList));
+        }
+      });
+
       window.dispatchEvent(new Event("cufa_chamadas_updated"));
-    } catch {}
+      toast.success("Chamada da turma salva com sucesso!", {
+        description: `Registrado: ${session.totalPresentes} presentes de ${session.totalAlunos} alunos na data ${dataChamada}.`,
+      });
+    } catch {
+      toast.error("Erro ao salvar chamada da turma.");
+    }
   }
 
   function togglePresenca(id: string) {
-    setAlunos((prev) => {
-      const next = prev.map((a) => {
+    setAlunos((prev) =>
+      prev.map((a) => {
         if (a.id === id) {
           const novoEstado = !a.presente;
           toast.success(
             novoEstado
               ? `${a.nome} marcado como Presente.`
               : `${a.nome} marcado como Ausente.`,
-            { duration: 1500 }
+            { duration: 1200 }
           );
           return { ...a, presente: novoEstado };
         }
         return a;
-      });
-      syncHistory(next);
-      return next;
-    });
+      })
+    );
   }
 
   function marcarTodos(presente: boolean) {
-    setAlunos((prev) => {
-      const next = prev.map((a) => ({ ...a, presente }));
-      syncHistory(next);
-      return next;
-    });
+    setAlunos((prev) => prev.map((a) => ({ ...a, presente })));
     toast.success(
       presente
         ? "Todos os alunos foram marcados como Presentes."
         : "Presenças limpas para a turma.",
-      { duration: 2000 }
+      { duration: 1500 }
     );
   }
 
@@ -201,7 +216,13 @@ function ProfessorChamadaPage() {
               <span>Lista de Chamada — {turmaSelecionada}</span>
             </CardTitle>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={handleSalvarChamada}
+                className="bg-brand-gradient text-primary-foreground font-bold text-xs shadow-brand h-9"
+              >
+                💾 Salvar Chamada
+              </Button>
               <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold">
                 Presentes: {totalPresentes} / {alunos.length}
               </Badge>

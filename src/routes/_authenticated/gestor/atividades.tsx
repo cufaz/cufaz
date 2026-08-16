@@ -216,6 +216,7 @@ export function AtividadesPage() {
     { id: "polo-alemao", nome: "Complexo do Alemão" },
     { id: "polo-realengo", nome: "Realengo" },
     { id: "polo-bangu", nome: "Bangu" },
+    { id: "polo-teste", nome: "Polo de Teste" },
   ];
 
   const polos: Row[] = (() => {
