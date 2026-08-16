@@ -91,7 +91,10 @@ export const savePolo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
-    if (id) return unwrap(await db(supabase).from("polos").update(values).eq("id", id).select().single());
+    if (id) {
+      const up = unwrap(await db(supabase).from("polos").update(values).eq("id", id).select().maybeSingle());
+      if (up) return up;
+    }
     return unwrap(await db(supabase).from("polos").insert(values).select().single());
   });
 
@@ -137,10 +140,13 @@ export const saveAtividade = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
-    if (id)
-      return unwrap(
-        await db(supabase).from("atividades").update(values).eq("id", id).select().single(),
+    if (id) {
+      const updated = unwrap(
+        await db(supabase).from("atividades").update(values).eq("id", id).select().maybeSingle(),
       );
+      if (updated) return updated;
+      // Registro não existe no banco (ex.: dados de demonstração) — cria.
+    }
     return unwrap(await db(supabase).from("atividades").insert(values).select().single());
   });
 
@@ -162,7 +168,10 @@ export const saveTurma = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
-    if (id) return unwrap(await db(supabase).from("turmas").update(values).eq("id", id).select().single());
+    if (id) {
+      const up = unwrap(await db(supabase).from("turmas").update(values).eq("id", id).select().maybeSingle());
+      if (up) return up;
+    }
     return unwrap(await db(supabase).from("turmas").insert(values).select().single());
   });
 
@@ -204,9 +213,12 @@ export const saveItemOrcamento = createServerFn({ method: "POST" })
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id)
-      return unwrap(
-        await db(supabase).from("itens_orcamento").update(values).eq("id", id).select().single(),
+    {
+      const up = unwrap(
+        await db(supabase).from("itens_orcamento").update(values).eq("id", id).select().maybeSingle(),
       );
+      if (up) return up;
+    }
     return unwrap(await db(supabase).from("itens_orcamento").insert(values).select().single());
   });
 
@@ -339,14 +351,15 @@ export const saveLancamento = createServerFn({ method: "POST" })
       await assertGestor(supabase, userId);
       const { id, ...values } = data as { id?: string } & Record<string, unknown>;
       if (id) {
-        return unwrap(
+        const up = unwrap(
           await db(supabase)
             .from("lancamentos_financeiros")
             .update(values)
             .eq("id", id)
             .select()
-            .single(),
+            .maybeSingle(),
         );
+        if (up) return up;
       }
       return unwrap(
         await db(supabase).from("lancamentos_financeiros").insert(values).select().single(),
@@ -467,7 +480,10 @@ export const saveMatricula = createServerFn({ method: "POST" })
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id)
-      return unwrap(await db(supabase).from("matriculas").update(values).eq("id", id).select().single());
+    {
+      const up = unwrap(await db(supabase).from("matriculas").update(values).eq("id", id).select().maybeSingle());
+      if (up) return up;
+    }
     return unwrap(await db(supabase).from("matriculas").insert(values).select().single());
   });
 
