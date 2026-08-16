@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload } from "lucide-react";
+import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
@@ -162,6 +162,7 @@ export function SignupDialog({
   const [cert2Name, setCert2Name] = useState<string | null>(null);
   const [cert3Name, setCert3Name] = useState<string | null>(null);
   const [cert4Name, setCert4Name] = useState<string | null>(null);
+  const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
   const atual = perfis.find((p) => p.id === perfil);
 
@@ -191,6 +192,7 @@ export function SignupDialog({
         setTelefone("");
         setSenha("");
         setConfirmarSenha("");
+        setFotoPerfil(null);
       }, 200);
     }
   }
@@ -250,21 +252,16 @@ export function SignupDialog({
       });
     } else if (perfil === "professor") {
       const pNome = nome.trim() ? (nome.trim().startsWith("Prof") ? nome.trim() : `Prof. ${nome.trim()}`) : "Prof. Novo Professor";
-      const pMod = modalidade || "Jiu Jitsu";
-      const pUni = unidade || "Complexo da Penha";
       const pEmail = email.trim().toLowerCase();
       const pSenha = senha.trim();
 
-      const novaSolicitacao = {
-        id: `solic-${Date.now()}`,
+      const novoProf = {
+        id: `prof-${Date.now()}`,
         professorNome: pNome,
         email: pEmail,
         senha: pSenha,
         telefone: telefone.trim(),
-        atividadeNome: pMod,
-        turmaNome: turmaEscolhida,
-        poloNome: pUni,
-        status: "pendente",
+        status: "ativo",
         docIdName: docIdName || null,
         docResName: docResName || null,
         docFuncName: docFuncName || null,
@@ -272,20 +269,20 @@ export function SignupDialog({
         cert2Name: cert2Name || null,
         cert3Name: cert3Name || null,
         cert4Name: cert4Name || null,
-        dataSolicitacao: new Date().toISOString().slice(0, 10),
+        dataCriacao: new Date().toISOString().slice(0, 10),
       };
 
       try {
-        const stored = localStorage.getItem("cufa_professores_solicitacoes");
-        let list = stored ? JSON.parse(stored) : [];
-        list.push(novaSolicitacao);
-        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(list));
-
-        // Also add to registered list for login
         const storedCad = localStorage.getItem("cufa_professores_cadastrados");
         let listCad = storedCad ? JSON.parse(storedCad) : [];
-        listCad.push(novaSolicitacao);
+        listCad.push(novoProf);
         localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listCad));
+
+        if (fotoPerfil) {
+          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
+          localStorage.setItem(`cufa_perfil_foto_${pEmail}`, fotoPerfil);
+          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
+        }
 
         window.dispatchEvent(new Event("cufa_professores_updated"));
       } catch {}
@@ -293,10 +290,9 @@ export function SignupDialog({
       localStorage.setItem("cufa_logged_user", pEmail);
       localStorage.setItem("cufa_logged_role", "professor");
       localStorage.setItem("cufa_professor_nome", pNome);
-      localStorage.setItem("cufa_polo_atribuido", pUni);
 
       toast.success("Conta de Professor criada com sucesso!", {
-        description: `Acesso liberado. A modalidade ${pMod} aguarda homologação do polo.`,
+        description: "Acesso liberado! Você já pode se candidatar às vagas e turmas disponíveis.",
       });
 
       fechar(false);
@@ -402,54 +398,40 @@ export function SignupDialog({
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Campo id="cpf-prof" label="CPF" required placeholder="000.000.000-00" />
-                  <div className="space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Modalidade
-                    </Label>
-                    <Select value={modalidade} onValueChange={setModalidade}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a modalidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modalidades.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade / Polo</Label>
-                    <Select value={unidade} onValueChange={setUnidade}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {comunidades.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Turma e Horário Desejado</Label>
-                    <Select value={turmaEscolhida} onValueChange={setTurmaEscolhida}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a turma" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Turma 1 - Tarde (14h - 16h)">Turma 1 - Tarde (14h - 16h)</SelectItem>
-                        <SelectItem value="Turma 2 - Tarde (16h - 18h)">Turma 2 - Tarde (16h - 18h)</SelectItem>
-                        <SelectItem value="Turma Manhã (09h - 11h)">Turma Manhã (09h - 11h)</SelectItem>
-                        <SelectItem value="Turma Noite (18h - 20h)">Turma Noite (18h - 20h)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground font-bold">
+                      Foto de Perfil (Opcional)
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      {fotoPerfil ? (
+                        <img
+                          src={fotoPerfil}
+                          alt="Foto do Professor"
+                          className="size-10 rounded-full object-cover border-2 border-primary shadow-xs shrink-0"
+                        />
+                      ) : (
+                        <div className="size-10 rounded-full bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center text-primary font-bold shrink-0">
+                          <Camera className="size-4" />
+                        </div>
+                      )}
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        className="cursor-pointer text-xs h-9 flex-1"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const base64 = ev.target?.result as string;
+                              setFotoPerfil(base64);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 

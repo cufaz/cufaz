@@ -117,18 +117,10 @@ function ProfessorPerfilPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">E-mail</Label>
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">E-mail de Login</Label>
                 <Input value={email} disabled className="text-xs bg-muted/30 font-semibold" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Modalidade</Label>
-                <Input value={modalidade} disabled className="text-xs bg-muted/30 font-semibold" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Unidade / Polo</Label>
-                <Input value={polo} disabled className="text-xs bg-muted/30 font-semibold" />
               </div>
             </div>
 
