@@ -43,42 +43,12 @@ const DEFAULT_GESTORES: GestorItem[] = [
     ativo: true,
   },
   {
-    id: "g2",
-    nome: "Responsável Polo Penha",
-    email: "penha@cufa.com.br",
-    senha: "penha2026",
+    id: "g-ricardo",
+    nome: "Ricardo",
+    email: "ricardo@cufa.com.br",
+    senha: "ricardo2026",
     tipo: "polo",
     poloNome: "Complexo da Penha",
-    dataCriacao: "2026-08-01",
-    ativo: true,
-  },
-  {
-    id: "g3",
-    nome: "Responsável Polo Madureira",
-    email: "madureira@cufa.com.br",
-    senha: "madureira2026",
-    tipo: "polo",
-    poloNome: "Viaduto de Madureira",
-    dataCriacao: "2026-08-01",
-    ativo: true,
-  },
-  {
-    id: "g4",
-    nome: "Responsável Polo Paraisópolis",
-    email: "paraisopolis@cufa.com.br",
-    senha: "paraisopolis2026",
-    tipo: "polo",
-    poloNome: "Paraisópolis",
-    dataCriacao: "2026-08-01",
-    ativo: true,
-  },
-  {
-    id: "g5",
-    nome: "Responsável Polo de Teste",
-    email: "teste@cufa.com.br",
-    senha: "teste2026",
-    tipo: "polo",
-    poloNome: "Polo de Teste",
     dataCriacao: "2026-08-01",
     ativo: true,
   },
@@ -90,9 +60,12 @@ export function GestoresPage() {
       const stored = localStorage.getItem("cufa_gestores_lista");
       if (stored) {
         const parsed: GestorItem[] = JSON.parse(stored);
-        if (parsed.some((g) => g.tipo === "polo")) return parsed;
-        // Merge defaults if only gestor geral was stored
-        return [...parsed, ...DEFAULT_GESTORES.filter((d) => d.tipo === "polo")];
+        // Filter out old dummy emails
+        const clean = parsed.filter(
+          (g) => !["penha@cufa.com.br", "madureira@cufa.com.br", "paraisopolis@cufa.com.br", "teste@cufa.com.br"].includes(g.email.toLowerCase())
+        );
+        if (clean.some((g) => g.tipo === "polo")) return clean;
+        return [...clean, ...DEFAULT_GESTORES.slice(1)];
       }
     } catch {}
     return DEFAULT_GESTORES;
@@ -110,11 +83,10 @@ export function GestoresPage() {
         const stored = localStorage.getItem("cufa_gestores_lista");
         if (stored) {
           const parsed: GestorItem[] = JSON.parse(stored);
-          setGestores(
-            parsed.some((g) => g.tipo === "polo")
-              ? parsed
-              : [...parsed, ...DEFAULT_GESTORES.filter((d) => d.tipo === "polo")]
+          const clean = parsed.filter(
+            (g) => !["penha@cufa.com.br", "madureira@cufa.com.br", "paraisopolis@cufa.com.br", "teste@cufa.com.br"].includes(g.email.toLowerCase())
           );
+          setGestores(clean.some((g) => g.tipo === "polo") ? clean : [...clean, ...DEFAULT_GESTORES.slice(1)]);
         }
       } catch {}
     }

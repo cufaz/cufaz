@@ -26,10 +26,22 @@ export function LoginDialog({
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
-    localStorage.setItem("cufa_logged_user", cleanEmail);
+    const cleanSenha = senha.trim();
 
-    // Master Admin Login
+    if (!cleanEmail || !cleanSenha) {
+      toast.error("Preencha o e-mail e a senha.");
+      return;
+    }
+
+    // 1. Master Admin Login
     if (cleanEmail === "master@cufa.com.br") {
+      if (cleanSenha !== "cufamaster2026" && cleanSenha !== "gestao26" && cleanSenha !== "master2026") {
+        toast.error("Senha incorreta!", {
+          description: "Verifique a senha informada e tente novamente.",
+        });
+        return;
+      }
+      localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_master_authenticated", "true");
       toast.success("Acesso Master Admin autorizado!");
       onOpenChange(false);
@@ -37,38 +49,74 @@ export function LoginDialog({
       return;
     }
 
-    // Gestor Geral Login
+    // 2. Gestor Geral Login
     if (cleanEmail === "gestor@cufa.com.br") {
+      if (cleanSenha !== "gestao26" && cleanSenha !== "cufa2026!") {
+        toast.error("Senha incorreta!", {
+          description: "Verifique a senha informada e tente novamente.",
+        });
+        return;
+      }
+      localStorage.setItem("cufa_logged_user", cleanEmail);
       toast.success("Login realizado com sucesso! Bem-vindo, Gestor Geral.");
       onOpenChange(false);
       window.location.href = "/gestor";
       return;
     }
 
-    // Check stored gestores list
+    // 3. Check registered list of gestores/responsaveis (including Ricardo)
+    let list: any[] = [];
     try {
       const stored = localStorage.getItem("cufa_gestores_lista");
-      const list = stored ? JSON.parse(stored) : [];
-      const matched = list.find((g: any) => String(g.email).toLowerCase() === cleanEmail);
-
-      if (matched) {
-        if (matched.tipo === "geral") {
-          toast.success("Login realizado com sucesso! Bem-vindo, Gestor Geral.");
-          onOpenChange(false);
-          window.location.href = "/gestor";
-          return;
-        } else {
-          localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
-          toast.success(`Login autorizado! Unidade ${matched.poloNome}`);
-          onOpenChange(false);
-          window.location.href = "/polo";
-          return;
-        }
-      }
+      if (stored) list = JSON.parse(stored);
     } catch {}
 
-    // Fallback for Responsável de Polo email pattern
-    if (cleanEmail.includes("penha")) {
+    // Include Ricardo in default list if missing
+    if (!list.some((g: any) => String(g.email).toLowerCase() === "ricardo@cufa.com.br")) {
+      list.push({
+        id: "g-ricardo",
+        nome: "Ricardo",
+        email: "ricardo@cufa.com.br",
+        senha: "ricardo2026",
+        tipo: "polo",
+        poloNome: "Complexo da Penha",
+      });
+    }
+
+    const matched = list.find((g: any) => String(g.email).toLowerCase() === cleanEmail);
+
+    if (matched) {
+      // STRICT PASSWORD CHECK
+      if (matched.senha && matched.senha !== cleanSenha) {
+        toast.error("Senha incorreta!", {
+          description: "A senha digitada não confere com a cadastrada para este usuário.",
+        });
+        return;
+      }
+
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      if (matched.tipo === "geral") {
+        toast.success("Login realizado com sucesso! Bem-vindo, Gestor Geral.");
+        onOpenChange(false);
+        window.location.href = "/gestor";
+      } else {
+        localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
+        toast.success(`Login autorizado! Unidade ${matched.poloNome}`);
+        onOpenChange(false);
+        window.location.href = "/polo";
+      }
+      return;
+    }
+
+    // 4. Fallback check for Ricardo specifically if not in list
+    if (cleanEmail === "ricardo@cufa.com.br") {
+      if (cleanSenha !== "ricardo2026" && cleanSenha !== "penha2026") {
+        toast.error("Senha incorreta!", {
+          description: "Verifique a senha informada e tente novamente.",
+        });
+        return;
+      }
+      localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
       toast.success("Login autorizado! Unidade Complexo da Penha.");
       onOpenChange(false);
@@ -76,29 +124,10 @@ export function LoginDialog({
       return;
     }
 
-    if (cleanEmail.includes("madureira")) {
-      localStorage.setItem("cufa_polo_atribuido", "Viaduto de Madureira");
-      toast.success("Login autorizado! Unidade Viaduto de Madureira.");
-      onOpenChange(false);
-      window.location.href = "/polo";
-      return;
-    }
-
-    if (cleanEmail.includes("paraisopolis")) {
-      localStorage.setItem("cufa_polo_atribuido", "Paraisópolis");
-      toast.success("Login autorizado! Unidade Paraisópolis.");
-      onOpenChange(false);
-      window.location.href = "/polo";
-      return;
-    }
-
-    // Default Responsável de Polo Login for any registered user
-    localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
-    toast.success("Login realizado com sucesso!", {
-      description: "Redirecionando para o Painel do Responsável...",
+    // 5. User not found
+    toast.error("Usuário não cadastrado!", {
+      description: "Verifique o e-mail informado ou realize o cadastro de acesso.",
     });
-    onOpenChange(false);
-    window.location.href = "/polo";
   }
 
   return (
