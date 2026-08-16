@@ -151,15 +151,19 @@ function FinanceiroPage() {
     return false;
   });
 
-  // 2. Custom Database Budget Items (from activities budget modal)
+  // 2. Custom Database Budget Items (from activities budget modal & activities cost)
   const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
+  const atividadesList: Row[] = data?.atividades ?? [];
+
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
+    const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
+
     const matchPolo =
       !poloId ||
       poloId === "todos" ||
       itemPoloId === poloId ||
-      (poloNomePrev && String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase().includes(poloNomePrev));
+      (poloNomePrev && (itemPoloNome.includes(poloNomePrev) || poloNomePrev.includes(itemPoloNome)));
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
@@ -178,6 +182,31 @@ function FinanceiroPage() {
         descricao: descStr,
         quantidade: qtdStr,
         previsto: custoNum,
+        realizado: 0,
+      });
+    }
+  });
+
+  // Fallback: If polo has activities with custo_mensal (e.g. Vôlei R$ 5.000,00) but no detailed items yet
+  const poloAtividades = atividadesList.filter((a) => {
+    const aPoloId = String(a['polo_id'] || "");
+    const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
+    return !poloId || poloId === "todos" || aPoloId === poloId || (poloNomePrev && aPoloNome.includes(poloNomePrev));
+  });
+
+  poloAtividades.forEach((a) => {
+    const ativNome = String(a['nome']);
+    const alreadyInDbCustom = dbCustomItems.some((di) => di.atividade === ativNome);
+    if (!alreadyInDbCustom && Number(a['custo_mensal'] || 0) > 0) {
+      dbCustomItems.push({
+        id: `ativ-${a['id']}`,
+        poloId: String(a['polo_id'] || poloId),
+        atividade: ativNome,
+        categoria: "Pessoal",
+        item: `Equipe e Operação ${ativNome}`,
+        descricao: String(a['descricao'] || "Oficina e recursos da atividade"),
+        quantidade: "1",
+        previsto: Number(a['custo_mensal']),
         realizado: 0,
       });
     }
@@ -500,7 +529,7 @@ function FinanceiroPage() {
                                   <td className="py-2.5 px-3 text-muted-foreground font-medium max-w-xs leading-relaxed">
                                     {item.descricao}
                                   </td>
-                                  <td className="py-2.5 px-3 font-semibold text-primary">{item.quantidade}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-primary">{String(item.quantidade || "1").match(/\d+/)?.[0] ?? "1"}</td>
                                   <td className="py-2.5 px-3 text-right font-semibold text-foreground">{brl(item.previsto)}</td>
                                   <td className="py-2.5 px-3 text-right font-bold text-foreground">{brl(item.realizado)}</td>
                                   <td className={`py-2.5 px-3 text-right font-extrabold ${variacao >= 0 ? "text-emerald-600" : "text-destructive"}`}>

@@ -138,7 +138,7 @@ function DashboardPage() {
       {/* Cards de KPIs Principais (Anexo 1, 2 & 3) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
-        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint={`Projeto ${duracaoProjetoMeses} meses`} />
+        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint={`Período do Projeto (${duracaoProjetoMeses} meses)`} />
         <Kpi label="Valores já utilizados" value={brl(despesasRealizadas)} hint="Despesas realizadas" />
         <Kpi label="% Orçamento utilizado" value={percUtilizadoStr} hint="Em relação ao previsto" />
         <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma de todos os polos" />

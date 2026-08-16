@@ -129,7 +129,7 @@ export function exportProfessionalExcel({
       i.categoria,
       i.item,
       i.descricao,
-      i.quantidade,
+      String(i.quantidade || "1").match(/\d+/)?.[0] ?? "1",
       formatBRL(i.previsto),
     ]);
   });

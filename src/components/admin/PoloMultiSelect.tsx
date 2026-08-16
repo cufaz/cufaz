@@ -40,14 +40,26 @@ export function PoloMultiSelect({
     } else {
       onChange(polos.map((p) => p.id));
     }
+    setOpen(false); // Auto-close popover on click (Anexo 2)
   }
 
   function togglePolo(id: string) {
     if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((item) => item !== id));
+      const updated = selectedIds.filter((item) => item !== id);
+      onChange(updated);
     } else {
       onChange([...selectedIds, id]);
     }
+    setOpen(false); // Auto-close popover on click (Anexo 2)
+  }
+
+  function selectSinglePolo(id: string) {
+    if (id === "") {
+      onChange([]);
+    } else {
+      onChange([id]);
+    }
+    setOpen(false); // Auto-close popover on click (Anexo 2)
   }
 
   function getDisplayText() {

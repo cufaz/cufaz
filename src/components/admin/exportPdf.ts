@@ -182,7 +182,7 @@ export function generateProfessionalPdf({
     item.atividade,
     item.categoria,
     item.item,
-    item.quantidade,
+    String(item.quantidade || "1").match(/\d+/)?.[0] ?? "1",
     formatBRL(item.previsto),
   ]);
 

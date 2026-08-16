@@ -132,7 +132,7 @@ export function DashboardTab({
           </div>
           <div className="mt-4">
             <span className="text-2xl font-extrabold text-foreground">{formatBRL(totalOrcamentoProjeto)}</span>
-            <p className="text-xs text-muted-foreground mt-1">Projeto {duracaoProjetoMeses} meses</p>
+            <p className="text-xs text-muted-foreground mt-1">Período do Projeto ({duracaoProjetoMeses} meses)</p>
           </div>
         </div>
 

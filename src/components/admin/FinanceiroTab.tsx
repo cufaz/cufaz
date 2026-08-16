@@ -405,7 +405,7 @@ export function FinanceiroTab({
                               <td className="py-2.5 px-3 text-muted-foreground font-medium max-w-xs leading-relaxed">
                                 {item.descricao}
                               </td>
-                              <td className="py-2.5 px-3 font-semibold text-primary">{item.quantidade}</td>
+                              <td className="py-2.5 px-3 font-semibold text-primary">{String(item.quantidade || "1").match(/\d+/)?.[0] ?? "1"}</td>
                               <td className="py-2.5 px-3 text-right font-semibold text-foreground">{formatBRL(item.previsto)}</td>
                               <td className="py-2.5 px-3 text-right font-bold text-foreground">{formatBRL(item.realizado)}</td>
                               <td className={`py-2.5 px-3 text-right font-extrabold ${variacao >= 0 ? "text-emerald-600" : "text-destructive"}`}>
