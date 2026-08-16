@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { zipSync, strToU8 } from "fflate";
 import {
   Users,
   Clock,
@@ -168,17 +169,81 @@ export function PoloAtividadesPage() {
   function handleDownloadZip(solic: ProfessorSolicitacao) {
     setIsDownloadingZip(true);
     setTimeout(() => {
-      setIsDownloadingZip(false);
-      const content = `PACOTE DE DOCUMENTAÇÃO CUFA DE HOMOLOGAÇÃO\n===========================================\nProfessor: ${solic.professorNome}\nE-mail: ${solic.email || "santana@cufa.com.br"}\nModalidade: ${solic.atividadeNome}\nTurma: ${solic.turmaNome || "Turma 1"}\nUnidade: ${solic.poloNome}\nData: ${solic.dataSolicitacao || "Hoje"}\n\nDocumentos inclusos:\n- Documento de Identificacao (RG/CPF)\n- Comprovante de Residencia`;
-      const blob = new Blob([content], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `documentos_${cleanStr(solic.professorNome)}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Download do arquivo ZIP finalizado!");
-    }, 1500);
+      try {
+        const infoTxt = `PACOTE DE HOMOLOGAÇÃO CUFA DE PROFESSOR
+===========================================
+Nome Completo: ${solic.professorNome}
+E-mail de Login: ${solic.email || "santana@cufa.com.br"}
+Modalidade / Atividade: ${solic.atividadeNome}
+Turma Atribuida: ${solic.turmaNome || "Turma 1"}
+Unidade / Polo: ${solic.poloNome}
+Data da Solicitação: ${solic.dataSolicitacao || "Hoje"}
+Status no Sistema: ${solic.status.toUpperCase()}
+
+DOCUMENTOS ANEXADOS NESTE ARQUIVO COMPACTADO:
+1. Ficha_Homologacao_Professor.txt (Ficha cadastral completa)
+2. Documento_Identificacao_RG_CPF.pdf (Cópia do documento de identidade)
+3. Comprovante_Residencia.pdf (Comprovante de residência atualizado)
+`;
+
+        const rgPdfDummy = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
+4 0 obj << /Length 60 >> stream
+BT /F1 12 Tf 100 700 TD (DOCUMENTO RG / CPF - ${solic.professorNome}) Tj ET
+endstream endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000205 00000 n 
+trailer << /Size 5 /Root 1 0 R >>
+startxref
+310
+%%EOF`;
+
+        const compResPdfDummy = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
+4 0 obj << /Length 70 >> stream
+BT /F1 12 Tf 100 700 TD (COMPROVANTE DE RESIDENCIA - ${solic.professorNome}) Tj ET
+endstream endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000205 00000 n 
+trailer << /Size 5 /Root 1 0 R >>
+startxref
+320
+%%EOF`;
+
+        const zipData = zipSync({
+          "Ficha_Homologacao_Professor.txt": strToU8(infoTxt),
+          "Documento_Identificacao_RG_CPF.pdf": strToU8(rgPdfDummy),
+          "Comprovante_Residencia.pdf": strToU8(compResPdfDummy),
+        });
+
+        const blob = new Blob([zipData], { type: "application/zip" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `documentos_${cleanStr(solic.professorNome)}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Download do pacote de documentos (ZIP) concluído com sucesso!");
+      } catch (err) {
+        toast.error("Erro ao gerar arquivo ZIP.");
+      } finally {
+        setIsDownloadingZip(false);
+      }
+    }, 1200);
   }
 
   const isPenha = poloNome.toLowerCase().includes("penha");
