@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingCart, Plus, CheckCircle2, Clock, PackageCheck, Send, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
@@ -43,7 +43,7 @@ export function PoloComprasPage() {
     return [];
   });
 
-  const DEFAULT_CATEGORIAS_CUFA = [
+  const BASE_CATEGORIAS_CUFA = [
     "Pessoal",
     "Materiais esportivos",
     "Materiais / consumo",
@@ -57,16 +57,35 @@ export function PoloComprasPage() {
     "Uniformes e vestuário",
     "Insumos, lanche e apoio operacional",
     "Kit Lanche",
+    "Logística",
+    "Transporte e Logística",
     "Custos Extras",
   ];
 
-  const [categoriasLista] = useState<string[]>(() => {
+  const [categoriasLista, setCategoriasLista] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_categorias_pedidos");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored);
+        return Array.from(new Set([...BASE_CATEGORIAS_CUFA, ...parsed]));
+      }
     } catch {}
-    return DEFAULT_CATEGORIAS_CUFA;
+    return BASE_CATEGORIAS_CUFA;
   });
+
+  useEffect(() => {
+    function syncCats() {
+      try {
+        const stored = localStorage.getItem("cufa_categorias_pedidos");
+        if (stored) {
+          const parsed: string[] = JSON.parse(stored);
+          setCategoriasLista(Array.from(new Set([...BASE_CATEGORIAS_CUFA, ...parsed])));
+        }
+      } catch {}
+    }
+    window.addEventListener("cufa_categorias_updated", syncCats);
+    return () => window.removeEventListener("cufa_categorias_updated", syncCats);
+  }, []);
 
   const [itemNome, setItemNome] = useState("");
   const [categoria, setCategoria] = useState(categoriasLista[0] || "Materiais esportivos");

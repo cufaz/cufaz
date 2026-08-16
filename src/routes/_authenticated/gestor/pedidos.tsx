@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -65,7 +65,7 @@ function PedidosPage() {
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
-  const DEFAULT_CATEGORIAS = [
+  const BASE_CATEGORIAS = [
     "Pessoal",
     "Materiais esportivos",
     "Materiais / consumo",
@@ -79,16 +79,35 @@ function PedidosPage() {
     "Uniformes e vestuário",
     "Insumos, lanche e apoio operacional",
     "Kit Lanche",
+    "Logística",
+    "Transporte e Logística",
     "Custos Extras",
   ];
 
   const [categorias, setCategorias] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_categorias_pedidos");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored);
+        return Array.from(new Set([...BASE_CATEGORIAS, ...parsed]));
+      }
     } catch {}
-    return DEFAULT_CATEGORIAS;
+    return BASE_CATEGORIAS;
   });
+
+  useEffect(() => {
+    function syncCats() {
+      try {
+        const stored = localStorage.getItem("cufa_categorias_pedidos");
+        if (stored) {
+          const parsed: string[] = JSON.parse(stored);
+          setCategorias(Array.from(new Set([...BASE_CATEGORIAS, ...parsed])));
+        }
+      } catch {}
+    }
+    window.addEventListener("cufa_categorias_updated", syncCats);
+    return () => window.removeEventListener("cufa_categorias_updated", syncCats);
+  }, []);
 
   const [novaCatModalOpen, setNovaCatModalOpen] = useState(false);
   const [novaCatNome, setNovaCatNome] = useState("");
@@ -97,14 +116,15 @@ function PedidosPage() {
     e.preventDefault();
     if (!novaCatNome.trim()) return;
     const itemLimpo = novaCatNome.trim();
-    if (categorias.includes(itemLimpo)) {
+    if (categorias.some((c) => c.toLowerCase() === itemLimpo.toLowerCase())) {
       toast.error("Categoria já cadastrada.");
       return;
     }
-    const atualizadas = [...categorias, itemLimpo];
+    const atualizadas = Array.from(new Set([...categorias, itemLimpo]));
     setCategorias(atualizadas);
     try {
       localStorage.setItem("cufa_categorias_pedidos", JSON.stringify(atualizadas));
+      window.dispatchEvent(new Event("cufa_categorias_updated"));
     } catch {}
     toast.success(`Categoria "${itemLimpo}" criada com sucesso!`);
     setNovaCatNome("");
