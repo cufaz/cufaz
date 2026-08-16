@@ -72,16 +72,32 @@ export function PoloResponsavelShell({
     return "Ricardo Brito";
   });
 
-  const [responsavelFoto, setResponsavelFoto] = useState(() => {
-    return localStorage.getItem(`cufa_perfil_foto_${loggedUserEmail}`) || localStorage.getItem("cufa_perfil_foto") || "";
-  });
+  function getValidFoto() {
+    try {
+      const storedPerfil = localStorage.getItem("cufa_responsavel_perfil");
+      if (storedPerfil) {
+        const p = JSON.parse(storedPerfil);
+        if (p.fotoUrl && !p.fotoUrl.includes("unsplash.com")) return p.fotoUrl;
+      }
+    } catch {}
+
+    const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
+    if (fUser && !fUser.includes("unsplash.com")) return fUser;
+
+    const fGlobal = localStorage.getItem("cufa_perfil_foto");
+    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
+
+    return "";
+  }
+
+  const [responsavelFoto, setResponsavelFoto] = useState(() => getValidFoto());
 
   useEffect(() => {
     function syncFoto() {
-      const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
-      const f = localStorage.getItem(`cufa_perfil_foto_${email}`) || localStorage.getItem("cufa_perfil_foto") || "";
-      setResponsavelFoto(f);
+      setResponsavelFoto(getValidFoto());
     }
+    syncFoto();
     window.addEventListener("cufa_perfil_foto_updated", syncFoto);
     window.addEventListener("storage", syncFoto);
     return () => {
@@ -224,11 +240,6 @@ export function PoloResponsavelShell({
       to: "/polo/alunos",
       label: "Alunos Matriculados",
       icon: Users,
-    },
-    {
-      to: "/polo/chamada",
-      label: "Chamada / Frequência",
-      icon: ClipboardCheck,
     },
     {
       to: "/polo/compras",

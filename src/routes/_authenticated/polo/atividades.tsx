@@ -278,11 +278,8 @@ export function PoloAtividadesPage() {
           {atividadesFiltradas.map((ativ) => {
             const pMatch = solicitacoes.find(
               (s) =>
-                (cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
-                  cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome))) &&
-                (!s.turmaNome ||
-                  cleanStr(s.turmaNome).includes(cleanStr(ativ.turmaNome)) ||
-                  cleanStr(ativ.turmaNome).includes(cleanStr(s.turmaNome)))
+                cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
+                cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome))
             );
 
             return (
