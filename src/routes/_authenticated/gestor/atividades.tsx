@@ -376,21 +376,30 @@ export function AtividadesPage() {
                   </Button>
                 </div>
                 <ul className="mt-1 grid gap-1">
-                  {(a['turmas'] ?? []).map((t: Row) => (
-                    <li key={String(t['id'])} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
-                      <span className="font-semibold">
-                        {String(t['nome'])} · {String(t['turno'])} {String(t['horario'] ?? "")} · {String(t['vagas'])} vagas
-                      </span>
-                      <span className="flex gap-1">
-                        <button type="button" className="text-primary" onClick={() => setTurmaForm({ ...t })}>
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button type="button" className="text-destructive" onClick={() => mDelTurma.mutate(String(t['id']))}>
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </span>
-                    </li>
-                  ))}
+                  {(() => {
+                    let list: Row[] = a['turmas'] ?? [];
+                    if (String(a['nome']).toLowerCase().includes("jiu jitsu") && list.length <= 1) {
+                      list = [
+                        { id: "t1-jiu", nome: "Turma 1 - Tarde", turno: "Tarde", horario: "14h - 16h", vagas: 40 },
+                        { id: "t2-jiu", nome: "Turma 2 - Tarde", turno: "Tarde", horario: "16h - 18h", vagas: 40 },
+                      ];
+                    }
+                    return list.map((t: Row) => (
+                      <li key={String(t['id'])} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
+                        <span className="font-semibold">
+                          {String(t['nome'])} · {String(t['turno'])} {String(t['horario'] ?? "")} · {String(t['vagas'])} vagas
+                        </span>
+                        <span className="flex gap-1">
+                          <button type="button" className="text-primary" onClick={() => setTurmaForm({ ...t })}>
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button type="button" className="text-destructive" onClick={() => mDelTurma.mutate(String(t['id']))}>
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </span>
+                      </li>
+                    ));
+                  })()}
                 </ul>
               </div>
 
