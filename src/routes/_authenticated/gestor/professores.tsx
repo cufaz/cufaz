@@ -17,9 +17,12 @@ import {
   TrendingUp,
   Mail,
   Phone,
+  FileText,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
+import { brl } from "@/lib/brl";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -641,6 +644,71 @@ function ProfessoresDashboardPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Seção 3: Notas Fiscais de Serviço do Professor (Anexo 5) */}
+                <div className="space-y-2 pt-1 border-t border-border/60">
+                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="size-3.5 text-primary" /> Notas Fiscais de Serviço (NF-e)
+                  </h5>
+                  {(() => {
+                    const profEmail = selectedProf.email?.toLowerCase() || "";
+                    let nfsList: any[] = [];
+                    try {
+                      const stored = localStorage.getItem(`cufa_professor_nfs_${profEmail}`);
+                      if (stored) nfsList = JSON.parse(stored);
+                      if (!nfsList || nfsList.length === 0) {
+                        const storedAll = localStorage.getItem("cufa_professor_nfs_all");
+                        if (storedAll) {
+                          const parsedAll = JSON.parse(storedAll);
+                          nfsList = parsedAll.filter((n: any) => n.profEmail?.toLowerCase() === profEmail);
+                        }
+                      }
+                    } catch {}
+
+                    if (nfsList.length === 0) {
+                      return (
+                        <p className="text-[11px] text-muted-foreground italic bg-muted/20 p-2.5 rounded-xl border border-border">
+                          Nenhuma Nota Fiscal de Serviço enviada por este professor até o momento.
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {nfsList.map((nf) => (
+                          <div key={nf.id} className="p-3 rounded-xl border border-border bg-card flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">
+                                <FileText className="size-3.5 text-primary" /> NF Período {nf.periodo} — {brl(nf.valor || 0)}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground font-medium">{nf.fileName} • Enviado em {nf.dataEnvio}</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (nf.fileDataUrl) {
+                                  const a = document.createElement("a");
+                                  a.href = nf.fileDataUrl;
+                                  a.download = nf.fileName;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  toast.success(`Download de ${nf.fileName} concluído!`);
+                                } else {
+                                  toast.error("Arquivo indisponível para download.");
+                                }
+                              }}
+                              className="h-7 text-[11px] font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1"
+                            >
+                              <Download className="size-3" /> Baixar NF
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

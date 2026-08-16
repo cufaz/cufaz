@@ -18,20 +18,71 @@ export function PoloAlunosPage() {
   const [pagina, setPagina] = useState(1);
   const itensPorPagina = 20;
 
-  // Zeroed mock by default for clean testing (Anexo 1)
-  const [alunosMock, setAlunosMock] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_alunos_polo");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
+  function loadMergedPoloAlunosList() {
+    const listMap = new Map<string, any>();
+    const cleanPolo = poloNome.toLowerCase();
 
-  useEffect(() => {
+    // 1. Read registered students in platform
     try {
-      localStorage.setItem("cufa_alunos_polo", JSON.stringify(alunosMock));
+      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
+      if (storedCad) {
+        const parsed = JSON.parse(storedCad);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const aPolo = (a.polo || "Complexo da Penha").toLowerCase();
+            if (cleanPolo.includes("penha") || aPolo.includes(cleanPolo) || cleanPolo.includes(aPolo)) {
+              const key = (a.email || a.nome || `aluno-${idx}`).toLowerCase();
+              listMap.set(key, {
+                id: a.id || `cad-${idx}`,
+                nome: a.nome,
+                email: a.email || "",
+                atividade: a.modalidade || "Jiu Jitsu",
+                turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
+                idade: a.dataNasc ? `${new Date().getFullYear() - new Date(a.dataNasc).getFullYear()} anos` : "14 anos",
+                responsavel: a.nomeResponsavel || "Próprio Aluno",
+                telefone: a.telResponsavel || a.telefone || "(11) 98877-6655",
+                dataMatricula: a.dataCriacao || new Date().toISOString().slice(0, 10),
+                status: "Ativo",
+              });
+            }
+          });
+        }
+      }
     } catch {}
-  }, [alunosMock]);
+
+    // 2. Read polo unit registered students
+    try {
+      const storedPolo = localStorage.getItem("cufa_alunos_polo");
+      if (storedPolo) {
+        const parsed = JSON.parse(storedPolo);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const key = (a.email || a.nome || `polo-${idx}`).toLowerCase();
+            if (!listMap.has(key)) {
+              listMap.set(key, {
+                id: a.id || `polo-${idx}`,
+                nome: a.nome,
+                email: a.email || "",
+                atividade: a.atividade || a.modalidade || "Jiu Jitsu",
+                turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
+                idade: a.idade || "15 anos",
+                responsavel: a.responsavel || a.nomeResponsavel || "Responsável Legal",
+                telefone: a.telefone || "(11) 98877-6655",
+                dataMatricula: a.dataMatricula || new Date().toISOString().slice(0, 10),
+                status: "Ativo",
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    return Array.from(listMap.values());
+  }
+
+  const [alunosMock, setAlunosMock] = useState<any[]>(() => {
+    return loadMergedPoloAlunosList();
+  });
 
   const atividadesPolo = poloNome.toLowerCase().includes("madureira")
     ? ["Basquete", "Karatê", "Capoeira"]

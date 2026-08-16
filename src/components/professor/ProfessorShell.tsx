@@ -11,6 +11,7 @@ import {
   X,
   GraduationCap,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import logo from "@/assets/cufa-z-logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -103,6 +104,11 @@ export function ProfessorShell({
       to: "/professor/chamada",
       label: "Chamada / Frequência",
       icon: ClipboardCheck,
+    },
+    {
+      to: "/professor/nf-servico",
+      label: "NF de Serviço",
+      icon: FileText,
     },
     {
       to: "/professor/perfil",

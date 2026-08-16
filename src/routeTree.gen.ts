@@ -37,6 +37,7 @@ import { Route as AuthenticatedPoloPerfilRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProfessorIndexRouteImport } from './routes/_authenticated/professor/index'
 import { Route as AuthenticatedProfessorAtividadesRouteImport } from './routes/_authenticated/professor/atividades'
 import { Route as AuthenticatedProfessorChamadaRouteImport } from './routes/_authenticated/professor/chamada'
+import { Route as AuthenticatedProfessorNfServicoRouteImport } from './routes/_authenticated/professor/nf-servico'
 import { Route as AuthenticatedProfessorOportunidadesRouteImport } from './routes/_authenticated/professor/oportunidades'
 import { Route as AuthenticatedProfessorPerfilRouteImport } from './routes/_authenticated/professor/perfil'
 
@@ -199,6 +200,12 @@ const AuthenticatedProfessorChamadaRoute =
     path: '/professor/chamada',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProfessorNfServicoRoute =
+  AuthenticatedProfessorNfServicoRouteImport.update({
+    id: '/professor/nf-servico',
+    path: '/professor/nf-servico',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProfessorOportunidadesRoute =
   AuthenticatedProfessorOportunidadesRouteImport.update({
     id: '/professor/oportunidades',
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/professor/atividades': typeof AuthenticatedProfessorAtividadesRoute
   '/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
+  '/professor/nf-servico': typeof AuthenticatedProfessorNfServicoRoute
   '/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
   '/aluno/': typeof AuthenticatedAlunoIndexRoute
@@ -265,6 +273,7 @@ export interface FileRoutesByTo {
   '/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/professor/atividades': typeof AuthenticatedProfessorAtividadesRoute
   '/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
+  '/professor/nf-servico': typeof AuthenticatedProfessorNfServicoRoute
   '/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
   '/aluno': typeof AuthenticatedAlunoIndexRoute
@@ -298,6 +307,7 @@ export interface FileRoutesById {
   '/_authenticated/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/_authenticated/professor/atividades': typeof AuthenticatedProfessorAtividadesRoute
   '/_authenticated/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
+  '/_authenticated/professor/nf-servico': typeof AuthenticatedProfessorNfServicoRoute
   '/_authenticated/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/_authenticated/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
   '/_authenticated/aluno/': typeof AuthenticatedAlunoIndexRoute
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/polo/perfil'
     | '/professor/atividades'
     | '/professor/chamada'
+    | '/professor/nf-servico'
     | '/professor/oportunidades'
     | '/professor/perfil'
     | '/aluno/'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/polo/perfil'
     | '/professor/atividades'
     | '/professor/chamada'
+    | '/professor/nf-servico'
     | '/professor/oportunidades'
     | '/professor/perfil'
     | '/aluno'
@@ -392,6 +404,7 @@ export interface FileRouteTypes {
     | '/_authenticated/polo/perfil'
     | '/_authenticated/professor/atividades'
     | '/_authenticated/professor/chamada'
+    | '/_authenticated/professor/nf-servico'
     | '/_authenticated/professor/oportunidades'
     | '/_authenticated/professor/perfil'
     | '/_authenticated/aluno/'
@@ -604,6 +617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfessorChamadaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/professor/nf-servico': {
+      id: '/_authenticated/professor/nf-servico'
+      path: '/professor/nf-servico'
+      fullPath: '/professor/nf-servico'
+      preLoaderRoute: typeof AuthenticatedProfessorNfServicoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/professor/oportunidades': {
       id: '/_authenticated/professor/oportunidades'
       path: '/professor/oportunidades'
@@ -684,6 +704,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlunoPerfilRoute: typeof AuthenticatedAlunoPerfilRoute
   AuthenticatedProfessorAtividadesRoute: typeof AuthenticatedProfessorAtividadesRoute
   AuthenticatedProfessorChamadaRoute: typeof AuthenticatedProfessorChamadaRoute
+  AuthenticatedProfessorNfServicoRoute: typeof AuthenticatedProfessorNfServicoRoute
   AuthenticatedProfessorOportunidadesRoute: typeof AuthenticatedProfessorOportunidadesRoute
   AuthenticatedProfessorPerfilRoute: typeof AuthenticatedProfessorPerfilRoute
   AuthenticatedAlunoIndexRoute: typeof AuthenticatedAlunoIndexRoute
@@ -700,6 +721,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlunoPerfilRoute: AuthenticatedAlunoPerfilRoute,
   AuthenticatedProfessorAtividadesRoute: AuthenticatedProfessorAtividadesRoute,
   AuthenticatedProfessorChamadaRoute: AuthenticatedProfessorChamadaRoute,
+  AuthenticatedProfessorNfServicoRoute: AuthenticatedProfessorNfServicoRoute,
   AuthenticatedProfessorOportunidadesRoute:
     AuthenticatedProfessorOportunidadesRoute,
   AuthenticatedProfessorPerfilRoute: AuthenticatedProfessorPerfilRoute,

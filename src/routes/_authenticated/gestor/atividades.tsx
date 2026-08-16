@@ -231,6 +231,43 @@ export function AtividadesPage() {
     return merged;
   })();
 
+  // Dynamic list of ONLY registered/active polos for Activity Creation Dialog (Anexo 1)
+  const polosCriacao: Row[] = (() => {
+    const listMap = new Map<string, Row>();
+
+    const fetched = (data?.polos as Row[]) ?? [];
+    fetched.forEach((p) => {
+      if (p['nome']) listMap.set(String(p['nome']).toLowerCase(), p);
+    });
+
+    try {
+      const stored = localStorage.getItem("cufa_polos_cadastrados");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((p: any) => {
+            if (p.nome && !listMap.has(String(p.nome).toLowerCase())) {
+              listMap.set(String(p.nome).toLowerCase(), {
+                id: p.id || `polo-${Date.now()}`,
+                nome: p.nome,
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    if (listMap.size === 0) {
+      return [
+        { id: "polo-penha", nome: "Complexo da Penha" },
+        { id: "polo-paraisopolis", nome: "Paraisópolis" },
+        { id: "polo-madureira", nome: "Viaduto de Madureira" },
+      ];
+    }
+
+    return Array.from(listMap.values());
+  })();
+
   const atividades: Row[] = data?.atividades ?? [];
 
   // Filter activities dynamically by multi-polo, date, and search term
@@ -487,7 +524,7 @@ export function AtividadesPage() {
                   value={String(form['polo_id'] ?? "")}
                   onChange={(e) => setForm({ ...form, polo_id: e.target.value })}
                 >
-                  {polos.map((p) => (
+                  {polosCriacao.map((p) => (
                     <option key={String(p['id'])} value={String(p['id'])}>
                       {String(p['nome'])}
                     </option>

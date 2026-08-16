@@ -83,6 +83,27 @@ ${prof.docFuncName ? `3. ${prof.docFuncName}` : ""}
     zipFiles[filename] = base64ToUint8Array(prof.docFuncData);
   }
 
+  // 5. Include any uploaded NFs (Anexo 5)
+  if (prof.email) {
+    try {
+      const pEmail = prof.email.toLowerCase();
+      const storedNfs = localStorage.getItem(`cufa_professor_nfs_${pEmail}`);
+      if (storedNfs) {
+        const nfsList = JSON.parse(storedNfs);
+        if (Array.isArray(nfsList)) {
+          nfsList.forEach((nf: any, idx: number) => {
+            const fname = nf.fileName || `NF_Servico_${nf.periodo || idx}.pdf`;
+            if (nf.fileDataUrl && nf.fileDataUrl.length > 20) {
+              zipFiles[`NF_Servico_${fname}`] = base64ToUint8Array(nf.fileDataUrl);
+            } else {
+              zipFiles[`NF_Servico_${fname}`] = strToU8(`NOTA FISCAL DE SERVIÇO - PERÍODO ${nf.periodo} - ${prof.nome}`);
+            }
+          });
+        }
+      }
+    } catch {}
+  }
+
   const zipped = zipSync(zipFiles);
   return new Blob([zipped], { type: "application/zip" });
 }

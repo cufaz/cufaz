@@ -39,3 +39,7 @@ export function parseBRLToNumber(value: string | number | null | undefined): num
 
   return Number(digitsOnly) / 100;
 }
+
+export function brl(value: number | null | undefined): string {
+  return formatBRLInput(value);
+}

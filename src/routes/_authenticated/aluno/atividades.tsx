@@ -18,6 +18,7 @@ import {
   Linkedin,
   Facebook,
   GraduationCap,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AlunoShell } from "@/components/aluno/AlunoShell";
@@ -86,6 +87,7 @@ function VitrineAtividadesAlunoPage() {
     instagram?: string;
     linkedin?: string;
   } | null>(null);
+  const [selectedCourseGalleryModal, setSelectedCourseGalleryModal] = useState<VitrineCardItem | null>(null);
 
   // Expanded Vitrine Items across all official CUFA Polos
   const defaultVitrine: VitrineCardItem[] = [
@@ -436,6 +438,19 @@ function VitrineAtividadesAlunoPage() {
                       <span>Vagas: <strong>{vagasRestantes} vagas disponíveis</strong></span>
                     </div>
 
+                    {/* Botão de Galeria de Fotos da Oficina (Anexo 4) */}
+                    <div className="pt-0.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCourseGalleryModal(item)}
+                        className="h-7 text-[11px] font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1.5"
+                      >
+                        <ImageIcon className="size-3.5 text-primary" /> Imagens da Oficina
+                      </Button>
+                    </div>
+
                     {/* Detalhes da Oficina definidos pelo Gestor */}
                     <div className="pt-2.5 border-t border-border/50 space-y-1.5">
                       <p className="text-[11px] font-bold text-foreground flex items-center gap-1">
@@ -558,6 +573,83 @@ function VitrineAtividadesAlunoPage() {
                 </div>
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Galeria de Fotos da Oficina (Anexo 4) */}
+      <Dialog
+        open={Boolean(selectedCourseGalleryModal)}
+        onOpenChange={(open) => !open && setSelectedCourseGalleryModal(null)}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-extrabold">
+              <ImageIcon className="size-5 text-primary" />
+              <span>Fotos da Oficina — {selectedCourseGalleryModal?.nome}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Galeria oficial de imagens das atividades e aulas da unidade {selectedCourseGalleryModal?.polo}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCourseGalleryModal && (
+            <div className="space-y-4 pt-2">
+              {(() => {
+                const storedFotos = localStorage.getItem("cufa_polo_galeria_fotos");
+                let fotosList: any[] = [];
+                try {
+                  if (storedFotos) {
+                    const parsed = JSON.parse(storedFotos);
+                    if (Array.isArray(parsed)) {
+                      fotosList = parsed.filter(
+                        (f: any) =>
+                          (f.oficina && String(f.oficina).toLowerCase() === selectedCourseGalleryModal.nome.toLowerCase()) ||
+                          (f.polo && String(f.polo).toLowerCase().includes(selectedCourseGalleryModal.polo.toLowerCase()))
+                      );
+                    }
+                  }
+                } catch {}
+
+                if (fotosList.length === 0) {
+                  // Clean fallback preview images for demonstration
+                  fotosList = [
+                    {
+                      id: "demo-1",
+                      titulo: `Treino Prático — ${selectedCourseGalleryModal.nome}`,
+                      url: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600&auto=format&fit=crop&q=80",
+                      data: "16/08/2026",
+                    },
+                    {
+                      id: "demo-2",
+                      titulo: `Alunos e Instrutor — ${selectedCourseGalleryModal.polo}`,
+                      url: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=600&auto=format&fit=crop&q=80",
+                      data: "15/08/2026",
+                    },
+                  ];
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {fotosList.map((foto) => (
+                      <div key={foto.id} className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs space-y-2">
+                        <div className="aspect-video relative overflow-hidden bg-muted">
+                          <img
+                            src={foto.url}
+                            alt={foto.titulo || "Foto da Oficina"}
+                            className="size-full object-cover transition-transform duration-300 hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-3">
+                          <p className="font-extrabold text-xs text-foreground leading-tight">{foto.titulo || selectedCourseGalleryModal.nome}</p>
+                          <p className="text-[10px] font-medium text-muted-foreground mt-0.5">Adicionada em {foto.data || "16/08/2026"}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           )}
         </DialogContent>
       </Dialog>
