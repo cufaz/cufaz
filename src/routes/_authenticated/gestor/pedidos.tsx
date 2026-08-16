@@ -36,6 +36,7 @@ function PedidosPage() {
   const fetchPedidos = useServerFn(listPedidos);
   const decidir = useServerFn(decidirPedido);
   const criar = useServerFn(criarPedido);
+  const excluir = useServerFn(deletePedido);
   const fetchPolos = useServerFn(listPolos);
   const fetchFin = useServerFn(getFinanceiro);
 
