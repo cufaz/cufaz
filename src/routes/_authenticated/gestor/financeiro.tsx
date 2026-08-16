@@ -137,11 +137,12 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // Calculate Despesas Previstas (Orçamento Mensal) with support for custom polos (Anexo 5)
+  // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items (Anexo 1 & 2)
   const poloObjPrev = polosList.find((p) => String(p['id']) === poloId);
   const poloNomePrev = poloObjPrev ? String(poloObjPrev['nome']).toLowerCase() : "";
 
-  const poloItensPrevisto = itensOrcamentoOFICIAIS.filter((item) => {
+  // 1. Preset Official Items
+  const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
     if (!poloId || poloId === "todos") return true;
     if (item.poloId === poloId) return true;
     if (poloNomePrev.includes("penha") && item.poloId === "penha") return true;
@@ -150,17 +151,44 @@ function FinanceiroPage() {
     return false;
   });
 
+  // 2. Custom Database Budget Items (from activities budget modal)
+  const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
+  itens.forEach((i: Row) => {
+    const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
+    const matchPolo =
+      !poloId ||
+      poloId === "todos" ||
+      itemPoloId === poloId ||
+      (poloNomePrev && String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase().includes(poloNomePrev));
+
+    if (matchPolo) {
+      const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
+      const ativNome = String(i['atividades']?.['nome'] || "Atividade");
+      const itemNome = String(i['item'] || "Item");
+      const descStr = String(i['descricao'] || "");
+      const qtdStr = String(i['quantidade'] || "1");
+      const custoNum = Number(i['custo_mensal'] || 0);
+
+      dbCustomItems.push({
+        id: String(i['id'] || `db-${Math.random()}`),
+        poloId: itemPoloId || poloId,
+        atividade: ativNome,
+        categoria: catNome,
+        item: itemNome,
+        descricao: descStr,
+        quantidade: qtdStr,
+        previsto: custoNum,
+        realizado: 0,
+      });
+    }
+  });
+
+  const poloItensPrevisto = [...presetItems, ...dbCustomItems];
   let previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
 
-  // Fallback for custom polos (like Polo de Teste) without official preset items (Anexo 5)
-  if (previstoTotal === 0 && poloId) {
-    const dbItensPolo = itens.filter((i) => String(i['polo_id']) === poloId);
-    const sumDbItens = dbItensPolo.reduce((s, i) => s + Number(i['custo_mensal'] || 0), 0);
-    if (sumDbItens > 0) {
-      previstoTotal = sumDbItens;
-    } else if (poloObjPrev && Number(poloObjPrev['orcamento_mensal']) > 0) {
-      previstoTotal = Number(poloObjPrev['orcamento_mensal']);
-    }
+  // Additional Fallback for custom polos if items list is empty
+  if (previstoTotal === 0 && poloId && poloObjPrev && Number(poloObjPrev['orcamento_mensal']) > 0) {
+    previstoTotal = Number(poloObjPrev['orcamento_mensal']);
   }
 
   const previstoPorCategoria = categorias
@@ -411,19 +439,7 @@ function FinanceiroPage() {
 
             <div className="p-4 space-y-6">
               {(() => {
-                // Find selected polo name for flexible matching
-                const poloObj = polosList.find((p) => String(p['id']) === poloId);
-                const poloNome = poloObj ? String(poloObj['nome']).toLowerCase() : "";
-
-                // Combine Database items & Parsed detailed items with flexible matching
-                const poloItens = itensOrcamentoOFICIAIS.filter((item) => {
-                  if (!poloId || poloId === "todos") return true;
-                  if (item.poloId === poloId) return true;
-                  if (poloNome.includes("penha") && item.poloId === "penha") return true;
-                  if (poloNome.includes("madureira") && item.poloId === "madureira") return true;
-                  if ((poloNome.includes("paraisópolis") || poloNome.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-                  return false;
-                });
+                const poloItens = poloItensPrevisto;
 
                 // Group by category
                 const categoriasMap: Record<string, typeof poloItens> = {};

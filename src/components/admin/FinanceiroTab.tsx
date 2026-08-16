@@ -137,7 +137,7 @@ export function FinanceiroTab({
     .filter((l) => l.tipo === "despesa")
     .reduce((sum, l) => sum + l.valor, 0);
 
-  // Orçamento (Despesas Previstas): Flexible matching with official dataset
+  // Orçamento (Despesas Previstas): Flexible matching with official dataset + custom polos
   const poloObjTab = polos.find((p) => p.id === selectedPoloId);
   const poloNomeTab = poloObjTab ? poloObjTab.nome.toLowerCase() : "";
 
@@ -150,7 +150,12 @@ export function FinanceiroTab({
     return false;
   });
 
-  const totalDespesasPrevistas = poloItensPrevistoTab.reduce((sum, i) => sum + i.previsto, 0);
+  let totalDespesasPrevistas = poloItensPrevistoTab.reduce((sum, i) => sum + i.previsto, 0);
+
+  // Fallback for custom polo budget if no official preset items (Anexo 1 & 2)
+  if (totalDespesasPrevistas === 0 && selectedPoloId !== "todos" && poloObjTab && poloObjTab.orcamentoMensal > 0) {
+    totalDespesasPrevistas = poloObjTab.orcamentoMensal;
+  }
 
   const saldoMesRealizado = totalReceitas - totalDespesasRealizadas;
   const diferencaPrevistoRealizado = totalDespesasPrevistas - totalDespesasRealizadas;
@@ -343,17 +348,7 @@ export function FinanceiroTab({
 
         <div className="space-y-6">
           {(() => {
-            const poloObj = polos.find((p) => p.id === selectedPoloId);
-            const poloNome = poloObj ? poloObj.nome.toLowerCase() : "";
-
-            const poloItens = itensOrcamentoOFICIAIS.filter((item) => {
-              if (!selectedPoloId || selectedPoloId === "todos") return true;
-              if (item.poloId === selectedPoloId) return true;
-              if (poloNome.includes("penha") && item.poloId === "penha") return true;
-              if (poloNome.includes("madureira") && item.poloId === "madureira") return true;
-              if ((poloNome.includes("paraisópolis") || poloNome.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-              return false;
-            });
+            const poloItens = poloItensPrevistoTab;
 
             const categoriasMap: Record<string, typeof poloItens> = {};
             poloItens.forEach((item) => {
