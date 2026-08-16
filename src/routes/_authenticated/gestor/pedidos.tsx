@@ -66,6 +66,17 @@ function PedidosPage() {
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
+  const mExcluir = useMutation({
+    mutationFn: (v: { id: string }) => excluir({ data: v }),
+    onSuccess: () => {
+      toast.success("Pedido excluído de todo o sistema");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error("Erro ao excluir", { description: e.message }),
+  });
+
+
+
   const BASE_CATEGORIAS = [
     "Pessoal",
     "Materiais esportivos",
