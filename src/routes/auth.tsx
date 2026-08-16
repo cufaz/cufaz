@@ -57,6 +57,8 @@ function AuthPage() {
       });
       setLoading(false);
       if (error) {
+        localStorage.removeItem("cufa_logged_user");
+        localStorage.removeItem("cufa_master_authenticated");
         toast.error("E-mail ou senha inválidos. Use a senha do gestor para salvar alterações.");
         return;
       }
@@ -65,7 +67,7 @@ function AuthPage() {
         localStorage.setItem("cufa_master_authenticated", "true");
       }
       toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-      window.location.href = "/gestor";
+      await navigate({ to: "/gestor", replace: true });
       return;
     }
 

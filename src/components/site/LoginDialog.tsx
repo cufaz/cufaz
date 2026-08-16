@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 export function LoginDialog({
   open,
@@ -22,8 +23,9 @@ export function LoginDialog({
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     const cleanSenha = senha.trim();
@@ -33,28 +35,17 @@ export function LoginDialog({
       return;
     }
 
-    // 1. Master Admin Login
-    if (cleanEmail === "master@cufa.com.br") {
-      if (cleanSenha !== "cufamaster2026" && cleanSenha !== "gestao26" && cleanSenha !== "master2026") {
-        toast.error("Senha incorreta!", {
-          description: "Verifique a senha informada e tente novamente.",
-        });
-        return;
-      }
-      localStorage.setItem("cufa_logged_user", cleanEmail);
-      localStorage.setItem("cufa_master_authenticated", "true");
-      toast.success("Acesso Master Admin autorizado!");
-      onOpenChange(false);
-      window.location.href = "/gestor";
-      return;
-    }
-
-    // 2. Gestor Geral Login
+    // O painel gestor exige uma sessão real; dados locais não concedem acesso.
     if (cleanEmail === "gestor@cufa.com.br") {
-      if (cleanSenha !== "gestao26" && cleanSenha !== "cufa2026!") {
-        toast.error("Senha incorreta!", {
-          description: "Verifique a senha informada e tente novamente.",
-        });
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: senha,
+      });
+      setLoading(false);
+      if (error) {
+        localStorage.removeItem("cufa_logged_user");
+        toast.error("E-mail ou senha inválidos.");
         return;
       }
       localStorage.setItem("cufa_logged_user", cleanEmail);
@@ -64,7 +55,7 @@ export function LoginDialog({
       return;
     }
 
-    // 3. Check registered list of gestores/responsaveis (including Ricardo)
+    // Check registered list of responsáveis de polo.
     let list: any[] = [];
     try {
       const stored = localStorage.getItem("cufa_gestores_lista");
@@ -166,7 +157,8 @@ export function LoginDialog({
               onChange={(e) => setSenha(e.target.value)}
             />
           </div>
-          <Button type="submit" className="bg-brand-gradient font-semibold shadow-brand">
+          <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand">
+            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             Entrar
           </Button>
         </form>

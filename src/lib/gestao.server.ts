@@ -5,15 +5,15 @@ export function db(supabase: SupabaseClient): SupabaseClient {
 }
 
 export async function assertGestor(supabase: SupabaseClient, userId: string) {
-  if (!supabase) return;
-  if (!userId || userId === "mock-gestor-user") return;
-  try {
-    const { data } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "gestor",
-    });
-    if (data) return;
-  } catch {}
+  if (!supabase || !userId || userId === "mock-gestor-user") {
+    throw new Error("Sua sessão expirou. Entre novamente para continuar.");
+  }
+  const { data, error } = await supabase.rpc("has_role", {
+    _user_id: userId,
+    _role: "gestor",
+  });
+  if (error) throw new Error("Não foi possível validar o acesso do gestor.");
+  if (!data) throw new Error("Este usuário não possui acesso de gestor.");
 }
 
 /** Bloqueia gravações quando não há sessão real de gestor (modo demonstração). */
