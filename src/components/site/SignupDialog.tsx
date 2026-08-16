@@ -2,6 +2,7 @@ import { useState } from "react";
 import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -176,6 +177,20 @@ export function SignupDialog({
   const [cert4Name, setCert4Name] = useState<string | null>(null);
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
+  // Student specific state
+  const [dataNasc, setDataNasc] = useState("");
+  const [nomeEscola, setNomeEscola] = useState("");
+  const [anoEscolar, setAnoEscolar] = useState("1º Ano - Ensino Fundamental");
+  const [turnoEscolar, setTurnoEscolar] = useState("Manhã");
+  const [qtdPessoasResidencia, setQtdPessoasResidencia] = useState("4");
+  const [nomeResponsavel, setNomeResponsavel] = useState("");
+  const [cpfResponsavel, setCpfResponsavel] = useState("");
+  const [telResponsavel, setTelResponsavel] = useState("");
+  const [docIdAlunoName, setDocIdAlunoName] = useState<string | null>(null);
+  const [docIdAlunoData, setDocIdAlunoData] = useState<string | null>(null);
+  const [docResAlunoName, setDocResAlunoName] = useState<string | null>(null);
+  const [docResAlunoData, setDocResAlunoData] = useState<string | null>(null);
+
   const atual = perfis.find((p) => p.id === perfil);
 
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -316,6 +331,60 @@ export function SignupDialog({
       fechar(false);
       triggerAuthRedirect("/professor", "Acessando Painel do Professor...");
       return;
+    } else if (perfil === "aluno") {
+      const aNome = nome.trim() || "Aluno";
+      const aEmail = email.trim().toLowerCase();
+      const aSenha = senha.trim();
+
+      const novoAluno = {
+        id: `aluno-${Date.now()}`,
+        nome: aNome,
+        email: aEmail,
+        senha: aSenha,
+        telefone: telefone.trim(),
+        dataNasc,
+        nomeEscola,
+        anoEscolar,
+        turnoEscolar,
+        qtdPessoasResidencia,
+        nomeResponsavel,
+        cpfResponsavel,
+        telResponsavel,
+        docIdName: docIdAlunoName,
+        docIdData: docIdAlunoData,
+        docResName: docResAlunoName,
+        docResData: docResAlunoData,
+        dataCriacao: new Date().toISOString().slice(0, 10),
+      };
+
+      try {
+        const stored = localStorage.getItem("cufa_alunos_cadastrados");
+        let list = stored ? JSON.parse(stored) : [];
+        list.push(novoAluno);
+        localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
+
+        if (fotoPerfil) {
+          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
+          localStorage.setItem(`cufa_perfil_foto_${aEmail}`, fotoPerfil);
+          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
+        }
+        window.dispatchEvent(new Event("cufa_alunos_updated"));
+      } catch {}
+
+      localStorage.setItem("cufa_logged_user", aEmail);
+      localStorage.setItem("cufa_logged_role", "aluno");
+      localStorage.setItem("cufa_aluno_nome", aNome);
+      if (telefone.trim()) {
+        localStorage.setItem("cufa_aluno_telefone", telefone.trim());
+      }
+
+      toast.success("Conta de Aluno criada com sucesso!", {
+        description: "Acesso liberado imediatamente! Seja bem-vindo à plataforma CUFA.",
+      });
+
+      fechar(false);
+      triggerAuthRedirect("/aluno", "Acessando Painel do Aluno...");
+      return;
     } else {
       toast.success("Cadastro realizado com sucesso!", {
         description: "Seu acesso à plataforma foi liberado imediatamente.",
@@ -364,7 +433,14 @@ export function SignupDialog({
 
         {perfil && (
           <form className="grid gap-4" onSubmit={enviar}>
-            <Campo id="nome" label="Nome completo" required placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <Campo
+              id="nome"
+              label={perfil === "aluno" ? "Nome Completo do Aluno" : "Nome completo"}
+              required
+              placeholder={perfil === "aluno" ? "Nome do aluno" : "Seu nome"}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo id="email" label="E-mail" type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
@@ -513,29 +589,119 @@ export function SignupDialog({
 
             {perfil === "aluno" && (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Campo id="nasc" label="Data de nascimento" type="date" required />
-                  <div className="space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Modalidade desejada
-                    </Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modalidades.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* Upload Foto de Perfil do Aluno */}
+                <div className="space-y-1.5 p-3 rounded-2xl bg-muted/40 border border-border/80">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                    Foto de Perfil do Aluno (Opcional)
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-12 border border-primary/40">
+                      {fotoPerfil && <AvatarImage src={fotoPerfil} alt="Perfil" className="object-cover" />}
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                        AL
+                      </AvatarFallback>
+                    </Avatar>
+                    <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 font-bold text-xs cursor-pointer shadow-xs transition-colors shrink-0">
+                      <Upload className="size-3.5" />
+                      <span>{fotoPerfil ? "Alterar Foto" : "Escolher foto de perfil"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setFotoPerfil(ev.target?.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
-                <SeletorComunidade />
-                <Campo id="resp" label="Nome do responsável (se menor de 18)" placeholder="Opcional" />
-                <Campo id="resp-tel" label="Telefone do responsável" placeholder="Opcional" />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Campo id="nasc" label="Data de Nascimento" type="date" required value={dataNasc} onChange={(e) => setDataNasc(e.target.value)} />
+                  <Campo id="esc-nome" label="Nome da Escola em que Estuda" placeholder="ex.: E.M. Paulo Freire" value={nomeEscola} onChange={(e) => setNomeEscola(e.target.value)} />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Ano Escolar</Label>
+                    <select
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium"
+                      value={anoEscolar}
+                      onChange={(e) => setAnoEscolar(e.target.value)}
+                    >
+                      <option value="1º Ano - Ensino Fundamental">1º Ano - Ensino Fundamental</option>
+                      <option value="2º Ano - Ensino Fundamental">2º Ano - Ensino Fundamental</option>
+                      <option value="3º Ano - Ensino Fundamental">3º Ano - Ensino Fundamental</option>
+                      <option value="4º Ano - Ensino Fundamental">4º Ano - Ensino Fundamental</option>
+                      <option value="5º Ano - Ensino Fundamental">5º Ano - Ensino Fundamental</option>
+                      <option value="6º Ano - Ensino Fundamental">6º Ano - Ensino Fundamental</option>
+                      <option value="7º Ano - Ensino Fundamental">7º Ano - Ensino Fundamental</option>
+                      <option value="8º Ano - Ensino Fundamental">8º Ano - Ensino Fundamental</option>
+                      <option value="9º Ano - Ensino Fundamental">9º Ano - Ensino Fundamental</option>
+                      <option value="1º Ano - Ensino Médio">1º Ano - Ensino Médio</option>
+                      <option value="2º Ano - Ensino Médio">2º Ano - Ensino Médio</option>
+                      <option value="3º Ano - Ensino Médio">3º Ano - Ensino Médio</option>
+                      <option value="Ensino Superior / Outros">Ensino Superior / Outros</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Turno Escolar</Label>
+                    <select
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium"
+                      value={turnoEscolar}
+                      onChange={(e) => setTurnoEscolar(e.target.value)}
+                    >
+                      <option value="Manhã">Manhã</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Noite">Noite</option>
+                      <option value="Integral">Integral</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Campo id="qtd-pessoas" label="Pessoas que residem com o aluno" type="number" min={1} placeholder="ex.: 4" value={qtdPessoasResidencia} onChange={(e) => setQtdPessoasResidencia(e.target.value)} />
+                  <Campo id="cpf-resp" label="CPF do Responsável" placeholder="000.000.000-00" value={cpfResponsavel} onChange={(e) => setCpfResponsavel(e.target.value)} />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Campo id="resp-nome" label="Nome do Responsável Legal" placeholder="ex.: Maria da Silva" value={nomeResponsavel} onChange={(e) => setNomeResponsavel(e.target.value)} />
+                  <Campo id="resp-tel" label="Telefone do Responsável" placeholder="(00) 00000-0000" value={telResponsavel} onChange={(e) => setTelResponsavel(e.target.value)} />
+                </div>
+
+                <div className="border-t border-border pt-4 mt-2 space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-primary block">
+                    Documentos do Aluno (Opcional)
+                  </Label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <FileUploadBtn
+                      id="doc-id-aluno"
+                      label="Documento de Identificação (RG / CPF)"
+                      fileName={docIdAlunoName}
+                      onSelect={(n, d) => {
+                        setDocIdAlunoName(n);
+                        setDocIdAlunoData(d);
+                      }}
+                    />
+                    <FileUploadBtn
+                      id="doc-res-aluno"
+                      label="Comprovante de Residência"
+                      fileName={docResAlunoName}
+                      onSelect={(n, d) => {
+                        setDocResAlunoName(n);
+                        setDocResAlunoData(d);
+                      }}
+                    />
+                  </div>
+                </div>
               </>
             )}
 

@@ -14,6 +14,11 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedGestorRouteRouteImport } from './routes/_authenticated/gestor/route'
 import { Route as AuthenticatedPoloRouteRouteImport } from './routes/_authenticated/polo/route'
+import { Route as AuthenticatedAlunoIndexRouteImport } from './routes/_authenticated/aluno/index'
+import { Route as AuthenticatedAlunoAtividadesRouteImport } from './routes/_authenticated/aluno/atividades'
+import { Route as AuthenticatedAlunoFrequenciaRouteImport } from './routes/_authenticated/aluno/frequencia'
+import { Route as AuthenticatedAlunoMinhasAtividadesRouteImport } from './routes/_authenticated/aluno/minhas-atividades'
+import { Route as AuthenticatedAlunoPerfilRouteImport } from './routes/_authenticated/aluno/perfil'
 import { Route as AuthenticatedGestorIndexRouteImport } from './routes/_authenticated/gestor/index'
 import { Route as AuthenticatedGestorAlunosRouteImport } from './routes/_authenticated/gestor/alunos'
 import { Route as AuthenticatedGestorAtividadesRouteImport } from './routes/_authenticated/gestor/atividades'
@@ -60,6 +65,35 @@ const AuthenticatedPoloRouteRoute = AuthenticatedPoloRouteRouteImport.update({
   path: '/polo',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAlunoIndexRoute = AuthenticatedAlunoIndexRouteImport.update({
+  id: '/aluno/',
+  path: '/aluno/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAlunoAtividadesRoute =
+  AuthenticatedAlunoAtividadesRouteImport.update({
+    id: '/aluno/atividades',
+    path: '/aluno/atividades',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAlunoFrequenciaRoute =
+  AuthenticatedAlunoFrequenciaRouteImport.update({
+    id: '/aluno/frequencia',
+    path: '/aluno/frequencia',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAlunoMinhasAtividadesRoute =
+  AuthenticatedAlunoMinhasAtividadesRouteImport.update({
+    id: '/aluno/minhas-atividades',
+    path: '/aluno/minhas-atividades',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAlunoPerfilRoute =
+  AuthenticatedAlunoPerfilRouteImport.update({
+    id: '/aluno/perfil',
+    path: '/aluno/perfil',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedGestorIndexRoute =
   AuthenticatedGestorIndexRouteImport.update({
     id: '/',
@@ -183,6 +217,10 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
   '/polo': typeof AuthenticatedPoloRouteRouteWithChildren
+  '/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
+  '/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
+  '/aluno/minhas-atividades': typeof AuthenticatedAlunoMinhasAtividadesRoute
+  '/aluno/perfil': typeof AuthenticatedAlunoPerfilRoute
   '/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
@@ -200,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
   '/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
+  '/aluno/': typeof AuthenticatedAlunoIndexRoute
   '/gestor/': typeof AuthenticatedGestorIndexRoute
   '/polo/': typeof AuthenticatedPoloIndexRoute
   '/professor/': typeof AuthenticatedProfessorIndexRoute
@@ -207,6 +246,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
+  '/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
+  '/aluno/minhas-atividades': typeof AuthenticatedAlunoMinhasAtividadesRoute
+  '/aluno/perfil': typeof AuthenticatedAlunoPerfilRoute
   '/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
@@ -224,6 +267,7 @@ export interface FileRoutesByTo {
   '/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
   '/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
+  '/aluno': typeof AuthenticatedAlunoIndexRoute
   '/gestor': typeof AuthenticatedGestorIndexRoute
   '/polo': typeof AuthenticatedPoloIndexRoute
   '/professor': typeof AuthenticatedProfessorIndexRoute
@@ -235,6 +279,10 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
   '/_authenticated/polo': typeof AuthenticatedPoloRouteRouteWithChildren
+  '/_authenticated/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
+  '/_authenticated/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
+  '/_authenticated/aluno/minhas-atividades': typeof AuthenticatedAlunoMinhasAtividadesRoute
+  '/_authenticated/aluno/perfil': typeof AuthenticatedAlunoPerfilRoute
   '/_authenticated/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/_authenticated/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/_authenticated/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
@@ -252,6 +300,7 @@ export interface FileRoutesById {
   '/_authenticated/professor/chamada': typeof AuthenticatedProfessorChamadaRoute
   '/_authenticated/professor/oportunidades': typeof AuthenticatedProfessorOportunidadesRoute
   '/_authenticated/professor/perfil': typeof AuthenticatedProfessorPerfilRoute
+  '/_authenticated/aluno/': typeof AuthenticatedAlunoIndexRoute
   '/_authenticated/gestor/': typeof AuthenticatedGestorIndexRoute
   '/_authenticated/polo/': typeof AuthenticatedPoloIndexRoute
   '/_authenticated/professor/': typeof AuthenticatedProfessorIndexRoute
@@ -263,6 +312,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/gestor'
     | '/polo'
+    | '/aluno/atividades'
+    | '/aluno/frequencia'
+    | '/aluno/minhas-atividades'
+    | '/aluno/perfil'
     | '/gestor/alunos'
     | '/gestor/atividades'
     | '/gestor/financeiro'
@@ -280,6 +333,7 @@ export interface FileRouteTypes {
     | '/professor/chamada'
     | '/professor/oportunidades'
     | '/professor/perfil'
+    | '/aluno/'
     | '/gestor/'
     | '/polo/'
     | '/professor/'
@@ -287,6 +341,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/aluno/atividades'
+    | '/aluno/frequencia'
+    | '/aluno/minhas-atividades'
+    | '/aluno/perfil'
     | '/gestor/alunos'
     | '/gestor/atividades'
     | '/gestor/financeiro'
@@ -304,6 +362,7 @@ export interface FileRouteTypes {
     | '/professor/chamada'
     | '/professor/oportunidades'
     | '/professor/perfil'
+    | '/aluno'
     | '/gestor'
     | '/polo'
     | '/professor'
@@ -314,6 +373,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/gestor'
     | '/_authenticated/polo'
+    | '/_authenticated/aluno/atividades'
+    | '/_authenticated/aluno/frequencia'
+    | '/_authenticated/aluno/minhas-atividades'
+    | '/_authenticated/aluno/perfil'
     | '/_authenticated/gestor/alunos'
     | '/_authenticated/gestor/atividades'
     | '/_authenticated/gestor/financeiro'
@@ -331,6 +394,7 @@ export interface FileRouteTypes {
     | '/_authenticated/professor/chamada'
     | '/_authenticated/professor/oportunidades'
     | '/_authenticated/professor/perfil'
+    | '/_authenticated/aluno/'
     | '/_authenticated/gestor/'
     | '/_authenticated/polo/'
     | '/_authenticated/professor/'
@@ -377,6 +441,41 @@ declare module '@tanstack/react-router' {
       path: '/polo'
       fullPath: '/polo'
       preLoaderRoute: typeof AuthenticatedPoloRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/aluno/': {
+      id: '/_authenticated/aluno/'
+      path: '/aluno'
+      fullPath: '/aluno/'
+      preLoaderRoute: typeof AuthenticatedAlunoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/aluno/atividades': {
+      id: '/_authenticated/aluno/atividades'
+      path: '/aluno/atividades'
+      fullPath: '/aluno/atividades'
+      preLoaderRoute: typeof AuthenticatedAlunoAtividadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/aluno/frequencia': {
+      id: '/_authenticated/aluno/frequencia'
+      path: '/aluno/frequencia'
+      fullPath: '/aluno/frequencia'
+      preLoaderRoute: typeof AuthenticatedAlunoFrequenciaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/aluno/minhas-atividades': {
+      id: '/_authenticated/aluno/minhas-atividades'
+      path: '/aluno/minhas-atividades'
+      fullPath: '/aluno/minhas-atividades'
+      preLoaderRoute: typeof AuthenticatedAlunoMinhasAtividadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/aluno/perfil': {
+      id: '/_authenticated/aluno/perfil'
+      path: '/aluno/perfil'
+      fullPath: '/aluno/perfil'
+      preLoaderRoute: typeof AuthenticatedAlunoPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/gestor/': {
@@ -579,21 +678,32 @@ const AuthenticatedPoloRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedGestorRouteRoute: typeof AuthenticatedGestorRouteRouteWithChildren
   AuthenticatedPoloRouteRoute: typeof AuthenticatedPoloRouteRouteWithChildren
+  AuthenticatedAlunoAtividadesRoute: typeof AuthenticatedAlunoAtividadesRoute
+  AuthenticatedAlunoFrequenciaRoute: typeof AuthenticatedAlunoFrequenciaRoute
+  AuthenticatedAlunoMinhasAtividadesRoute: typeof AuthenticatedAlunoMinhasAtividadesRoute
+  AuthenticatedAlunoPerfilRoute: typeof AuthenticatedAlunoPerfilRoute
   AuthenticatedProfessorAtividadesRoute: typeof AuthenticatedProfessorAtividadesRoute
   AuthenticatedProfessorChamadaRoute: typeof AuthenticatedProfessorChamadaRoute
   AuthenticatedProfessorOportunidadesRoute: typeof AuthenticatedProfessorOportunidadesRoute
   AuthenticatedProfessorPerfilRoute: typeof AuthenticatedProfessorPerfilRoute
+  AuthenticatedAlunoIndexRoute: typeof AuthenticatedAlunoIndexRoute
   AuthenticatedProfessorIndexRoute: typeof AuthenticatedProfessorIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGestorRouteRoute: AuthenticatedGestorRouteRouteWithChildren,
   AuthenticatedPoloRouteRoute: AuthenticatedPoloRouteRouteWithChildren,
+  AuthenticatedAlunoAtividadesRoute: AuthenticatedAlunoAtividadesRoute,
+  AuthenticatedAlunoFrequenciaRoute: AuthenticatedAlunoFrequenciaRoute,
+  AuthenticatedAlunoMinhasAtividadesRoute:
+    AuthenticatedAlunoMinhasAtividadesRoute,
+  AuthenticatedAlunoPerfilRoute: AuthenticatedAlunoPerfilRoute,
   AuthenticatedProfessorAtividadesRoute: AuthenticatedProfessorAtividadesRoute,
   AuthenticatedProfessorChamadaRoute: AuthenticatedProfessorChamadaRoute,
   AuthenticatedProfessorOportunidadesRoute:
     AuthenticatedProfessorOportunidadesRoute,
   AuthenticatedProfessorPerfilRoute: AuthenticatedProfessorPerfilRoute,
+  AuthenticatedAlunoIndexRoute: AuthenticatedAlunoIndexRoute,
   AuthenticatedProfessorIndexRoute: AuthenticatedProfessorIndexRoute,
 }
 
