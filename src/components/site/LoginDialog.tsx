@@ -26,6 +26,7 @@ export function LoginDialog({
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
+    localStorage.setItem("cufa_logged_user", cleanEmail);
 
     // Master Admin Login
     if (cleanEmail === "master@cufa.com.br") {

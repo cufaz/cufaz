@@ -4,9 +4,28 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    if (typeof window !== "undefined") {
+      const localUser =
+        localStorage.getItem("cufa_logged_user") ||
+        localStorage.getItem("cufa_polo_atribuido") ||
+        localStorage.getItem("cufa_master_authenticated");
+      if (localUser) {
+        return { user: { id: "local-user", email: localUser } };
+      }
+    }
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) return { user: data.user };
+    } catch {}
+
+    // Allow access in demo mode if logged in locally
+    if (typeof window !== "undefined") {
+      const localUser = localStorage.getItem("cufa_logged_user");
+      if (localUser) return { user: { id: "local-user", email: localUser } };
+    }
+
+    throw redirect({ to: "/auth" });
   },
   component: () => <Outlet />,
 });

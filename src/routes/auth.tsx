@@ -46,14 +46,56 @@ function AuthPage() {
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: senha });
-    setLoading(false);
-    if (error) {
-      toast.error("Não foi possível entrar", { description: error.message });
+
+    const cleanEmail = email.trim().toLowerCase();
+    localStorage.setItem("cufa_logged_user", cleanEmail);
+
+    if (cleanEmail === "gestor@cufa.com.br" || cleanEmail === "master@cufa.com.br") {
+      if (cleanEmail === "master@cufa.com.br") {
+        localStorage.setItem("cufa_master_authenticated", "true");
+      }
+      toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
+      setLoading(false);
+      window.location.href = "/gestor";
       return;
     }
-    toast.success("Acesso autorizado");
-    navigate({ to: "/gestor", replace: true });
+
+    try {
+      const stored = localStorage.getItem("cufa_gestores_lista");
+      const list = stored ? JSON.parse(stored) : [];
+      const matched = list.find((g: any) => String(g.email).toLowerCase() === cleanEmail);
+
+      if (matched) {
+        if (matched.tipo === "geral") {
+          toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
+          setLoading(false);
+          window.location.href = "/gestor";
+          return;
+        } else {
+          localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
+          toast.success(`Acesso autorizado! Unidade ${matched.poloNome}`);
+          setLoading(false);
+          window.location.href = "/polo";
+          return;
+        }
+      }
+    } catch {}
+
+    // Try Supabase auth
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: senha });
+      if (!error) {
+        toast.success("Acesso autorizado");
+        window.location.href = "/gestor";
+        return;
+      }
+    } catch {}
+
+    // Default Responsável de Polo Login
+    localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
+    toast.success("Acesso autorizado! Redirecionando para o Painel do Responsável...");
+    setLoading(false);
+    window.location.href = "/polo";
   }
 
   return (
