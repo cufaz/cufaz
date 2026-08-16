@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export interface ProfessorSolicitacao {
   id: string;
   professorNome: string;
+  email?: string;
   atividadeNome: string;
   turmaNome?: string;
   poloNome: string;
@@ -58,17 +59,31 @@ export function PoloAtividadesPage() {
     return [];
   });
 
+  const defaultSolicitacao: ProfessorSolicitacao = {
+    id: "solic-vitoria-jiujitsu",
+    professorNome: "Prof. Vitoria Santana",
+    email: "profvitoriasantana@cufa.com.br",
+    atividadeNome: "Jiu Jitsu",
+    turmaNome: "Turma 1",
+    poloNome: "Complexo da Penha",
+    status: "pendente",
+    dataSolicitacao: new Date().toISOString().slice(0, 10),
+  };
+
   const [solicitacoes, setSolicitacoes] = useState<ProfessorSolicitacao[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
       if (stored) {
         const list = JSON.parse(stored);
-        const deduped = deduplicateRequests(list);
-        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(deduped));
-        return deduped;
+        if (Array.isArray(list) && list.length > 0) {
+          const deduped = deduplicateRequests(list);
+          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(deduped));
+          return deduped;
+        }
       }
     } catch {}
-    return [];
+    localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify([defaultSolicitacao]));
+    return [defaultSolicitacao];
   });
 
   useEffect(() => {
@@ -76,10 +91,15 @@ export function PoloAtividadesPage() {
       try {
         const stored = localStorage.getItem("cufa_professores_solicitacoes");
         if (stored) {
-          const deduped = deduplicateRequests(JSON.parse(stored));
-          setSolicitacoes(deduped);
+          const list = JSON.parse(stored);
+          if (Array.isArray(list) && list.length > 0) {
+            const deduped = deduplicateRequests(list);
+            setSolicitacoes(deduped);
+            return;
+          }
         }
       } catch {}
+      setSolicitacoes([defaultSolicitacao]);
     }
 
     window.addEventListener("cufa_professores_updated", syncProfessores);
