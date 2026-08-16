@@ -440,18 +440,32 @@ function VitrineAtividadesAlunoPage() {
             const isSubmitting = submittingId === item.id;
             const hasProf = item.professorNome && !item.professorNome.includes("Aguardando");
 
-            // Calculate exact remaining vagas dynamically
-            const totalAlunosCadastrados = (() => {
+            // Calculate exact remaining vagas dynamically based ONLY on real enrollments in this turma
+            const matriculadosTurma = (() => {
+              let count = 0;
               try {
-                const stored = localStorage.getItem("cufa_alunos_cadastrados");
-                if (stored) return JSON.parse(stored).length;
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith("cufa_aluno_inscricoes_")) {
+                    const val = localStorage.getItem(key);
+                    if (val) {
+                      const list = JSON.parse(val);
+                      if (Array.isArray(list)) {
+                        const hasInsc = list.some(
+                          (ins: any) =>
+                            ins.status === "ativa" &&
+                            (ins.atividadeId === item.id ||
+                              (ins.atividadeNome === item.nome && ins.turmaNome === item.turmaNome && ins.poloNome === item.polo))
+                        );
+                        if (hasInsc) count++;
+                      }
+                    }
+                  }
+                }
               } catch {}
-              return 0;
+              return count;
             })();
 
-            const matriculadosTurma = item.id === "v-penha-jiu-t1"
-              ? Math.max(totalAlunosCadastrados, item.alunosMatriculados)
-              : item.alunosMatriculados;
             const vagasRestantes = Math.max(0, item.vagasTotais - matriculadosTurma);
 
             return (
