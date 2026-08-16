@@ -31,24 +31,71 @@ interface GestorItem {
   ativo: boolean;
 }
 
+const DEFAULT_GESTORES: GestorItem[] = [
+  {
+    id: "g1",
+    nome: "Gestor Geral CUFA",
+    email: "gestor@cufa.com.br",
+    senha: "gestao26",
+    tipo: "geral",
+    poloNome: "Todos os Polos (Acesso Geral)",
+    dataCriacao: "2026-08-01",
+    ativo: true,
+  },
+  {
+    id: "g2",
+    nome: "Responsável Polo Penha",
+    email: "penha@cufa.com.br",
+    senha: "penha2026",
+    tipo: "polo",
+    poloNome: "Complexo da Penha",
+    dataCriacao: "2026-08-01",
+    ativo: true,
+  },
+  {
+    id: "g3",
+    nome: "Responsável Polo Madureira",
+    email: "madureira@cufa.com.br",
+    senha: "madureira2026",
+    tipo: "polo",
+    poloNome: "Viaduto de Madureira",
+    dataCriacao: "2026-08-01",
+    ativo: true,
+  },
+  {
+    id: "g4",
+    nome: "Responsável Polo Paraisópolis",
+    email: "paraisopolis@cufa.com.br",
+    senha: "paraisopolis2026",
+    tipo: "polo",
+    poloNome: "Paraisópolis",
+    dataCriacao: "2026-08-01",
+    ativo: true,
+  },
+  {
+    id: "g5",
+    nome: "Responsável Polo de Teste",
+    email: "teste@cufa.com.br",
+    senha: "teste2026",
+    tipo: "polo",
+    poloNome: "Polo de Teste",
+    dataCriacao: "2026-08-01",
+    ativo: true,
+  },
+];
+
 export function GestoresPage() {
   const [gestores, setGestores] = useState<GestorItem[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_gestores_lista");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed: GestorItem[] = JSON.parse(stored);
+        if (parsed.some((g) => g.tipo === "polo")) return parsed;
+        // Merge defaults if only gestor geral was stored
+        return [...parsed, ...DEFAULT_GESTORES.filter((d) => d.tipo === "polo")];
+      }
     } catch {}
-    return [
-      {
-        id: "g1",
-        nome: "Gestor Geral CUFA",
-        email: "gestor@cufa.com.br",
-        senha: "gestao26",
-        tipo: "geral",
-        poloNome: "Todos os Polos (Acesso Geral)",
-        dataCriacao: "2026-08-01",
-        ativo: true,
-      },
-    ];
+    return DEFAULT_GESTORES;
   });
 
   useEffect(() => {
@@ -61,7 +108,14 @@ export function GestoresPage() {
     function syncGestores() {
       try {
         const stored = localStorage.getItem("cufa_gestores_lista");
-        if (stored) setGestores(JSON.parse(stored));
+        if (stored) {
+          const parsed: GestorItem[] = JSON.parse(stored);
+          setGestores(
+            parsed.some((g) => g.tipo === "polo")
+              ? parsed
+              : [...parsed, ...DEFAULT_GESTORES.filter((d) => d.tipo === "polo")]
+          );
+        }
       } catch {}
     }
 
@@ -263,71 +317,6 @@ export function GestoresPage() {
                         size="sm"
                         variant="outline"
                         className="text-xs font-bold"
-                        onClick={() => handleResetSenha(g)}
-                      >
-                        <Key className="size-3.5 mr-1" /> Resetar Senha
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* SEÇÃO 3: RESPONSÁVEIS CUFA / OPERACIONAIS DE POLO (Anexo 4) */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-            <div className="flex items-center gap-2.5">
-              <span className="grid size-9 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
-                <UserCheck className="size-5" />
-              </span>
-              <div>
-                <h2 className="text-base font-extrabold text-foreground uppercase tracking-wide">
-                  3. Responsáveis CUFA de Polos (Operacional e Campo)
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Controle total de credenciais e senhas dos responsáveis cadastrados pelos polos da comunidade.
-                </p>
-              </div>
-            </div>
-            <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 font-bold">
-              {gestoresPolos.length} responsáveis registrados
-            </Badge>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  <th className="pb-3">Nome do Responsável</th>
-                  <th className="pb-3">E-mail de Login</th>
-                  <th className="pb-3">Senha de Acesso</th>
-                  <th className="pb-3">Unidade Atribuída</th>
-                  <th className="pb-3 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {gestoresPolos.map((g) => (
-                  <tr key={g.id} className="hover:bg-muted/30">
-                    <td className="py-3.5 font-bold text-foreground flex items-center gap-2">
-                      <span className="grid size-8 place-items-center rounded-full bg-emerald-500/10 text-emerald-600 shrink-0">
-                        <User className="size-4" />
-                      </span>
-                      <span>{g.nome}</span>
-                    </td>
-                    <td className="py-3.5 text-muted-foreground font-medium">{g.email}</td>
-                    <td className="py-3.5">
-                      <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 inline-block">
-                        {showPasswords ? g.senha : "••••••••"}
-                      </span>
-                    </td>
-                    <td className="py-3.5 font-semibold text-foreground">{g.poloNome}</td>
-                    <td className="py-3.5 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs font-bold border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10"
                         onClick={() => handleResetSenha(g)}
                       >
                         <Key className="size-3.5 mr-1" /> Resetar Senha
