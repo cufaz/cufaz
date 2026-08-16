@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import logo from "@/assets/cufa-z-logo.png";
+import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -36,6 +37,16 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayMsg, setOverlayMsg] = useState("Autenticando e preparando o seu painel CUFA...");
+  const [targetUrl, setTargetUrl] = useState<string | null>(null);
+
+  function irCom(url: string, message: string) {
+    setLoading(false);
+    setOverlayMsg(message);
+    setTargetUrl(url);
+    setOverlayOpen(true);
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -67,7 +78,7 @@ function AuthPage() {
         localStorage.setItem("cufa_master_authenticated", "true");
       }
       toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-      await navigate({ to: "/gestor", replace: true });
+      irCom("/gestor", "Acessando Painel do Gestor Geral...");
       return;
     }
 
@@ -82,14 +93,12 @@ function AuthPage() {
       if (matched) {
         if (matched.tipo === "geral") {
           toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-          setLoading(false);
-          window.location.href = "/gestor";
+          irCom("/gestor", "Acessando Painel do Gestor Geral...");
           return;
         } else {
           localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
           toast.success(`Acesso autorizado! Unidade ${matched.poloNome}`);
-          setLoading(false);
-          window.location.href = "/polo";
+          irCom("/polo", `Acessando painel da unidade ${matched.poloNome}...`);
           return;
         }
       }
@@ -100,7 +109,7 @@ function AuthPage() {
       const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: senha });
       if (!error) {
         toast.success("Acesso autorizado");
-        window.location.href = "/gestor";
+        irCom("/gestor", "Acessando Painel do Gestor Geral...");
         return;
       }
     } catch {}
@@ -108,11 +117,18 @@ function AuthPage() {
     // Default Responsável de Polo Login
     localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
     toast.success("Acesso autorizado! Redirecionando para o Painel do Responsável...");
-    setLoading(false);
-    window.location.href = "/polo";
+    irCom("/polo", "Acessando painel da unidade Complexo da Penha...");
   }
 
   return (
+    <>
+    <AuthLoadingOverlay
+      open={overlayOpen}
+      message={overlayMsg}
+      onComplete={() => {
+        if (targetUrl) window.location.href = targetUrl;
+      }}
+    />
     <main className="min-h-dvh bg-background px-4 py-10">
       <div className="mx-auto w-full max-w-md">
         <Button asChild variant="ghost" size="sm" className="mb-4 font-semibold text-muted-foreground">
@@ -155,5 +171,6 @@ function AuthPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }
