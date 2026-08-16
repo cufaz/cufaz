@@ -44,7 +44,7 @@ export function PoloComprasPage() {
   });
 
   const [itemNome, setItemNome] = useState("");
-  const [categoria, setCategoria] = useState("Materiais esportivos");
+  const [categoria, setCategoria] = useState("Materiais esportivos e equipamentos");
   const [quantidade, setQuantidade] = useState("");
   const [observacao, setObservacao] = useState("");
 
@@ -177,11 +177,12 @@ export function PoloComprasPage() {
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
               >
-                <option value="Materiais esportivos">Materiais esportivos</option>
-                <option value="Materiais de consumo / higiene">Materiais de consumo / higiene</option>
-                <option value="Papelaria e apostilas">Papelaria e apostilas</option>
-                <option value="Kit Lanche">Kit Lanche</option>
-                <option value="Infraestrutura e reparos">Infraestrutura e reparos</option>
+                <option value="Materiais esportivos e equipamentos">Materiais esportivos e equipamentos</option>
+                <option value="Insumos, lanche e apoio operacional">Insumos, lanche e apoio operacional</option>
+                <option value="Uniformes e vestuário">Uniformes e vestuário</option>
+                <option value="Infraestrutura, manutenção e limpeza">Infraestrutura, manutenção e limpeza</option>
+                <option value="Material didático e apostilas">Material didático e apostilas</option>
+                <option value="Recursos Humanos / Equipe Operacional">Recursos Humanos / Equipe Operacional</option>
               </select>
             </div>
 

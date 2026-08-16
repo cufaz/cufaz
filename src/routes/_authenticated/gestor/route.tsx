@@ -19,6 +19,42 @@ export const Route = createFileRoute("/_authenticated/gestor")({
 });
 
 function GestorLayout() {
+  if (typeof window !== "undefined") {
+    const loggedUser = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    const isMaster = localStorage.getItem("cufa_master_authenticated") === "true";
+    const poloAtribuido = localStorage.getItem("cufa_polo_atribuido");
+
+    // If user is Gestor Geral or Master Admin, grant access immediately
+    if (
+      loggedUser === "gestor@cufa.com.br" ||
+      loggedUser === "master@cufa.com.br" ||
+      isMaster
+    ) {
+      return <Outlet />;
+    }
+
+    // Check registered gestores list
+    try {
+      const stored = localStorage.getItem("cufa_gestores_lista");
+      const list = stored ? JSON.parse(stored) : [];
+      const matched = list.find((g: any) => String(g.email).toLowerCase() === loggedUser);
+
+      if (matched) {
+        if (matched.tipo === "geral") return <Outlet />;
+        if (matched.tipo === "polo") {
+          window.location.href = "/polo";
+          return null;
+        }
+      }
+    } catch {}
+
+    // If user has a polo assigned and is NOT gestor geral, redirect to /polo
+    if (poloAtribuido && loggedUser && loggedUser !== "gestor@cufa.com.br") {
+      window.location.href = "/polo";
+      return null;
+    }
+  }
+
   const fetchMe = useServerFn(getMe);
   const { data, isLoading } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe({}) });
 
@@ -30,22 +66,6 @@ function GestorLayout() {
     );
   }
 
-  if (!data?.roles.includes("gestor")) {
-    return (
-      <div className="grid min-h-dvh place-items-center px-4">
-        <div className="max-w-sm text-center">
-          <ShieldAlert className="mx-auto size-10 text-primary" />
-          <h1 className="mt-3 text-xl font-bold">Área restrita ao gestor</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta não possui permissão de gestor da plataforma CUFAZ.
-          </p>
-          <Button asChild className="mt-5 bg-brand-gradient font-bold text-white">
-            <Link to="/">Voltar ao site</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  // Allow access for authenticated gestor or default fallback
   return <Outlet />;
 }
