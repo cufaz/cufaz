@@ -24,7 +24,7 @@ function DashboardPage() {
   const [dataFim, setDataFim] = useState("2026-08-31");
   const [isFiltering, setIsFiltering] = useState(false);
 
-  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<any[]>(() => {
+  function getDeduplicatedLocalLancamentos(): any[] {
     try {
       const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
       const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
@@ -59,49 +59,38 @@ function DashboardPage() {
           };
         });
 
-      return [...listLanc, ...approvedLanc];
+      const combined = [...listLanc, ...approvedLanc];
+      const result: any[] = [];
+      const seen = new Map<string, any>();
+
+      combined.forEach((item) => {
+        const descClean = String(item.descricao || item.item || "").trim().toLowerCase();
+        const poloClean = String(item.polo_id || item.polo_nome || "").trim().toLowerCase();
+        const key = `${descClean}_${poloClean}`;
+        const valNum = Number(item.valor || item.valor_total || 0);
+
+        if (!seen.has(key)) {
+          const entry = { ...item, valor: valNum };
+          seen.set(key, entry);
+          result.push(entry);
+        } else {
+          const existing = seen.get(key)!;
+          if (valNum > Number(existing['valor'] || 0)) {
+            existing['valor'] = valNum;
+          }
+        }
+      });
+
+      return result;
     } catch {}
     return [];
-  });
+  }
+
+  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<any[]>(getDeduplicatedLocalLancamentos);
 
   useEffect(() => {
     function syncDashboardLanc() {
-      try {
-        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-        const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
-
-        const storedPedidos = localStorage.getItem("cufa_compras_polo");
-        const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
-        const approvedLanc = listPedidos
-          .filter((p: any) => p.status === "aprovado")
-          .map((p: any) => {
-            const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
-            const pIdCode = pNome.toLowerCase().includes("penha")
-              ? "penha"
-              : pNome.toLowerCase().includes("madureira")
-              ? "madureira"
-              : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
-              ? "paraisopolis"
-              : "polo-teste";
-            const valNum = Number(p.valor_total || p.valor || 0);
-
-            return {
-              id: `ped-aprov-${p.id}`,
-              polo_id: pIdCode,
-              polo_nome: pNome,
-              descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
-              valor: valNum,
-              tipo: "despesa",
-              natureza: "realizado",
-              categoria_id: p.categoria || "Materiais / consumo",
-              categoria_nome: p.categoria || "Materiais / consumo",
-              competencia: "2026-08-01",
-              created_at: p.dataSolicitacao || new Date().toISOString(),
-            };
-          });
-
-        setLocalCustomLancamentos([...listLanc, ...approvedLanc]);
-      } catch {}
+      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
     }
 
     window.addEventListener("cufa_pedidos_updated", syncDashboardLanc);

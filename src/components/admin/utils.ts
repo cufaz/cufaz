@@ -60,8 +60,8 @@ export function exportProfessionalExcel({
     return false;
   });
 
-  // Filter lancamentos with flexible polo matching
-  const lancamentosFiltrados = lancamentos.filter((l: any) => {
+  // Filter lancamentos with flexible polo matching and deduplication
+  const rawLancamentosFiltrados = lancamentos.filter((l: any) => {
     const lPoloId = String(l.poloId || l.polo_id || "").toLowerCase();
     const lPoloNome = String(l.poloNome || l.polo_nome || "").toLowerCase();
 
@@ -78,6 +78,25 @@ export function exportProfessionalExcel({
     const matchData = (!dataInicio || lData >= dataInicio) && (!dataFim || lData <= dataFim);
     return matchPolo && matchData;
   });
+
+  const lancMap = new Map<string, any>();
+  rawLancamentosFiltrados.forEach((l: any) => {
+    const desc = String(l.descricao || l.item || "").trim().toLowerCase();
+    const pDest = String(l.poloNome || l.polo_nome || poloNome).trim().toLowerCase();
+    const key = `${desc}_${pDest}`;
+    const valNum = Number(l.valor || 0);
+
+    if (!lancMap.has(key)) {
+      lancMap.set(key, { ...l, valor: valNum });
+    } else {
+      const existing = lancMap.get(key)!;
+      if (valNum > Number(existing.valor || 0)) {
+        existing.valor = valNum;
+      }
+    }
+  });
+
+  const lancamentosFiltrados = Array.from(lancMap.values());
 
   const totalReceitas = lancamentosFiltrados
     .filter((l) => l.tipo === "receita")

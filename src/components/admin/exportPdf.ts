@@ -221,14 +221,34 @@ export function generateProfessionalPdf({
   doc.setTextColor(249, 115, 22);
   doc.text("4. OUTRAS CONTAS — DESPESAS LANÇADAS NO MÊS", 14, nextY3);
 
-  const despesaLancRows = lancamentosFiltrados
+  const despesaLancMap = new Map<string, { desc: string; cat: string; polo: string; valor: number }>();
+
+  lancamentosFiltrados
     .filter((l: any) => l.tipo === "despesa")
-    .map((l: any) => [
-      String(l.descricao || l.item || "Despesa Realizada"),
-      String(l.categoria || l.categoria_nome || "Materiais / consumo"),
-      String(l.poloNome || l.polo_nome || poloNome),
-      formatBRL(Number(l.valor || 0)),
-    ]);
+    .forEach((l: any) => {
+      const desc = String(l.descricao || l.item || "Despesa Realizada").trim();
+      const cat = String(l.categoria || l.categoria_nome || "Materiais / consumo").trim();
+      const pDest = String(l.poloNome || l.polo_nome || poloNome).trim();
+      const valNum = Number(l.valor || 0);
+
+      const key = `${desc.toLowerCase()}_${pDest.toLowerCase()}`;
+
+      if (!despesaLancMap.has(key)) {
+        despesaLancMap.set(key, { desc, cat, polo: pDest, valor: valNum });
+      } else {
+        const existing = despesaLancMap.get(key)!;
+        if (valNum > existing.valor) {
+          existing.valor = valNum;
+        }
+      }
+    });
+
+  const despesaLancRows = Array.from(despesaLancMap.values()).map((item) => [
+    item.desc,
+    item.cat,
+    item.polo,
+    formatBRL(item.valor),
+  ]);
 
   autoTable(doc, {
     startY: nextY3 + 3,
