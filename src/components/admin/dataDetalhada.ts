@@ -286,4 +286,7 @@ export const itensOrcamentoOFICIAIS: ItemOrcamentoDetalhado[] = [
   { id: "par-kar-36", poloId: "paraisopolis", atividade: "Karatê", categoria: "Serviços técnicos essenciais", item: "TI / suporte / dados (rateio)", descricao: "Suporte técnico, organização de dados e apoio digital", quantidade: "1 rateio mensal", previsto: 100.00, realizado: 0 },
   { id: "par-kar-37", poloId: "paraisopolis", atividade: "Karatê", categoria: "Outros", item: "Kit Lanche", descricao: "Apoio aos alunos (30 lanches por dia x 2 dias x 4 semanas)", quantidade: "30 lanches/dia", previsto: 3096.00, realizado: 0 },
   { id: "par-kar-38", poloId: "paraisopolis", atividade: "Karatê", categoria: "Extras", item: "Custos Extras", descricao: "Valor reservado para apoio em imprevistos, competições, transporte", quantidade: "1 reserva mensal", previsto: 4139.60, realizado: 0 },
+
+  // --- POLO DE TESTE: VÔLEI (R$ 500,00) ---
+  { id: "teste-vol-1", poloId: "polo-teste", atividade: "Vôlei", categoria: "Pessoal", item: "Professor/Instrutor", descricao: "Professor Profissional", quantidade: "1", previsto: 500.00, realizado: 0 },
 ];

@@ -167,21 +167,18 @@ function FinanceiroPage() {
     .filter((p) => selectedPoloIds.includes(String(p['id'])))
     .map((p) => String(p['nome']).toLowerCase());
 
-  // 1. Official Preset Items for Penha, Madureira, Paraisópolis
-  const isPoloTesteOnly = !isAllSelected && selectedPoloNames.length > 0 && selectedPoloNames.every((pName) => pName.includes("teste"));
-
-  const presetItems = isPoloTesteOnly
-    ? []
-    : itensOrcamentoOFICIAIS.filter((item) => {
-        if (isAllSelected) return true;
-        if (selectedPoloIds.includes(item.poloId)) return true;
-        return selectedPoloNames.some((pName) => {
-          if (pName.includes("penha") && item.poloId === "penha") return true;
-          if (pName.includes("madureira") && item.poloId === "madureira") return true;
-          if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-          return false;
-        });
-      });
+  // 1. Official Preset Items for Penha, Madureira, Paraisópolis, Polo de Teste
+  const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
+    if (isAllSelected) return true;
+    if (selectedPoloIds.includes(item.poloId)) return true;
+    return selectedPoloNames.some((pName) => {
+      if (pName.includes("penha") && item.poloId === "penha") return true;
+      if (pName.includes("madureira") && item.poloId === "madureira") return true;
+      if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+      if (pName.includes("teste") && (item.poloId === "polo-teste" || item.poloId === "teste")) return true;
+      return false;
+    });
+  });
 
   const officialAtivNames = new Set(itensOrcamentoOFICIAIS.map((i) => i.atividade.toLowerCase()));
 

@@ -119,33 +119,25 @@ export function PoloMultiSelect({
             </p>
           ) : (
             filteredPolos.map((p) => {
-              const isChecked = selectedIds.length === 1 && selectedIds[0] === p.id;
+              const isChecked = selectedIds.includes(p.id);
               return (
                 <div
                   key={p.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onChange([p.id]);
-                    setOpen(false);
+                    togglePolo(p.id);
                   }}
                   className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 cursor-pointer select-none transition-colors"
                 >
                   <Checkbox
                     id={`polo-${p.id}`}
-                    checked={selectedIds.includes(p.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        onChange([p.id]);
-                        setOpen(false);
-                      } else {
-                        togglePolo(p.id);
-                      }
-                    }}
+                    checked={isChecked}
+                    onCheckedChange={() => togglePolo(p.id)}
                   />
                   <span className="text-xs font-medium text-foreground truncate flex-1">
                     {p.nome}
                   </span>
-                  {selectedIds.includes(p.id) && <Check className="size-3.5 text-primary shrink-0" />}
+                  {isChecked && <Check className="size-3.5 text-primary shrink-0" />}
                 </div>
               );
             })
