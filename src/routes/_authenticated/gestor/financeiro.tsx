@@ -167,6 +167,7 @@ function FinanceiroPage() {
     .filter((p) => selectedPoloIds.includes(String(p['id'])))
     .map((p) => String(p['nome']).toLowerCase());
 
+  // 1. Official Preset Items for Penha, Madureira, Paraisópolis
   const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
     if (isAllSelected) return true;
     if (selectedPoloIds.includes(item.poloId)) return true;
@@ -178,22 +179,27 @@ function FinanceiroPage() {
     });
   });
 
-  // 2. Custom Database Budget Items (from activities budget modal & activities cost)
+  const officialAtivNames = new Set(itensOrcamentoOFICIAIS.map((i) => i.atividade.toLowerCase()));
+
+  // 2. Custom Database Budget Items (Only for custom activities not in official preset, like Vôlei / Polo de Teste)
   const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
   const atividadesList: Row[] = data?.atividades ?? [];
 
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
+    const ativNome = String(i['atividades']?.['nome'] || "Atividade");
+
+    const isOfficialAtiv = Array.from(officialAtivNames).some((o) => ativNome.toLowerCase().includes(o) || o.includes(ativNome.toLowerCase()));
+    if (isOfficialAtiv) return; // Prevent duplicating official preset activities
 
     const matchPolo =
       isAllSelected ||
       selectedPoloIds.includes(itemPoloId) ||
-      selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome));
+      selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome) || (pName.includes("teste") && (itemPoloId.includes("teste") || itemPoloNome.includes("teste"))));
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
-      const ativNome = String(i['atividades']?.['nome'] || "Atividade");
       const itemNome = String(i['item'] || "Item");
       const descStr = String(i['descricao'] || "");
       const qtdStr = String(i['quantidade'] || "1");
@@ -213,32 +219,35 @@ function FinanceiroPage() {
     }
   });
 
-  // Fallback: If polo has activities with custo_mensal (e.g. Vôlei R$ 5.000,00) but no detailed items yet
-  const poloAtividades = atividadesList.filter((a) => {
+  // Fallback: Custom activities with custo_mensal (e.g. Vôlei in Polo de Teste R$ 500,00)
+  atividadesList.forEach((a) => {
+    const ativNome = String(a['nome']);
     const aPoloId = String(a['polo_id'] || "");
     const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
-    return (
+
+    const isOfficialAtiv = Array.from(officialAtivNames).some((o) => ativNome.toLowerCase().includes(o) || o.includes(ativNome.toLowerCase()));
+    if (isOfficialAtiv) return;
+
+    const matchPolo =
       isAllSelected ||
       selectedPoloIds.includes(aPoloId) ||
-      selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome))
-    );
-  });
+      selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome) || (pName.includes("teste") && (aPoloId.includes("teste") || aPoloNome.includes("teste") || ativNome.toLowerCase().includes("vôlei") || ativNome.toLowerCase().includes("volei"))));
 
-  poloAtividades.forEach((a) => {
-    const ativNome = String(a['nome']);
-    const alreadyInDbCustom = dbCustomItems.some((di) => di.atividade === ativNome);
-    if (!alreadyInDbCustom && Number(a['custo_mensal'] || 0) > 0) {
-      dbCustomItems.push({
-        id: `ativ-${a['id']}`,
-        poloId: String(a['polo_id'] || selectedPoloIds[0] || "todos"),
-        atividade: ativNome,
-        categoria: "Pessoal",
-        item: `Equipe e Operação ${ativNome}`,
-        descricao: String(a['descricao'] || "Oficina e recursos da atividade"),
-        quantidade: "1",
-        previsto: Number(a['custo_mensal']),
-        realizado: 0,
-      });
+    if (matchPolo && Number(a['custo_mensal'] || 0) > 0) {
+      const alreadyInDbCustom = dbCustomItems.some((di) => di.atividade.toLowerCase() === ativNome.toLowerCase());
+      if (!alreadyInDbCustom) {
+        dbCustomItems.push({
+          id: `ativ-${a['id']}`,
+          poloId: aPoloId || "polo-teste",
+          atividade: ativNome,
+          categoria: "Pessoal",
+          item: `Professor/Instrutor ${ativNome}`,
+          descricao: String(a['descricao'] || "Professor Profissional"),
+          quantidade: "1",
+          previsto: Number(a['custo_mensal']),
+          realizado: 0,
+        });
+      }
     }
   });
 

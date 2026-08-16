@@ -147,8 +147,12 @@ export function PoloMultiSelect({
         <div className="mt-2 pt-2 border-t border-border flex justify-end">
           <Button
             size="sm"
-            className="w-full h-8 text-xs font-bold bg-brand-gradient text-white"
-            onClick={() => setOpen(false)}
+            type="button"
+            className="w-full h-8 text-xs font-bold bg-brand-gradient text-white shadow-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
           >
             Aplicar ({selectedIds.length === 0 || selectedIds.length === polos.length ? "Todos" : selectedIds.length})
           </Button>
