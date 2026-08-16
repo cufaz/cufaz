@@ -674,37 +674,48 @@ function VitrineAtividadesAlunoPage() {
           {selectedCourseGalleryModal && (
             <div className="space-y-4 pt-2">
               {(() => {
-                const storedFotos = localStorage.getItem("cufa_polo_galeria_fotos");
+                const poloClean = selectedCourseGalleryModal.polo.toLowerCase().trim();
+                const oficinaClean = selectedCourseGalleryModal.nome.toLowerCase().trim();
                 let fotosList: any[] = [];
+
                 try {
-                  if (storedFotos) {
-                    const parsed = JSON.parse(storedFotos);
+                  const storedUnit = localStorage.getItem(`cufa_galeria_${poloClean}`);
+                  if (storedUnit) {
+                    const parsed = JSON.parse(storedUnit);
                     if (Array.isArray(parsed)) {
                       fotosList = parsed.filter(
-                        (f: any) =>
-                          (f.oficina && String(f.oficina).toLowerCase() === selectedCourseGalleryModal.nome.toLowerCase()) ||
-                          (f.polo && String(f.polo).toLowerCase().includes(selectedCourseGalleryModal.polo.toLowerCase()))
+                        (f: any) => !f.atividade || String(f.atividade).toLowerCase().trim() === oficinaClean || oficinaClean.includes(String(f.atividade).toLowerCase().trim())
                       );
+                    }
+                  }
+
+                  if (fotosList.length === 0) {
+                    const storedGlobal = localStorage.getItem("cufa_polo_galeria_fotos") || localStorage.getItem("cufa_galeria_fotos");
+                    if (storedGlobal) {
+                      const parsed = JSON.parse(storedGlobal);
+                      if (Array.isArray(parsed)) {
+                        fotosList = parsed.filter((f: any) => {
+                          const fPolo = String(f.polo || f.poloNome || "").toLowerCase();
+                          const fAtiv = String(f.atividade || "").toLowerCase();
+                          const matchPolo = fPolo.includes(poloClean) || poloClean.includes(fPolo);
+                          const matchAtiv = !fAtiv || fAtiv.includes(oficinaClean) || oficinaClean.includes(fAtiv);
+                          return matchPolo && matchAtiv;
+                        });
+                      }
                     }
                   }
                 } catch {}
 
                 if (fotosList.length === 0) {
-                  // Clean fallback preview images for demonstration
-                  fotosList = [
-                    {
-                      id: "demo-1",
-                      titulo: `Treino Prático — ${selectedCourseGalleryModal.nome}`,
-                      url: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600&auto=format&fit=crop&q=80",
-                      data: "16/08/2026",
-                    },
-                    {
-                      id: "demo-2",
-                      titulo: `Alunos e Instrutor — ${selectedCourseGalleryModal.polo}`,
-                      url: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=600&auto=format&fit=crop&q=80",
-                      data: "15/08/2026",
-                    },
-                  ];
+                  return (
+                    <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-border bg-secondary/20 space-y-2">
+                      <ImageIcon className="size-10 text-muted-foreground/40 mx-auto" />
+                      <p className="font-extrabold text-xs text-foreground">Nenhuma foto enviada para esta oficina ainda</p>
+                      <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
+                        As imagens adicionadas pelo responsável da unidade ({selectedCourseGalleryModal.polo}) na aba Galeria de Fotos aparecerão aqui.
+                      </p>
+                    </div>
+                  );
                 }
 
                 return (
@@ -720,7 +731,7 @@ function VitrineAtividadesAlunoPage() {
                         </div>
                         <div className="p-3">
                           <p className="font-extrabold text-xs text-foreground leading-tight">{foto.titulo || selectedCourseGalleryModal.nome}</p>
-                          <p className="text-[10px] font-medium text-muted-foreground mt-0.5">Adicionada em {foto.data || "16/08/2026"}</p>
+                          <p className="text-[10px] font-medium text-muted-foreground mt-0.5">Adicionada em {foto.dataUpload || foto.data || "16/08/2026"}</p>
                         </div>
                       </div>
                     ))}

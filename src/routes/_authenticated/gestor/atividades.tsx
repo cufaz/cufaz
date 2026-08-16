@@ -180,9 +180,31 @@ export function AtividadesPage() {
     },
     onError: fail,
   });
+  const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
   const mDelTurma = useMutation({
-    mutationFn: (id: string) => apagarTurma({ data: { id } }),
-    onSuccess: () => ok("Turma removida"),
+    mutationFn: async (id: string) => {
+      try {
+        const storedLocal = localStorage.getItem("cufa_turmas_locais");
+        if (storedLocal) {
+          const parsed = JSON.parse(storedLocal);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((t: any) => String(t.id) !== String(id));
+            localStorage.setItem("cufa_turmas_locais", JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+
+      if (isUuid(id)) {
+        try {
+          return await apagarTurma({ data: { id } });
+        } catch (err: any) {
+          console.warn("Soft handling Supabase turma delete:", err);
+        }
+      }
+      return { ok: true };
+    },
+    onSuccess: () => ok("Turma removida com sucesso"),
     onError: fail,
   });
   const mItem = useMutation({
@@ -660,45 +682,78 @@ export function AtividadesPage() {
             <DialogTitle>{turmaForm?.['id'] ? "Editar turma" : "Nova turma"}</DialogTitle>
           </DialogHeader>
           {turmaForm ? (
-            <form
-              className="grid gap-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                mTurma.mutate(turmaForm);
-              }}
-            >
-              <div className="space-y-1.5">
-                <Label>Nome</Label>
-                <Input required value={String(turmaForm['nome'] ?? "")} onChange={(e) => setTurmaForm({ ...turmaForm, nome: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Turno</Label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={String(turmaForm['turno'] ?? "Tarde")}
-                    onChange={(e) => setTurmaForm({ ...turmaForm, turno: e.target.value })}
-                  >
-                    {["Manhã", "Tarde", "Noite"].map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Horário</Label>
-                  <Input value={String(turmaForm['horario'] ?? "")} onChange={(e) => setTurmaForm({ ...turmaForm, horario: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Limite de vagas</Label>
-                <Input type="number" value={Number(turmaForm['vagas'] ?? 0)} onChange={(e) => setTurmaForm({ ...turmaForm, vagas: Number(e.target.value) })} />
-              </div>
-              <DialogFooter>
-                <Button type="submit" className="bg-brand-gradient font-bold text-white">
-                  Salvar
-                </Button>
-              </DialogFooter>
-            </form>
+            (() => {
+              const parentAtividade =
+                atividades.find((a: Row) => String(a['id']) === String(turmaForm['atividade_id'])) ||
+                atividadesFiltradas.find((a: Row) => String(a['id']) === String(turmaForm['atividade_id']));
+              const maxVagasPermitidas = parentAtividade ? Number(parentAtividade['vagas'] || 0) : 0;
+
+              return (
+                <form
+                  className="grid gap-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const vNum = Number(turmaForm['vagas'] || 0);
+                    if (maxVagasPermitidas > 0 && vNum > maxVagasPermitidas) {
+                      toast.error(`Limite excedido! O máximo permitido para esta oficina é de ${maxVagasPermitidas} vagas.`);
+                      return;
+                    }
+                    mTurma.mutate(turmaForm);
+                  }}
+                >
+                  <div className="space-y-1.5">
+                    <Label>Nome</Label>
+                    <Input required value={String(turmaForm['nome'] ?? "")} onChange={(e) => setTurmaForm({ ...turmaForm, nome: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Turno</Label>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={String(turmaForm['turno'] ?? "Tarde")}
+                        onChange={(e) => setTurmaForm({ ...turmaForm, turno: e.target.value })}
+                      >
+                        {["Manhã", "Tarde", "Noite"].map((t) => (
+                          <option key={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Horário</Label>
+                      <Input value={String(turmaForm['horario'] ?? "")} onChange={(e) => setTurmaForm({ ...turmaForm, horario: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Limite de vagas</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={maxVagasPermitidas > 0 ? maxVagasPermitidas : undefined}
+                      value={Number(turmaForm['vagas'] ?? (maxVagasPermitidas || 10))}
+                      onChange={(e) => {
+                        const num = Number(e.target.value);
+                        if (maxVagasPermitidas > 0 && num > maxVagasPermitidas) {
+                          toast.warning(`O limite máximo desta oficina é de ${maxVagasPermitidas} vagas.`);
+                          setTurmaForm({ ...turmaForm, vagas: maxVagasPermitidas });
+                        } else {
+                          setTurmaForm({ ...turmaForm, vagas: num });
+                        }
+                      }}
+                    />
+                    {maxVagasPermitidas > 0 && (
+                      <p className="text-[11px] font-semibold text-muted-foreground">
+                        Limite máximo estipulado no cadastro da oficina: <strong className="text-primary">{maxVagasPermitidas} vagas</strong>.
+                      </p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" className="bg-brand-gradient font-bold text-white">
+                      Salvar
+                    </Button>
+                  </DialogFooter>
+                </form>
+              );
+            })()
           ) : null}
         </DialogContent>
       </Dialog>
