@@ -161,18 +161,50 @@ export function LoginDialog({
       return;
     }
 
-    // 6. Fallback check for default Professor email
+    // 6. Check registered students in cufa_alunos_cadastrados
+    let alunosList: any[] = [];
+    try {
+      const stored = localStorage.getItem("cufa_alunos_cadastrados");
+      if (stored) alunosList = JSON.parse(stored);
+    } catch {}
+
+    const matchedAluno = alunosList.find(
+      (a: any) => a.email && String(a.email).toLowerCase() === cleanEmail
+    );
+
+    if (matchedAluno) {
+      if (matchedAluno.senha && matchedAluno.senha !== cleanSenha) {
+        toast.error("Senha incorreta!", {
+          description: "A senha digitada não confere com a cadastrada para este aluno.",
+        });
+        return;
+      }
+
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem("cufa_logged_role", "aluno");
+      localStorage.setItem("cufa_aluno_nome", matchedAluno.nome || "Aluno");
+      if (matchedAluno.telefone) {
+        localStorage.setItem("cufa_aluno_telefone", matchedAluno.telefone);
+      }
+
+      toast.success("Login autorizado! Bem-vindo, Aluno.");
+      onOpenChange(false);
+      triggerAuthRedirect("/aluno", "Acessando Painel do Aluno...");
+      return;
+    }
+
+    // 7. Fallback check for default Professor email
     if (cleanEmail === "professor@cufa.com.br" || cleanEmail.includes("prof")) {
       localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_logged_role", "professor");
-      localStorage.setItem("cufa_professor_nome", "Prof. Marcos Faixa Preta");
+      localStorage.setItem("cufa_professor_nome", "Prof.ª Santana Silva");
       toast.success("Login autorizado! Bem-vindo, Professor.");
       onOpenChange(false);
       triggerAuthRedirect("/professor", "Acessando Painel do Professor...");
       return;
     }
 
-    // 7. User not found
+    // 8. User not found
     toast.error("Usuário não cadastrado!", {
       description: "Verifique o e-mail informado ou realize o cadastro de acesso.",
     });

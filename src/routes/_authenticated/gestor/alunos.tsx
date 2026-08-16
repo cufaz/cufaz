@@ -95,30 +95,82 @@ function GestorAlunosDashboardPage() {
             const cNome = cad.nome || "Aluno";
             const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`) || localStorage.getItem("cufa_perfil_foto");
 
+            let userPolo = cad.polo || "Complexo da Penha";
+            let userMod = cad.modalidade || "Jiu Jitsu";
+            let userTurma = cad.turma || "Turma 1 - Tarde";
+
+            try {
+              const inscStored = localStorage.getItem(`cufa_aluno_inscricoes_${cEmail}`);
+              if (inscStored) {
+                const inscList = JSON.parse(inscStored);
+                if (Array.isArray(inscList) && inscList.length > 0) {
+                  const activeInsc = inscList.find((i: any) => i.status === "ativa") || inscList[0];
+                  if (activeInsc) {
+                    userPolo = activeInsc.poloNome || userPolo;
+                    userMod = activeInsc.atividadeNome || userMod;
+                    userTurma = activeInsc.turmaNome || userTurma;
+                  }
+                }
+              }
+            } catch {}
+
             if (cEmail && !seenEmails.has(cEmail)) {
               seenEmails.add(cEmail);
               list.push({
                 id: cad.id || `aluno-${Date.now()}`,
                 nome: cNome,
                 email: cEmail,
-                telefone: cad.telefone || "(21) 98765-4321",
-                polo: cad.polo || "Complexo da Penha",
-                modalidade: cad.modalidade || "Jiu Jitsu",
-                turma: cad.turma || "Turma 1 - Tarde",
+                telefone: cad.telefone || "",
+                polo: userPolo,
+                modalidade: userMod,
+                turma: userTurma,
                 dataNasc: cad.dataNasc,
-                nomeEscola: cad.nomeEscola || "E.M. Paulo Freire",
-                anoEscolar: cad.anoEscolar || "1º Ano - Ensino Médio",
+                nomeEscola: cad.nomeEscola || "Não informada",
+                anoEscolar: cad.anoEscolar || "1º Ano - Ensino Fundamental",
                 turnoEscolar: cad.turnoEscolar || "Manhã",
-                qtdPessoasResidencia: cad.qtdPessoasResidencia || "4",
+                qtdPessoasResidencia: cad.qtdPessoasResidencia || "1",
                 nomeResponsavel: cad.nomeResponsavel || "Responsável Legal",
-                cpfResponsavel: cad.cpfResponsavel || "000.000.000-00",
-                telResponsavel: cad.telResponsavel || "(21) 98765-4321",
+                cpfResponsavel: cad.cpfResponsavel || "",
+                telResponsavel: cad.telResponsavel || "",
                 docIdName: cad.docIdName,
                 docIdData: cad.docIdData,
                 docResName: cad.docResName,
                 docResData: cad.docResData,
                 foto: fUser || null,
                 dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // Also read cufa_alunos_polo
+    try {
+      const storedPolo = localStorage.getItem("cufa_alunos_polo");
+      if (storedPolo) {
+        const parsed = JSON.parse(storedPolo);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((pAluno: any) => {
+            const pEmail = String(pAluno.email || `${cleanStr(pAluno.nome)}@aluno.cufa.org`).toLowerCase();
+            if (!seenEmails.has(pEmail)) {
+              seenEmails.add(pEmail);
+              list.push({
+                id: pAluno.id || `aluno-polo-${Date.now()}`,
+                nome: pAluno.nome,
+                email: pEmail,
+                telefone: pAluno.telefone || "(21) 98765-4321",
+                polo: pAluno.polo || "Complexo da Penha",
+                modalidade: pAluno.oficina || "Jiu Jitsu",
+                turma: "Turma 1 - Tarde",
+                nomeEscola: "E.M. Paulo Freire",
+                anoEscolar: "1º Ano - Ensino Médio",
+                turnoEscolar: "Manhã",
+                qtdPessoasResidencia: "4",
+                nomeResponsavel: "Responsável Legal",
+                cpfResponsavel: "000.000.000-00",
+                telResponsavel: "(21) 98765-4321",
+                dataCriacao: "2026-08-16",
               });
             }
           });
