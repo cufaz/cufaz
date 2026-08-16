@@ -111,7 +111,7 @@ export function GestorShell({
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans">
-      <AuthLoadingOverlay open={isLoggingOut || carregando} message={isLoggingOut ? "Encerrando sessão com segurança..." : "Carregando dados da plataforma..."} />
+      <AuthLoadingOverlay open={isLoggingOut} message="Encerrando sessão com segurança..." />
 
       {/* Mobile Top Header */}
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
