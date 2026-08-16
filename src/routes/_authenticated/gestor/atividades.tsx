@@ -57,6 +57,25 @@ function savePeriodos(key: string, periodos: any) {
   } catch {}
 }
 
+const ALL_CATEGORIAS_OFICIAIS = [
+  { id: "cat-1", nome: "Pessoal" },
+  { id: "cat-2", nome: "Materiais esportivos" },
+  { id: "cat-3", nome: "Materiais / consumo" },
+  { id: "cat-4", nome: "Comunicação" },
+  { id: "cat-5", nome: "Evento pedagógico / esportivo" },
+  { id: "cat-6", nome: "Encargos" },
+  { id: "cat-7", nome: "Infraestrutura" },
+  { id: "cat-8", nome: "Administrativo / RH essencial" },
+  { id: "cat-9", nome: "Serviços técnicos essenciais" },
+  { id: "cat-10", nome: "Material didático e apostilas" },
+  { id: "cat-11", nome: "Uniformes e vestuário" },
+  { id: "cat-12", nome: "Insumos, lanche e apoio operacional" },
+  { id: "cat-13", nome: "Kit Lanche" },
+  { id: "cat-14", nome: "Logística" },
+  { id: "cat-15", nome: "Transporte e Logística" },
+  { id: "cat-16", nome: "Custos Extras" },
+];
+
 export function AtividadesPage() {
   const qc = useQueryClient();
   const fetchAtividades = useServerFn(listAtividades);
@@ -83,6 +102,32 @@ export function AtividadesPage() {
     queryFn: () => fetchOrcamento({ data: { atividadeId: String(orcamentoDe?.['id']) } }),
     enabled: Boolean(orcamentoDe),
   });
+
+  const customCatsFromStorage: string[] = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_categorias_pedidos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  })();
+
+  const categoriasParaSelect = (() => {
+    const baseList =
+      orcamento.data?.categorias && (orcamento.data.categorias as Row[]).length > 0
+        ? (orcamento.data.categorias as Row[])
+        : ALL_CATEGORIAS_OFICIAIS;
+
+    const existingNames = new Set(baseList.map((c) => String(c['nome']).toLowerCase()));
+    const extraItems: Row[] = [];
+
+    customCatsFromStorage.forEach((catName, idx) => {
+      if (!existingNames.has(catName.toLowerCase())) {
+        extraItems.push({ id: `custom-cat-${idx}`, nome: catName });
+      }
+    });
+
+    return [...baseList, ...extraItems];
+  })();
 
   const ok = (msg: string) => {
     toast.success(msg);
@@ -695,10 +740,10 @@ export function AtividadesPage() {
                 <Label>Categoria</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={String(itemForm['categoria_id'] ?? "")}
+                  value={String(itemForm['categoria_id'] ?? (categoriasParaSelect[0]?.id ?? "cat-1"))}
                   onChange={(e) => setItemForm({ ...itemForm, categoria_id: e.target.value })}
                 >
-                  {(orcamento.data?.categorias ?? []).map((c: Row) => (
+                  {categoriasParaSelect.map((c: Row) => (
                     <option key={String(c['id'])} value={String(c['id'])}>
                       {String(c['nome'])}
                     </option>
