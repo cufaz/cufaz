@@ -108,6 +108,7 @@ export function SignupDialog({
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [unidade, setUnidade] = useState("Complexo da Penha");
+  const [modalidade, setModalidade] = useState("Jiu Jitsu");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
@@ -179,6 +180,31 @@ export function SignupDialog({
 
       toast.success("Cadastro de Responsável liberado com sucesso!", {
         description: `Acesso liberado para a unidade ${uNome}. E-mail: ${gEmail}`,
+      });
+    } else if (perfil === "professor") {
+      const pNome = nome.trim() ? (nome.trim().startsWith("Prof") ? nome.trim() : `Prof. ${nome.trim()}`) : "Prof. Novo Professor";
+      const pMod = modalidade || "Jiu Jitsu";
+      const pUni = unidade || "Complexo da Penha";
+
+      const novaSolicitacao = {
+        id: `solic-${Date.now()}`,
+        professorNome: pNome,
+        atividadeNome: pMod,
+        poloNome: pUni,
+        status: "pendente",
+        dataSolicitacao: new Date().toISOString().slice(0, 10),
+      };
+
+      try {
+        const stored = localStorage.getItem("cufa_professores_solicitacoes");
+        let list = stored ? JSON.parse(stored) : [];
+        list.push(novaSolicitacao);
+        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(list));
+        window.dispatchEvent(new Event("cufa_professores_updated"));
+      } catch {}
+
+      toast.success("Cadastro de Professor enviado com sucesso!", {
+        description: `A solicitação para ministrar ${pMod} no ${pUni} foi enviada e aguarda aprovação do responsável pelo polo.`,
       });
     } else {
       toast.success("Cadastro realizado com sucesso!", {
@@ -282,9 +308,9 @@ export function SignupDialog({
                     <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                       Modalidade
                     </Label>
-                    <Select>
+                    <Select value={modalidade} onValueChange={setModalidade}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder="Selecione a modalidade" />
                       </SelectTrigger>
                       <SelectContent>
                         {modalidades.map((m) => (
@@ -296,7 +322,21 @@ export function SignupDialog({
                     </Select>
                   </div>
                 </div>
-                <SeletorComunidade />
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade / Polo</Label>
+                  <Select value={unidade} onValueChange={setUnidade}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {comunidades.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Campo id="formacao" label="Formação / Graduação" placeholder="Ex.: Faixa preta 2º dan" />
                 <div className="space-y-1.5">
                   <Label
