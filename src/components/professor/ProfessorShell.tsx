@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import logo from "@/assets/cufa-z-logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,6 +78,11 @@ export function ProfessorShell({
       to: "/professor/atividades",
       label: "Minhas Atividades",
       icon: BookOpen,
+    },
+    {
+      to: "/professor/oportunidades",
+      label: "Vagas para Ministrar",
+      icon: Sparkles,
     },
     {
       to: "/professor/chamada",

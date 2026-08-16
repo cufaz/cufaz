@@ -11,22 +11,34 @@ export const Route = createFileRoute("/_authenticated/professor/atividades")({
 
 function ProfessorAtividadesPage() {
   const [profPolo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "").toLowerCase());
+  const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "");
 
-  // Read solicitudes matching this professor
+  // Read solicitudes matching ONLY this logged-in professor
   const [solicitacoes] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const list = JSON.parse(stored);
+        const minhas = list.filter(
+          (item: any) =>
+            (profEmail && item.email && String(item.email).toLowerCase() === profEmail) ||
+            (profNome && item.professorNome && String(item.professorNome).toLowerCase() === profNome.toLowerCase())
+        );
+        if (minhas.length > 0) return minhas;
+      }
     } catch {}
-    return [
+
+    return profNome ? [
       {
-        id: "solic-default",
+        id: "solic-atual",
+        professorNome: profNome,
         atividadeNome: "Jiu Jitsu",
         poloNome: profPolo,
-        status: "aprovado",
+        status: "pendente",
         dataSolicitacao: new Date().toISOString().slice(0, 10),
       },
-    ];
+    ] : [];
   });
 
   return (

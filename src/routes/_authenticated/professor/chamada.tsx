@@ -31,19 +31,30 @@ function ProfessorChamadaPage() {
 
   function togglePresenca(id: string) {
     setAlunos((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, presente: !a.presente } : a))
+      prev.map((a) => {
+        if (a.id === id) {
+          const novoEstado = !a.presente;
+          toast.success(
+            novoEstado
+              ? `${a.nome} marcado como Presente.`
+              : `${a.nome} marcado como Ausente.`,
+            { duration: 1500 }
+          );
+          return { ...a, presente: novoEstado };
+        }
+        return a;
+      })
     );
   }
 
   function marcarTodos(presente: boolean) {
     setAlunos((prev) => prev.map((a) => ({ ...a, presente })));
-  }
-
-  function salvarChamada() {
-    const presentesCount = alunos.filter((a) => a.presente).length;
-    toast.success("Chamada registrada com sucesso!", {
-      description: `${presentesCount} de ${alunos.length} alunos marcados como presentes para a aula de ${dataChamada}.`,
-    });
+    toast.success(
+      presente
+        ? "Todos os alunos foram marcados como Presentes."
+        : "Presenças limpas para a turma.",
+      { duration: 2000 }
+    );
   }
 
   const alunosFiltrados = alunos.filter((a) =>
@@ -55,12 +66,7 @@ function ProfessorChamadaPage() {
   return (
     <ProfessorShell
       title="Chamada / Frequência de Alunos"
-      description="Registre a presença diária dos alunos matriculados nas suas oficinas."
-      actions={
-        <Button onClick={salvarChamada} className="bg-brand-gradient font-bold shadow-brand">
-          <CheckCircle2 className="size-4 mr-2" /> Salvar Chamada
-        </Button>
-      }
+      description="A presença é registrada e fixada automaticamente ao clicar no aluno."
     >
       <div className="space-y-6">
         {/* Controles de Data e Turma */}

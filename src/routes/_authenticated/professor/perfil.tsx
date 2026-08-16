@@ -15,28 +15,55 @@ export const Route = createFileRoute("/_authenticated/professor/perfil")({
 });
 
 function ProfessorPerfilPage() {
-  const [nome, setNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "Prof. Marcos Faixa Preta");
-  const [biografia, setBiografia] = useState("Instrutor de Artes Marciais e Faixa Preta de Jiu Jitsu com foco na formação de jovens atletas e inclusão social nas comunidades.");
-  const [telefone, setTelefone] = useState("(21) 99887-6655");
-  const [email] = useState("professor@cufa.com.br");
+  const [nome, setNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "Prof. Instrutor");
+  const [email] = useState(() => localStorage.getItem("cufa_logged_user") || "professor@cufa.com.br");
   const [polo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
-  const [modalidade] = useState("Jiu Jitsu");
-  const [foto, setFoto] = useState(() => localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150");
+  const [modalidade] = useState(() => localStorage.getItem("cufa_professor_modalidade") || "Jiu Jitsu");
+  const [telefone, setTelefone] = useState(() => localStorage.getItem("cufa_professor_telefone") || "(21) 99887-6655");
+  const [biografia, setBiografia] = useState(() => localStorage.getItem("cufa_professor_biografia") || "Instrutor capacitado focado no desenvolvimento social e esportivo dos alunos.");
+
+  // Social networks
+  const [instagram, setInstagram] = useState(() => localStorage.getItem("cufa_professor_instagram") || "");
+  const [facebook, setFacebook] = useState(() => localStorage.getItem("cufa_professor_facebook") || "");
+  const [linkedin, setLinkedin] = useState(() => localStorage.getItem("cufa_professor_linkedin") || "");
+
+  // Photo state
+  const [foto, setFoto] = useState<string | null>(() => localStorage.getItem("cufa_perfil_foto"));
+  const [fotoNome, setFotoNome] = useState<string | null>(() => localStorage.getItem("cufa_perfil_foto_name"));
+
+  function handleFotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFotoNome(file.name);
+      localStorage.setItem("cufa_perfil_foto_name", file.name);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const res = evt.target?.result as string;
+        setFoto(res);
+        localStorage.setItem("cufa_perfil_foto", res);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
     localStorage.setItem("cufa_professor_nome", nome);
-    localStorage.setItem("cufa_perfil_foto", foto);
+    localStorage.setItem("cufa_professor_telefone", telefone);
+    localStorage.setItem("cufa_professor_biografia", biografia);
+    localStorage.setItem("cufa_professor_instagram", instagram);
+    localStorage.setItem("cufa_professor_facebook", facebook);
+    localStorage.setItem("cufa_professor_linkedin", linkedin);
     toast.success("Perfil do professor atualizado com sucesso!");
   }
 
   return (
     <ProfessorShell
       title="Meu Perfil de Professor"
-      description="Edite suas informações pessoais, biografia e visualize os documentos anexados."
+      description="Edite suas informações pessoais, redes sociais e visualize os documentos anexados."
     >
       <form onSubmit={handleSalvarPerfil} className="space-y-6 max-w-4xl">
-        {/* Foto de Perfil & Dados Básicos */}
+        {/* Foto de Perfil & Dados Pessoais */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60">
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -47,21 +74,35 @@ function ProfessorPerfilPage() {
           <CardContent className="pt-4 space-y-4">
             <div className="flex items-center gap-4">
               <Avatar className="size-16 border-2 border-primary/30 shadow-md">
-                <AvatarImage src={foto} />
+                {foto && <AvatarImage src={foto} />}
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                   {nome.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
+
               <div className="space-y-1">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Link da Foto de Perfil
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  Foto de Perfil
                 </Label>
-                <Input
-                  value={foto}
-                  onChange={(e) => setFoto(e.target.value)}
-                  placeholder="https://exemplo.com/sua-foto.jpg"
-                  className="text-xs w-72 sm:w-96"
-                />
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor="foto-upload"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs cursor-pointer shadow-xs transition-all"
+                  >
+                    <Upload className="size-3.5" />
+                    <span>Upload da Foto</span>
+                    <input
+                      id="foto-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFotoSelect}
+                    />
+                  </label>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {fotoNome ? fotoNome : "Nenhuma foto selecionada"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -99,6 +140,47 @@ function ProfessorPerfilPage() {
                 onChange={(e) => setBiografia(e.target.value)}
                 className="text-xs leading-relaxed"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Redes Sociais do Professor */}
+        <Card className="border-border shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/60">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <User className="size-4 text-primary" />
+              <span>Redes Sociais & Links Profissionais</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Instagram</Label>
+                <Input
+                  placeholder="@seu.perfil ou link"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Facebook</Label>
+                <Input
+                  placeholder="https://facebook.com/seu.perfil"
+                  value={facebook}
+                  onChange={(e) => setFacebook(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">LinkedIn</Label>
+                <Input
+                  placeholder="https://linkedin.com/in/seu.perfil"
+                  value={linkedin}
+                  onChange={(e) => setLinkedin(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
