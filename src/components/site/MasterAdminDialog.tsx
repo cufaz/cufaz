@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Crown, Lock, ShieldCheck, Users, GraduationCap, UserCheck, Key, Plus, X } from "lucide-react";
+import { Crown, Lock, ShieldCheck, Users, GraduationCap, UserCheck, Key, Plus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -322,7 +322,7 @@ export function MasterAdminDialog({
                               {g.senha}
                             </td>
                             <td className="py-3 font-medium">{g.polo}</td>
-                            <td className="py-3 text-right">
+                            <td className="py-3 text-right flex items-center justify-end gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -330,6 +330,27 @@ export function MasterAdminDialog({
                                 onClick={() => toast.info(`Senha enviada para ${g.email}`)}
                               >
                                 <Key className="size-3.5 mr-1" /> Resetar Senha
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                                onClick={() => {
+                                  if (confirm(`Deseja excluir definitivamente o gestor ${g.nome}?`)) {
+                                    setGestoresData((prev: any[]) => prev.filter((item) => item.id !== g.id));
+                                    try {
+                                      const stored = localStorage.getItem("cufa_gestores_lista");
+                                      if (stored) {
+                                        const list = JSON.parse(stored).filter((item: any) => item.id !== g.id);
+                                        localStorage.setItem("cufa_gestores_lista", JSON.stringify(list));
+                                      }
+                                    } catch {}
+                                    toast.success(`Gestor ${g.nome} excluído definitivamente.`);
+                                  }
+                                }}
+                                title="Excluir Gestor"
+                              >
+                                <Trash2 className="size-4" />
                               </Button>
                             </td>
                           </tr>
@@ -361,6 +382,7 @@ export function MasterAdminDialog({
                             <th className="pb-3">Senha</th>
                             <th className="pb-3">Polo</th>
                             <th className="pb-3">Atividade</th>
+                            <th className="pb-3 text-right">Ação</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
@@ -373,6 +395,29 @@ export function MasterAdminDialog({
                               </td>
                               <td className="py-3 font-medium">{a.polo}</td>
                               <td className="py-3 font-semibold text-primary">{a.atividade}</td>
+                              <td className="py-3 text-right">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                                  onClick={() => {
+                                    if (confirm(`Deseja excluir definitivamente o aluno ${a.nome}?`)) {
+                                      setAlunosData((prev) => prev.filter((item) => item.id !== a.id));
+                                      try {
+                                        const stored = localStorage.getItem("cufa_alunos_polo");
+                                        if (stored) {
+                                          const list = JSON.parse(stored).filter((item: any) => item.id !== a.id);
+                                          localStorage.setItem("cufa_alunos_polo", JSON.stringify(list));
+                                        }
+                                      } catch {}
+                                      toast.success(`Aluno ${a.nome} excluído definitivamente.`);
+                                    }
+                                  }}
+                                  title="Excluir Aluno"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -403,6 +448,7 @@ export function MasterAdminDialog({
                             <th className="pb-3">Senha</th>
                             <th className="pb-3">Disciplina / Oficina</th>
                             <th className="pb-3">Polo</th>
+                            <th className="pb-3 text-right">Ação</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
@@ -415,6 +461,35 @@ export function MasterAdminDialog({
                               </td>
                               <td className="py-3 font-semibold text-primary">{p.disciplina}</td>
                               <td className="py-3 font-medium">{p.polo}</td>
+                              <td className="py-3 text-right">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                                  onClick={() => {
+                                    if (confirm(`Deseja excluir definitivamente o professor ${p.nome}?`)) {
+                                      setProfessoresData((prev) => prev.filter((item) => item.id !== p.id));
+                                      try {
+                                        const storedC = localStorage.getItem("cufa_professores_cadastrados");
+                                        if (storedC) {
+                                          const listC = JSON.parse(storedC).filter((item: any) => item.id !== p.id && item.email !== p.email);
+                                          localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listC));
+                                        }
+                                        const storedS = localStorage.getItem("cufa_professores_solicitacoes");
+                                        if (storedS) {
+                                          const listS = JSON.parse(storedS).filter((item: any) => item.email !== p.email);
+                                          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(listS));
+                                        }
+                                        window.dispatchEvent(new Event("cufa_professores_updated"));
+                                      } catch {}
+                                      toast.success(`Professor ${p.nome} excluído definitivamente.`);
+                                    }
+                                  }}
+                                  title="Excluir Professor"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>

@@ -86,9 +86,15 @@ function ProfessorAtividadesPage() {
                   <MapPin className="size-3.5 text-primary shrink-0" />
                   <span>Unidade {item.poloNome || profPolo}</span>
                 </div>
+                {item.turmaNome && (
+                  <div className="flex items-center gap-2 font-bold text-primary">
+                    <BookOpen className="size-3.5 shrink-0" />
+                    <span>{item.turmaNome}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="size-3.5 text-primary shrink-0" />
-                  <span>{isAprovado ? "35 alunos matriculados" : "Aguardando homologação do polo"}</span>
+                  <span>{isAprovado ? "Turma homologada" : "Aguardando homologação do polo"}</span>
                 </div>
                 <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground flex justify-between">
                   <span>Data da Solicitação:</span>

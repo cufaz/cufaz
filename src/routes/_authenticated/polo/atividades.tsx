@@ -11,6 +11,7 @@ export interface ProfessorSolicitacao {
   id: string;
   professorNome: string;
   atividadeNome: string;
+  turmaNome?: string;
   poloNome: string;
   status: "pendente" | "aprovado" | "recusado";
   dataSolicitacao?: string;
@@ -191,7 +192,28 @@ export function PoloAtividadesPage() {
         },
       ];
 
-  const atividadesCalculadas = rawAtividades.map((ativ) => {
+  const atividadesExpandidas: any[] = [];
+  rawAtividades.forEach((ativ) => {
+    if (ativ.turmas && ativ.turmas.length > 1) {
+      ativ.turmas.forEach((turmaLabel: string, idx: number) => {
+        atividadesExpandidas.push({
+          ...ativ,
+          id: `${ativ.id}-t${idx + 1}`,
+          turmaNome: `Turma ${idx + 1}`,
+          turmaDetalhe: turmaLabel,
+          vagas: Math.round(ativ.vagas / ativ.turmas.length),
+        });
+      });
+    } else {
+      atividadesExpandidas.push({
+        ...ativ,
+        turmaNome: "Turma 1",
+        turmaDetalhe: ativ.turmas ? ativ.turmas[0] : `${ativ.nome} — Turma Única`,
+      });
+    }
+  });
+
+  const atividadesCalculadas = atividadesExpandidas.map((ativ) => {
     const countReal = alunosLista.filter((a: any) => a.atividade === ativ.nome).length;
     return {
       ...ativ,
@@ -206,8 +228,8 @@ export function PoloAtividadesPage() {
 
   return (
     <PoloResponsavelShell
-      title="Atividades do Polo"
-      description={`Modalidades esportivas, culturais e formativas ativas no ${poloNome}.`}
+      title="Atividades e Turmas do Polo"
+      description={`Modalidades e turmas ativas no ${poloNome}. Cada turma possui seu controle de vagas e instrutor responsável.`}
     >
       <div className="space-y-6">
         {/* Barra de Filtros: Oficina e Período */}
@@ -251,16 +273,16 @@ export function PoloAtividadesPage() {
           </div>
         </div>
 
-        {/* Grid de Cards de Atividades */}
+        {/* Grid de Cards de Atividades Separadas por Turma */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {atividadesFiltradas.map((ativ) => {
             const pMatch = solicitacoes.find(
               (s) =>
                 (cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
                   cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome))) &&
-                (!s.poloNome ||
-                  cleanStr(s.poloNome).includes(cleanStr(poloNome)) ||
-                  cleanStr(poloNome).includes(cleanStr(s.poloNome)))
+                (!s.turmaNome ||
+                  cleanStr(s.turmaNome).includes(cleanStr(ativ.turmaNome)) ||
+                  cleanStr(ativ.turmaNome).includes(cleanStr(s.turmaNome)))
             );
 
             return (
@@ -274,8 +296,11 @@ export function PoloAtividadesPage() {
                       <CheckCircle2 className="size-3 mr-1" /> Ativa
                     </Badge>
                   </div>
-                  <CardTitle className="text-xl font-extrabold mt-2 text-foreground">
-                    {ativ.nome}
+                  <CardTitle className="text-xl font-extrabold mt-2 text-foreground flex items-center justify-between">
+                    <span>{ativ.nome}</span>
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-lg border border-primary/20">
+                      {ativ.turmaNome}
+                    </span>
                   </CardTitle>
 
                   {/* Section Instrutor com Aprovação e Recusa */}
@@ -356,7 +381,7 @@ export function PoloAtividadesPage() {
                     <span className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground">
                       Turmas e Horários
                     </span>
-                    {ativ.turmas.map((t) => (
+                    {ativ.turmas.map((t: string) => (
                       <div key={t} className="p-2 rounded-lg bg-background border border-border text-foreground font-medium">
                         {t}
                       </div>

@@ -149,6 +149,7 @@ export function SignupDialog({
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [unidade, setUnidade] = useState("Complexo da Penha");
+  const [turmaEscolhida, setTurmaEscolhida] = useState("Turma 1 - Tarde (14h - 16h)");
   const [modalidade, setModalidade] = useState("Jiu Jitsu");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -261,6 +262,7 @@ export function SignupDialog({
         senha: pSenha,
         telefone: telefone.trim(),
         atividadeNome: pMod,
+        turmaNome: turmaEscolhida,
         poloNome: pUni,
         status: "pendente",
         docIdName: docIdName || null,
@@ -418,20 +420,37 @@ export function SignupDialog({
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade / Polo</Label>
-                  <Select value={unidade} onValueChange={setUnidade}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {comunidades.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade / Polo</Label>
+                    <Select value={unidade} onValueChange={setUnidade}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {comunidades.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Turma e Horário Desejado</Label>
+                    <Select value={turmaEscolhida} onValueChange={setTurmaEscolhida}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a turma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Turma 1 - Tarde (14h - 16h)">Turma 1 - Tarde (14h - 16h)</SelectItem>
+                        <SelectItem value="Turma 2 - Tarde (16h - 18h)">Turma 2 - Tarde (16h - 18h)</SelectItem>
+                        <SelectItem value="Turma Manhã (09h - 11h)">Turma Manhã (09h - 11h)</SelectItem>
+                        <SelectItem value="Turma Noite (18h - 20h)">Turma Noite (18h - 20h)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Upload de Documentação e Certificados do Professor com Botão Estilizado (Anexo 3) */}

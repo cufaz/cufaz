@@ -93,24 +93,33 @@ function ProfessorDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                <div>
-                  <span className="font-extrabold text-sm text-foreground block">Jiu Jitsu — Turma Tarde A</span>
-                  <span className="text-xs text-muted-foreground">Segundas e Quartas • 14:00 - 15:30</span>
+              {minhasAtividades.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-border rounded-xl">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Nenhuma turma vinculada no momento. Candidate-se na aba "Vagas para Ministrar".
+                  </p>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
-                  Ativa
-                </span>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                <div>
-                  <span className="font-extrabold text-sm text-foreground block">Jiu Jitsu — Turma Tarde B</span>
-                  <span className="text-xs text-muted-foreground">Terças e Quintas • 15:30 - 17:00</span>
-                </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
-                  Ativa
-                </span>
-              </div>
+              ) : (
+                minhasAtividades.map((ativ: any, idx: number) => (
+                  <div key={ativ.id || idx} className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-extrabold text-foreground block text-sm">
+                        {ativ.atividadeNome} {ativ.turmaNome ? `— ${ativ.turmaNome}` : ""}
+                      </span>
+                      <span className="text-muted-foreground">Unidade {ativ.poloNome || profPolo}</span>
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                        ativ.status === "aprovado"
+                          ? "text-emerald-600 bg-emerald-500/10"
+                          : "text-amber-600 bg-amber-500/10"
+                      }`}
+                    >
+                      {ativ.status === "aprovado" ? "Ativa (Aprovada)" : "Aguardando Aprovação"}
+                    </span>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
