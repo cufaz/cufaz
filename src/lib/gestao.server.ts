@@ -5,7 +5,8 @@ export function db(supabase: SupabaseClient): SupabaseClient {
 }
 
 export async function assertGestor(supabase: SupabaseClient, userId: string) {
-  if (userId === "mock-gestor-user" || !supabase) return;
+  if (!supabase) return;
+  if (!userId || userId === "mock-gestor-user") return;
   try {
     const { data } = await supabase.rpc("has_role", {
       _user_id: userId,
@@ -13,6 +14,15 @@ export async function assertGestor(supabase: SupabaseClient, userId: string) {
     });
     if (data) return;
   } catch {}
+}
+
+/** Bloqueia gravações quando não há sessão real de gestor (modo demonstração). */
+export function assertGestorWrite(userId: string) {
+  if (!userId || userId === "mock-gestor-user") {
+    throw new Error(
+      "Sessão expirada. Faça login como gestor (gestor@cufa.com.br) para salvar alterações.",
+    );
+  }
 }
 
 export function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
