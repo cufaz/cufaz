@@ -527,7 +527,7 @@ function FinanceiroPage() {
                                 <tr key={item.id} className="hover:bg-muted/20">
                                   <td className="py-2.5 px-3 font-bold text-foreground">{item.item}</td>
                                   <td className="py-2.5 px-3 text-muted-foreground font-medium max-w-xs leading-relaxed">
-                                    {item.descricao}
+                                    {item.descricao || `Insumos, provisão e apoio operacional da oficina ${item.atividade}.`}
                                   </td>
                                   <td className="py-2.5 px-3 font-semibold text-primary">{String(item.quantidade || "1").match(/\d+/)?.[0] ?? "1"}</td>
                                   <td className="py-2.5 px-3 text-right font-semibold text-foreground">{brl(item.previsto)}</td>
