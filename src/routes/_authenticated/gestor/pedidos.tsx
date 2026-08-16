@@ -910,6 +910,30 @@ function PedidosPage() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(pedidoExcluir)} onOpenChange={(v) => !v && setPedidoExcluir(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir pedido de compra</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir <span className="font-bold text-foreground">{String(pedidoExcluir?.['item'] ?? "")}</span>?
+            O pedido será removido de todo o sistema, incluindo lançamentos no financeiro, relatórios e cálculos. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPedidoExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-destructive font-bold text-white hover:bg-destructive/90"
+              onClick={handleExcluirPedido}
+              disabled={mExcluir.isPending}
+            >
+              {mExcluir.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Trash2 className="mr-1 size-4" />}
+              Excluir definitivamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </GestorShell>
   );
 }
