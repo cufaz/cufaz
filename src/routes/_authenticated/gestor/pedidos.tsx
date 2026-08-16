@@ -352,6 +352,36 @@ function PedidosPage() {
     toast.success(novoStatus === "reprovado" ? "Pedido reprovado!" : "Pedido atualizado!");
   }
 
+  const [pedidoExcluir, setPedidoExcluir] = useState<Row | null>(null);
+
+  function handleExcluirPedido() {
+    const p = pedidoExcluir;
+    if (!p) return;
+    const pId = String(p['id']);
+    const itemNome = String(p['item'] ?? p['descricao'] ?? "");
+
+    const updated = localPedidos.filter((l) => String(l['id']) !== pId);
+    setLocalPedidos(updated);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
+      // remove lançamentos financeiros vinculados a este pedido
+      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+      const listLanc: Row[] = storedLanc ? JSON.parse(storedLanc) : [];
+      const limpos = listLanc.filter((l) => {
+        if (String(l['id']) === `lanc-ped-${pId}`) return false;
+        const desc = String(l['descricao'] ?? "");
+        if (itemNome && desc === `[Compra Aprovada] ${itemNome}`) return false;
+        return true;
+      });
+      localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(limpos));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+      window.dispatchEvent(new Event("cufa_lancamentos_updated"));
+    } catch {}
+
+    mExcluir.mutate({ id: pId });
+    setPedidoExcluir(null);
+  }
+
   const serverPedidos: Row[] = data ?? [];
   const pedidos: Row[] = [
     ...localPedidos,
