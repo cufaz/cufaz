@@ -48,17 +48,29 @@ function AuthPage() {
     setLoading(true);
 
     const cleanEmail = email.trim().toLowerCase();
-    localStorage.setItem("cufa_logged_user", cleanEmail);
 
     if (cleanEmail === "gestor@cufa.com.br" || cleanEmail === "master@cufa.com.br") {
+      // Autentica de verdade: sem sessão real as gravações são bloqueadas pela RLS.
+      const { error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: senha,
+      });
+      setLoading(false);
+      if (error) {
+        toast.error("E-mail ou senha inválidos. Use a senha do gestor para salvar alterações.");
+        return;
+      }
+      localStorage.setItem("cufa_logged_user", cleanEmail);
       if (cleanEmail === "master@cufa.com.br") {
         localStorage.setItem("cufa_master_authenticated", "true");
       }
       toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-      setLoading(false);
       window.location.href = "/gestor";
       return;
     }
+
+    localStorage.setItem("cufa_logged_user", cleanEmail);
+
 
     try {
       const stored = localStorage.getItem("cufa_gestores_lista");
