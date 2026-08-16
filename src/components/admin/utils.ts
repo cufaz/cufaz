@@ -60,20 +60,32 @@ export function exportProfessionalExcel({
     return false;
   });
 
-  // Filter lancamentos
-  const lancamentosFiltrados = lancamentos.filter((l) => {
-    const matchPolo = !selectedPoloId || selectedPoloId === "todos" || l.poloId === selectedPoloId;
-    const matchData = (!dataInicio || l.data >= dataInicio) && (!dataFim || l.data <= dataFim);
+  // Filter lancamentos with flexible polo matching
+  const lancamentosFiltrados = lancamentos.filter((l: any) => {
+    const lPoloId = String(l.poloId || l.polo_id || "").toLowerCase();
+    const lPoloNome = String(l.poloNome || l.polo_nome || "").toLowerCase();
+
+    const matchPolo =
+      !selectedPoloId ||
+      selectedPoloId === "todos" ||
+      lPoloId === selectedPoloId ||
+      (poloNomeClean.includes("penha") && (lPoloId.includes("penha") || lPoloNome.includes("penha"))) ||
+      (poloNomeClean.includes("madureira") && (lPoloId.includes("madureira") || lPoloNome.includes("madureira"))) ||
+      ((poloNomeClean.includes("paraisópolis") || poloNomeClean.includes("paraisopolis")) && (lPoloId.includes("paraisopolis") || lPoloNome.includes("paraisopolis"))) ||
+      (poloNomeClean.includes("teste") && (lPoloId.includes("teste") || lPoloNome.includes("teste")));
+
+    const lData = String(l.data || l.created_at || l.competencia || "").slice(0, 10);
+    const matchData = (!dataInicio || lData >= dataInicio) && (!dataFim || lData <= dataFim);
     return matchPolo && matchData;
   });
 
   const totalReceitas = lancamentosFiltrados
     .filter((l) => l.tipo === "receita")
-    .reduce((sum, l) => sum + l.valor, 0);
+    .reduce((sum, l) => sum + Number(l.valor || 0), 0);
 
   const totalDespesasRealizadas = lancamentosFiltrados
     .filter((l) => l.tipo === "despesa")
-    .reduce((sum, l) => sum + l.valor, 0);
+    .reduce((sum, l) => sum + Number(l.valor || 0), 0);
 
   const totalDespesasPrevistas = poloItensPrevisto.reduce((sum, i) => sum + i.previsto, 0);
   const saldoRealizado = totalReceitas - totalDespesasRealizadas;
@@ -109,8 +121,8 @@ export function exportProfessionalExcel({
   ];
   Object.entries(catMap).forEach(([catNome, previstoCat]) => {
     const gastoCat = lancamentosFiltrados
-      .filter((l) => l.tipo === "despesa" && l.categoria.toLowerCase() === catNome.toLowerCase())
-      .reduce((sum, l) => sum + l.valor, 0);
+      .filter((l: any) => l.tipo === "despesa" && (String(l.categoria || l.categoria_nome || "").toLowerCase().includes(catNome.toLowerCase()) || catNome.toLowerCase().includes(String(l.categoria || l.categoria_nome || "").toLowerCase())))
+      .reduce((sum: number, l: any) => sum + Number(l.valor || 0), 0);
     const dif = previstoCat - gastoCat;
     const perc = previstoCat > 0 ? ((gastoCat / previstoCat) * 100).toFixed(1) + "%" : "0%";
     catData.push([catNome, formatBRL(previstoCat), formatBRL(gastoCat), formatBRL(dif), perc]);

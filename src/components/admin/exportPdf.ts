@@ -51,21 +51,32 @@ export function generateProfessionalPdf({
     if (poloNomeClean.includes("teste") && (item.poloId === "polo-teste" || item.poloId === "teste")) return true;
     return false;
   });
+  // Filter lancamentos with flexible polo matching
+  const lancamentosFiltrados = lancamentos.filter((l: any) => {
+    const lPoloId = String(l.poloId || l.polo_id || "").toLowerCase();
+    const lPoloNome = String(l.poloNome || l.polo_nome || "").toLowerCase();
 
-  // Filter lancamentos
-  const lancamentosFiltrados = lancamentos.filter((l) => {
-    const matchPolo = !selectedPoloId || selectedPoloId === "todos" || l.poloId === selectedPoloId;
-    const matchData = (!dataInicio || l.data >= dataInicio) && (!dataFim || l.data <= dataFim);
+    const matchPolo =
+      !selectedPoloId ||
+      selectedPoloId === "todos" ||
+      lPoloId === selectedPoloId ||
+      (poloNomeClean.includes("penha") && (lPoloId.includes("penha") || lPoloNome.includes("penha"))) ||
+      (poloNomeClean.includes("madureira") && (lPoloId.includes("madureira") || lPoloNome.includes("madureira"))) ||
+      ((poloNomeClean.includes("paraisópolis") || poloNomeClean.includes("paraisopolis")) && (lPoloId.includes("paraisopolis") || lPoloNome.includes("paraisopolis"))) ||
+      (poloNomeClean.includes("teste") && (lPoloId.includes("teste") || lPoloNome.includes("teste")));
+
+    const lData = String(l.data || l.created_at || l.competencia || "").slice(0, 10);
+    const matchData = (!dataInicio || lData >= dataInicio) && (!dataFim || lData <= dataFim);
     return matchPolo && matchData;
   });
 
   const totalReceitas = lancamentosFiltrados
     .filter((l) => l.tipo === "receita")
-    .reduce((sum, l) => sum + l.valor, 0);
+    .reduce((sum, l) => sum + Number(l.valor || 0), 0);
 
   const totalDespesasRealizadas = lancamentosFiltrados
     .filter((l) => l.tipo === "despesa")
-    .reduce((sum, l) => sum + l.valor, 0);
+    .reduce((sum, l) => sum + Number(l.valor || 0), 0);
 
   const totalDespesasPrevistas = poloItensPrevisto.reduce((sum, i) => sum + i.previsto, 0);
   const saldoRealizado = totalReceitas - totalDespesasRealizadas;
@@ -113,7 +124,7 @@ export function generateProfessionalPdf({
 
   const resumoRows = [
     ["Receitas do Mês (Realizadas)", formatBRL(totalReceitas), totalReceitas > 0 ? "Receitas registradas" : "Sem receitas"],
-    ["Despesas Realizadas (Gastos)", formatBRL(totalDespesasRealizadas), "Total pago no período"],
+    ["Despesas Realizadas (Gastos)", formatBRL(totalDespesasRealizadas), totalDespesasRealizadas > 0 ? "Despesas ativas" : "Total pago no período"],
     ["Despesas Previstas (Orçamento)", formatBRL(totalDespesasPrevistas), "Orçamento mensal aprovado"],
     ["Saldo do Mês (Realizado)", formatBRL(saldoRealizado), saldoRealizado >= 0 ? "Saldo Positivo" : "Déficit"],
     ["Diferença Previsto × Realizado", formatBRL(difPrevistoRealizado), difPrevistoRealizado >= 0 ? "Dentro do limite" : "Excedido"],
@@ -149,8 +160,8 @@ export function generateProfessionalPdf({
 
   const catRows = Object.entries(catMap).map(([catNome, previstoCat]) => {
     const gastoCat = lancamentosFiltrados
-      .filter((l) => l.tipo === "despesa" && l.categoria.toLowerCase() === catNome.toLowerCase())
-      .reduce((sum, l) => sum + l.valor, 0);
+      .filter((l: any) => l.tipo === "despesa" && (String(l.categoria || l.categoria_nome || "").toLowerCase().includes(catNome.toLowerCase()) || catNome.toLowerCase().includes(String(l.categoria || l.categoria_nome || "").toLowerCase())))
+      .reduce((sum: number, l: any) => sum + Number(l.valor || 0), 0);
     const dif = previstoCat - gastoCat;
     const perc = previstoCat > 0 ? ((gastoCat / previstoCat) * 100).toFixed(1) + "%" : "0%";
     return [catNome, formatBRL(previstoCat), formatBRL(gastoCat), formatBRL(dif), perc];
@@ -200,6 +211,37 @@ export function generateProfessionalPdf({
       2: { cellWidth: 62, fontStyle: "bold" },
       3: { cellWidth: 34 },
       4: { cellWidth: 26, halign: "right", fontStyle: "bold" },
+    },
+  });
+
+  // Section 4: Despesas Lançadas no Mês / Compras Aprovadas (Anexo 1 & 2)
+  const nextY3 = (doc as any).lastAutoTable.finalY + 8;
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(249, 115, 22);
+  doc.text("4. OUTRAS CONTAS — DESPESAS LANÇADAS NO MÊS", 14, nextY3);
+
+  const despesaLancRows = lancamentosFiltrados
+    .filter((l: any) => l.tipo === "despesa")
+    .map((l: any) => [
+      String(l.descricao || l.item || "Despesa Realizada"),
+      String(l.categoria || l.categoria_nome || "Materiais / consumo"),
+      String(l.poloNome || l.polo_nome || poloNome),
+      formatBRL(Number(l.valor || 0)),
+    ]);
+
+  autoTable(doc, {
+    startY: nextY3 + 3,
+    head: [["DESCRIÇÃO / ITEM", "CATEGORIA", "POLO DE DESTINO", "VALOR (R$)"]],
+    body: despesaLancRows.length === 0 ? [["Nenhuma despesa lançada no período.", "-", "-", "R$ 0,00"]] : despesaLancRows,
+    theme: "striped",
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { fontSize: 8, cellPadding: 2 },
+    columnStyles: {
+      0: { cellWidth: 70, fontStyle: "bold" },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 45 },
+      3: { cellWidth: 22, halign: "right", fontStyle: "bold" },
     },
     didDrawCell: (data) => {
       // Draw category separator line when category changes (Anexo 5)
