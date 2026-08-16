@@ -370,20 +370,13 @@ function VitrineAtividadesAlunoPage() {
   const todosOsPolos = (() => {
     const polosSet = new Set<string>();
 
-    const defaultPolos = [
+    const defaultOfficialPolos = [
       "Complexo da Penha",
-      "Viaduto de Madureira",
       "Paraisópolis",
-      "Cidade de Deus",
-      "Rocinha",
-      "Vila Cruzeiro",
-      "Manguinhos",
-      "Complexo do Alemão",
-      "Realengo",
-      "Bangu",
       "Polo de Teste",
+      "Viaduto de Madureira",
     ];
-    defaultPolos.forEach((p) => polosSet.add(p));
+    defaultOfficialPolos.forEach((p) => polosSet.add(p));
 
     try {
       const stored = localStorage.getItem("cufa_polos_cadastrados");
@@ -397,11 +390,7 @@ function VitrineAtividadesAlunoPage() {
       }
     } catch {}
 
-    vitrineList.forEach((item) => {
-      if (item.polo) polosSet.add(item.polo);
-    });
-
-    return Array.from(polosSet);
+    return Array.from(polosSet).sort((a, b) => a.localeCompare(b));
   })();
 
   const vitrineFiltrada = vitrineList.filter((item) => {

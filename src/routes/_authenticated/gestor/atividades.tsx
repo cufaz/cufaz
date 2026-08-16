@@ -228,17 +228,9 @@ export function AtividadesPage() {
 
   const defaultAllPolos: Row[] = [
     { id: "polo-penha", nome: "Complexo da Penha" },
-    { id: "polo-madureira", nome: "Viaduto de Madureira" },
     { id: "polo-paraisopolis", nome: "Paraisópolis" },
-    { id: "polo-heliopolis", nome: "Heliópolis" },
-    { id: "polo-cidade-de-deus", nome: "Cidade de Deus" },
-    { id: "polo-rocinha", nome: "Rocinha" },
-    { id: "polo-vila-cruzeiro", nome: "Vila Cruzeiro" },
-    { id: "polo-manguinhos", nome: "Manguinhos" },
-    { id: "polo-alemao", nome: "Complexo do Alemão" },
-    { id: "polo-realengo", nome: "Realengo" },
-    { id: "polo-bangu", nome: "Bangu" },
     { id: "polo-teste", nome: "Polo de Teste" },
+    { id: "polo-madureira", nome: "Viaduto de Madureira" },
   ];
 
   const polos: Row[] = (() => {

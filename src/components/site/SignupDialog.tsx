@@ -65,9 +65,8 @@ function getRegisteredPolosList(): string[] {
   if (listMap.size === 0) {
     listMap.add("Complexo da Penha");
     listMap.add("Paraisópolis");
-    listMap.add("Viaduto de Madureira");
-    listMap.add("Heliópolis");
     listMap.add("Polo de Teste");
+    listMap.add("Viaduto de Madureira");
   }
 
   return Array.from(listMap);
