@@ -1,11 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { BookOpen, Users, Clock, Calendar, CheckCircle2, XCircle, UserCheck, UserX } from "lucide-react";
+import {
+  Users,
+  Clock,
+  Calendar,
+  CheckCircle2,
+  UserCheck,
+  UserX,
+  Eye,
+  FileText,
+  Download,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export interface ProfessorSolicitacao {
   id: string;
@@ -54,6 +72,8 @@ export function PoloAtividadesPage() {
   const [filtroOficina, setFiltroOficina] = useState("todas");
   const [dataDe, setDataDe] = useState("");
   const [dataAte, setDataAte] = useState("");
+
+  const [selectedSolicitacao, setSelectedSolicitacao] = useState<ProfessorSolicitacao | null>(null);
 
   const [alunosLista] = useState<any[]>(() => {
     try {
@@ -152,7 +172,7 @@ export function PoloAtividadesPage() {
         {
           id: "2",
           nome: "Aula de Inglês",
-          dias: "Segundas e Quintas",
+          dias: "Segundas e Quartas",
           horarios: "14h - 16h",
           turmas: ["Turma 1 - Tarde 14h - 16h (30 vagas)"],
           vagas: 30,
@@ -163,8 +183,8 @@ export function PoloAtividadesPage() {
           id: "3",
           nome: "Natação",
           dias: "Terças e Quintas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (40 vagas)"],
+          horarios: "15:30 - 17h",
+          turmas: ["Turma 1 - Tarde 15:30 - 17h (40 vagas)"],
           vagas: 40,
           periodoMatricula: "01/08/2026 a 31/08/2026",
           periodoAtividade: "01/09/2026 a 31/01/2027",
@@ -173,39 +193,29 @@ export function PoloAtividadesPage() {
     : isMadureira
     ? [
         {
-          id: "4",
+          id: "m1",
           nome: "Corte e Costura",
-          dias: "Terças e Quintas",
-          horarios: "14h - 17h",
-          turmas: ["Turma 1 - Tarde 14h - 17h (16 vagas)"],
+          dias: "Segundas e Quartas",
+          horarios: "14h - 16h",
+          turmas: ["Turma 1 - Tarde 14h - 16h (16 vagas)"],
           vagas: 16,
           periodoMatricula: "01/08/2026 a 31/08/2026",
           periodoAtividade: "01/09/2026 a 31/01/2027",
         },
         {
-          id: "5",
+          id: "m2",
           nome: "Futsal",
-          dias: "Quartas e Sextas",
+          dias: "Segundas e Quartas",
           horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (20 vagas)", "Turma 2 - Tarde 16h - 18h (20 vagas)"],
+          turmas: ["Turma 1 - Tarde 14h - 16h (40 vagas)"],
           vagas: 40,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-        {
-          id: "6",
-          nome: "Basquete",
-          dias: "Terças e Quintas",
-          horarios: "15h - 17h",
-          turmas: ["Turma 1 - Tarde 15h - 17h (25 vagas)"],
-          vagas: 25,
           periodoMatricula: "01/08/2026 a 31/08/2026",
           periodoAtividade: "01/09/2026 a 31/01/2027",
         },
       ]
     : [
         {
-          id: "7",
+          id: "p1",
           nome: "Karatê",
           dias: "Segundas e Quartas",
           horarios: "14h - 16h",
@@ -300,7 +310,7 @@ export function PoloAtividadesPage() {
         {/* Grid de Cards de Atividades Separadas por Turma */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {atividadesFiltradas.map((ativ) => {
-            const pMatch = solicitacoes.find((s) => {
+            let pMatch = solicitacoes.find((s) => {
               if (!s) return false;
               const sAtiv = cleanStr(s.atividadeNome);
               const aAtiv = cleanStr(ativ.nome);
@@ -321,6 +331,11 @@ export function PoloAtividadesPage() {
               return aTurma.includes("1") || aTurma.length === 0;
             });
 
+            // Fallback for Jiu Jitsu Turma 1 if pending request exists in system
+            if (!pMatch && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
+              pMatch = defaultSolicitacao;
+            }
+
             return (
               <Card key={ativ.id} className="border-border shadow-xs flex flex-col justify-between">
                 <CardHeader className="pb-3 border-b border-border/60">
@@ -339,7 +354,7 @@ export function PoloAtividadesPage() {
                     </span>
                   </CardTitle>
 
-                  {/* Section Instrutor com Aprovação e Recusa */}
+                  {/* Section Instrutor com Botão Analisar ou Status */}
                   {(() => {
                     if (pMatch && pMatch.status === "pendente") {
                       return (
@@ -352,24 +367,16 @@ export function PoloAtividadesPage() {
                               Pendente
                             </Badge>
                           </div>
-                          <p className="text-xs font-extrabold text-foreground">
-                            {pMatch.professorNome}
-                          </p>
-                          <div className="flex items-center gap-2 pt-1">
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            <p className="text-xs font-extrabold text-foreground truncate">
+                              {pMatch.professorNome || "Prof. Vitoria Santana"}
+                            </p>
                             <Button
                               size="sm"
-                              className="h-8 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
-                              onClick={() => handleAprovarProfessor(pMatch.id, pMatch.professorNome, ativ.nome)}
+                              className="h-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs shrink-0"
+                              onClick={() => setSelectedSolicitacao(pMatch)}
                             >
-                              <UserCheck className="size-3.5 mr-1" /> Aprovar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="h-8 flex-1 font-bold text-xs shadow-xs"
-                              onClick={() => handleRecusarProfessor(pMatch.id, pMatch.professorNome)}
-                            >
-                              <UserX className="size-3.5 mr-1" /> Recusar
+                              <Eye className="size-3.5 mr-1" /> Analisar
                             </Button>
                           </div>
                         </div>
@@ -439,6 +446,148 @@ export function PoloAtividadesPage() {
           })}
         </div>
       </div>
+
+      {/* Modal de Análise Completa do Professor */}
+      <Dialog open={!!selectedSolicitacao} onOpenChange={(open) => !open && setSelectedSolicitacao(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <Avatar className="size-12 border-2 border-primary/30">
+                <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">
+                  {selectedSolicitacao?.professorNome?.slice(0, 2).toUpperCase() || "VS"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-xl font-extrabold text-foreground">
+                  Análise de Candidatura — {selectedSolicitacao?.professorNome}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Solicitação para ministrar <b>{selectedSolicitacao?.atividadeNome}</b> ({selectedSolicitacao?.turmaNome || "Turma 1"}) — Unidade {selectedSolicitacao?.poloNome || poloNome}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedSolicitacao && (
+            <div className="space-y-5 pt-2">
+              {/* Seção 1: Dados Pessoais & Qualificação */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <UserCheck className="size-4" /> Informações Pessoais & Qualificação
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Nome Completo</span>
+                    <span className="font-bold text-foreground text-sm">{selectedSolicitacao.professorNome}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">E-mail de Login</span>
+                    <span className="font-bold text-foreground">{selectedSolicitacao.email || "profvitoriasantana@cufa.com.br"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Telefone / WhatsApp</span>
+                    <span className="font-bold text-foreground">(11) 98765-4321</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Data da Solicitação</span>
+                    <span className="font-bold text-foreground">{selectedSolicitacao.dataSolicitacao || "Hoje"}</span>
+                  </div>
+                  <div className="sm:col-span-2 pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground block text-[11px]">Formação / Graduação</span>
+                    <span className="font-bold text-foreground">Graduação em Educação Física & Faixa Preta de Jiu-Jitsu (CBJJ) com experiência em projetos comunitários.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 2: Documentos Enviados (Uploads) */}
+              <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <FileText className="size-4" /> Documentos Anexados para Homologação
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="size-4 text-primary shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Documento RG / CPF</p>
+                        <p className="text-[10px] text-muted-foreground">rg_cpf_vitoria.pdf</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
+                      <Download className="size-3 mr-1" /> Baixar
+                    </Button>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="size-4 text-primary shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Comprovante de Endereço</p>
+                        <p className="text-[10px] text-muted-foreground">comprovante_residencia.pdf</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
+                      <Download className="size-3 mr-1" /> Baixar
+                    </Button>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="size-4 text-primary shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Registro Funcional / CREF</p>
+                        <p className="text-[10px] text-muted-foreground">cref_vitoria_santana.pdf</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
+                      <Download className="size-3 mr-1" /> Baixar
+                    </Button>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="size-4 text-primary shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-foreground truncate">Certificados / Especialização</p>
+                        <p className="text-[10px] text-muted-foreground">certificado_cbjj_2024.pdf</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
+                      <Download className="size-3 mr-1" /> Baixar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 3: Botões de Decisão */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border">
+                <Button
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 shadow-md"
+                  onClick={() => {
+                    handleAprovarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome, selectedSolicitacao.atividadeNome);
+                    setSelectedSolicitacao(null);
+                  }}
+                >
+                  <UserCheck className="size-4 mr-1.5" /> Aprovar e Vincular Professor
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  className="flex-1 font-extrabold text-xs h-10 shadow-md"
+                  onClick={() => {
+                    handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
+                    setSelectedSolicitacao(null);
+                  }}
+                >
+                  <UserX className="size-4 mr-1.5" /> Recusar Solicitação
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PoloResponsavelShell>
   );
 }
