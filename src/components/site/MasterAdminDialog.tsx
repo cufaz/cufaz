@@ -32,8 +32,6 @@ export function MasterAdminDialog({
   // Mock Master Data for inspection of credentials and accounts
   const [gestoresData, setGestoresData] = useState([
     { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
-    { id: "g2", nome: "Alessandra Vieira", email: "alessandra.penha@cufa.com.br", senha: "penha2026", polo: "Complexo da Penha", status: "Ativo" },
-    { id: "g3", nome: "Aline Góes", email: "aline.madureira@cufa.com.br", senha: "madureira2026", polo: "Viaduto de Madureira", status: "Ativo" },
   ]);
 
   const [alunosData, setAlunosData] = useState([

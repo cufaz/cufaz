@@ -43,36 +43,6 @@ export function GestoresPage() {
       dataCriacao: "2026-08-01",
       ativo: true,
     },
-    {
-      id: "g2",
-      nome: "Alessandra Vieira",
-      email: "alessandra.penha@cufa.com.br",
-      senha: "penha2026",
-      tipo: "polo",
-      poloNome: "Complexo da Penha",
-      dataCriacao: "2026-08-05",
-      ativo: true,
-    },
-    {
-      id: "g3",
-      nome: "Aline Góes",
-      email: "aline.madureira@cufa.com.br",
-      senha: "madureira2026",
-      tipo: "polo",
-      poloNome: "Viaduto de Madureira",
-      dataCriacao: "2026-08-08",
-      ativo: true,
-    },
-    {
-      id: "g4",
-      nome: "Renato Silva",
-      email: "renato.paraisopolis@cufa.com.br",
-      senha: "paraisopolis2026",
-      tipo: "polo",
-      poloNome: "Paraisópolis",
-      dataCriacao: "2026-08-10",
-      ativo: true,
-    },
   ]);
 
   const [modalOpen, setModalOpen] = useState(false);

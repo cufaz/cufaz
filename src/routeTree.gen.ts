@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedGestorRouteRouteImport } from './routes/_authenticated/gestor/route'
+import { Route as AuthenticatedPoloRouteRouteImport } from './routes/_authenticated/polo/route'
 import { Route as AuthenticatedGestorIndexRouteImport } from './routes/_authenticated/gestor/index'
 import { Route as AuthenticatedGestorAlunosRouteImport } from './routes/_authenticated/gestor/alunos'
 import { Route as AuthenticatedGestorAtividadesRouteImport } from './routes/_authenticated/gestor/atividades'
@@ -21,6 +22,13 @@ import { Route as AuthenticatedGestorGestoresRouteImport } from './routes/_authe
 import { Route as AuthenticatedGestorPedidosRouteImport } from './routes/_authenticated/gestor/pedidos'
 import { Route as AuthenticatedGestorPolosRouteImport } from './routes/_authenticated/gestor/polos'
 import { Route as AuthenticatedGestorProfessoresRouteImport } from './routes/_authenticated/gestor/professores'
+import { Route as AuthenticatedPoloIndexRouteImport } from './routes/_authenticated/polo/index'
+import { Route as AuthenticatedPoloAlunosRouteImport } from './routes/_authenticated/polo/alunos'
+import { Route as AuthenticatedPoloAtividadesRouteImport } from './routes/_authenticated/polo/atividades'
+import { Route as AuthenticatedPoloChamadaRouteImport } from './routes/_authenticated/polo/chamada'
+import { Route as AuthenticatedPoloComprasRouteImport } from './routes/_authenticated/polo/compras'
+import { Route as AuthenticatedPoloGaleriaRouteImport } from './routes/_authenticated/polo/galeria'
+import { Route as AuthenticatedPoloPerfilRouteImport } from './routes/_authenticated/polo/perfil'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -42,6 +50,11 @@ const AuthenticatedGestorRouteRoute =
     path: '/gestor',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPoloRouteRoute = AuthenticatedPoloRouteRouteImport.update({
+  id: '/polo',
+  path: '/polo',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGestorIndexRoute =
   AuthenticatedGestorIndexRouteImport.update({
     id: '/',
@@ -90,11 +103,51 @@ const AuthenticatedGestorProfessoresRoute =
     path: '/professores',
     getParentRoute: () => AuthenticatedGestorRouteRoute,
   } as any)
+const AuthenticatedPoloIndexRoute = AuthenticatedPoloIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedPoloRouteRoute,
+} as any)
+const AuthenticatedPoloAlunosRoute = AuthenticatedPoloAlunosRouteImport.update({
+  id: '/alunos',
+  path: '/alunos',
+  getParentRoute: () => AuthenticatedPoloRouteRoute,
+} as any)
+const AuthenticatedPoloAtividadesRoute =
+  AuthenticatedPoloAtividadesRouteImport.update({
+    id: '/atividades',
+    path: '/atividades',
+    getParentRoute: () => AuthenticatedPoloRouteRoute,
+  } as any)
+const AuthenticatedPoloChamadaRoute =
+  AuthenticatedPoloChamadaRouteImport.update({
+    id: '/chamada',
+    path: '/chamada',
+    getParentRoute: () => AuthenticatedPoloRouteRoute,
+  } as any)
+const AuthenticatedPoloComprasRoute =
+  AuthenticatedPoloComprasRouteImport.update({
+    id: '/compras',
+    path: '/compras',
+    getParentRoute: () => AuthenticatedPoloRouteRoute,
+  } as any)
+const AuthenticatedPoloGaleriaRoute =
+  AuthenticatedPoloGaleriaRouteImport.update({
+    id: '/galeria',
+    path: '/galeria',
+    getParentRoute: () => AuthenticatedPoloRouteRoute,
+  } as any)
+const AuthenticatedPoloPerfilRoute = AuthenticatedPoloPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedPoloRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
+  '/polo': typeof AuthenticatedPoloRouteRouteWithChildren
   '/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
@@ -102,7 +155,14 @@ export interface FileRoutesByFullPath {
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/polo/alunos': typeof AuthenticatedPoloAlunosRoute
+  '/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
+  '/polo/chamada': typeof AuthenticatedPoloChamadaRoute
+  '/polo/compras': typeof AuthenticatedPoloComprasRoute
+  '/polo/galeria': typeof AuthenticatedPoloGaleriaRoute
+  '/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/gestor/': typeof AuthenticatedGestorIndexRoute
+  '/polo/': typeof AuthenticatedPoloIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -114,7 +174,14 @@ export interface FileRoutesByTo {
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/polo/alunos': typeof AuthenticatedPoloAlunosRoute
+  '/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
+  '/polo/chamada': typeof AuthenticatedPoloChamadaRoute
+  '/polo/compras': typeof AuthenticatedPoloComprasRoute
+  '/polo/galeria': typeof AuthenticatedPoloGaleriaRoute
+  '/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/gestor': typeof AuthenticatedGestorIndexRoute
+  '/polo': typeof AuthenticatedPoloIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +189,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
+  '/_authenticated/polo': typeof AuthenticatedPoloRouteRouteWithChildren
   '/_authenticated/gestor/alunos': typeof AuthenticatedGestorAlunosRoute
   '/_authenticated/gestor/atividades': typeof AuthenticatedGestorAtividadesRoute
   '/_authenticated/gestor/financeiro': typeof AuthenticatedGestorFinanceiroRoute
@@ -129,7 +197,14 @@ export interface FileRoutesById {
   '/_authenticated/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/_authenticated/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/_authenticated/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/_authenticated/polo/alunos': typeof AuthenticatedPoloAlunosRoute
+  '/_authenticated/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
+  '/_authenticated/polo/chamada': typeof AuthenticatedPoloChamadaRoute
+  '/_authenticated/polo/compras': typeof AuthenticatedPoloComprasRoute
+  '/_authenticated/polo/galeria': typeof AuthenticatedPoloGaleriaRoute
+  '/_authenticated/polo/perfil': typeof AuthenticatedPoloPerfilRoute
   '/_authenticated/gestor/': typeof AuthenticatedGestorIndexRoute
+  '/_authenticated/polo/': typeof AuthenticatedPoloIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +212,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/gestor'
+    | '/polo'
     | '/gestor/alunos'
     | '/gestor/atividades'
     | '/gestor/financeiro'
@@ -144,7 +220,14 @@ export interface FileRouteTypes {
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
+    | '/polo/alunos'
+    | '/polo/atividades'
+    | '/polo/chamada'
+    | '/polo/compras'
+    | '/polo/galeria'
+    | '/polo/perfil'
     | '/gestor/'
+    | '/polo/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -156,13 +239,21 @@ export interface FileRouteTypes {
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
+    | '/polo/alunos'
+    | '/polo/atividades'
+    | '/polo/chamada'
+    | '/polo/compras'
+    | '/polo/galeria'
+    | '/polo/perfil'
     | '/gestor'
+    | '/polo'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/gestor'
+    | '/_authenticated/polo'
     | '/_authenticated/gestor/alunos'
     | '/_authenticated/gestor/atividades'
     | '/_authenticated/gestor/financeiro'
@@ -170,7 +261,14 @@ export interface FileRouteTypes {
     | '/_authenticated/gestor/pedidos'
     | '/_authenticated/gestor/polos'
     | '/_authenticated/gestor/professores'
+    | '/_authenticated/polo/alunos'
+    | '/_authenticated/polo/atividades'
+    | '/_authenticated/polo/chamada'
+    | '/_authenticated/polo/compras'
+    | '/_authenticated/polo/galeria'
+    | '/_authenticated/polo/perfil'
     | '/_authenticated/gestor/'
+    | '/_authenticated/polo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -207,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/gestor'
       fullPath: '/gestor'
       preLoaderRoute: typeof AuthenticatedGestorRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/polo': {
+      id: '/_authenticated/polo'
+      path: '/polo'
+      fullPath: '/polo'
+      preLoaderRoute: typeof AuthenticatedPoloRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/gestor/': {
@@ -265,6 +370,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGestorProfessoresRouteImport
       parentRoute: typeof AuthenticatedGestorRouteRoute
     }
+    '/_authenticated/polo/': {
+      id: '/_authenticated/polo/'
+      path: '/'
+      fullPath: '/polo/'
+      preLoaderRoute: typeof AuthenticatedPoloIndexRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/alunos': {
+      id: '/_authenticated/polo/alunos'
+      path: '/alunos'
+      fullPath: '/polo/alunos'
+      preLoaderRoute: typeof AuthenticatedPoloAlunosRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/atividades': {
+      id: '/_authenticated/polo/atividades'
+      path: '/atividades'
+      fullPath: '/polo/atividades'
+      preLoaderRoute: typeof AuthenticatedPoloAtividadesRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/chamada': {
+      id: '/_authenticated/polo/chamada'
+      path: '/chamada'
+      fullPath: '/polo/chamada'
+      preLoaderRoute: typeof AuthenticatedPoloChamadaRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/compras': {
+      id: '/_authenticated/polo/compras'
+      path: '/compras'
+      fullPath: '/polo/compras'
+      preLoaderRoute: typeof AuthenticatedPoloComprasRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/galeria': {
+      id: '/_authenticated/polo/galeria'
+      path: '/galeria'
+      fullPath: '/polo/galeria'
+      preLoaderRoute: typeof AuthenticatedPoloGaleriaRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
+    '/_authenticated/polo/perfil': {
+      id: '/_authenticated/polo/perfil'
+      path: '/perfil'
+      fullPath: '/polo/perfil'
+      preLoaderRoute: typeof AuthenticatedPoloPerfilRouteImport
+      parentRoute: typeof AuthenticatedPoloRouteRoute
+    }
   }
 }
 
@@ -296,12 +450,40 @@ const AuthenticatedGestorRouteRouteWithChildren =
     AuthenticatedGestorRouteRouteChildren,
   )
 
+interface AuthenticatedPoloRouteRouteChildren {
+  AuthenticatedPoloAlunosRoute: typeof AuthenticatedPoloAlunosRoute
+  AuthenticatedPoloAtividadesRoute: typeof AuthenticatedPoloAtividadesRoute
+  AuthenticatedPoloChamadaRoute: typeof AuthenticatedPoloChamadaRoute
+  AuthenticatedPoloComprasRoute: typeof AuthenticatedPoloComprasRoute
+  AuthenticatedPoloGaleriaRoute: typeof AuthenticatedPoloGaleriaRoute
+  AuthenticatedPoloPerfilRoute: typeof AuthenticatedPoloPerfilRoute
+  AuthenticatedPoloIndexRoute: typeof AuthenticatedPoloIndexRoute
+}
+
+const AuthenticatedPoloRouteRouteChildren: AuthenticatedPoloRouteRouteChildren =
+  {
+    AuthenticatedPoloAlunosRoute: AuthenticatedPoloAlunosRoute,
+    AuthenticatedPoloAtividadesRoute: AuthenticatedPoloAtividadesRoute,
+    AuthenticatedPoloChamadaRoute: AuthenticatedPoloChamadaRoute,
+    AuthenticatedPoloComprasRoute: AuthenticatedPoloComprasRoute,
+    AuthenticatedPoloGaleriaRoute: AuthenticatedPoloGaleriaRoute,
+    AuthenticatedPoloPerfilRoute: AuthenticatedPoloPerfilRoute,
+    AuthenticatedPoloIndexRoute: AuthenticatedPoloIndexRoute,
+  }
+
+const AuthenticatedPoloRouteRouteWithChildren =
+  AuthenticatedPoloRouteRoute._addFileChildren(
+    AuthenticatedPoloRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedGestorRouteRoute: typeof AuthenticatedGestorRouteRouteWithChildren
+  AuthenticatedPoloRouteRoute: typeof AuthenticatedPoloRouteRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGestorRouteRoute: AuthenticatedGestorRouteRouteWithChildren,
+  AuthenticatedPoloRouteRoute: AuthenticatedPoloRouteRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

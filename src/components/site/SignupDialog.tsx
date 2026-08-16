@@ -79,10 +79,10 @@ function Campo({
 function SeletorComunidade() {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Comunidade</Label>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade</Label>
       <Select>
         <SelectTrigger>
-          <SelectValue placeholder="Selecione a comunidade" />
+          <SelectValue placeholder="Selecione a unidade" />
         </SelectTrigger>
         <SelectContent>
           {comunidades.map((c) => (
@@ -164,12 +164,8 @@ export function SignupDialog({
 
             {perfil === "responsavel" && (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Campo id="cpf" label="CPF" required placeholder="000.000.000-00" />
-                  <Campo id="cargo" label="Cargo na CUFA" required placeholder="Ex.: Coordenador" />
-                </div>
+                <Campo id="cpf" label="CPF" required placeholder="000.000.000-00" />
                 <SeletorComunidade />
-                <Campo id="unidade" label="Unidade / Espaço" placeholder="Ex.: Complexo da Penha" />
               </>
             )}
 
