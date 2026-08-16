@@ -123,7 +123,10 @@ export function PoloMultiSelect({
               return (
                 <div
                   key={p.id}
-                  onClick={() => togglePolo(p.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePolo(p.id);
+                  }}
                   className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 cursor-pointer select-none transition-colors"
                 >
                   <Checkbox
@@ -139,6 +142,16 @@ export function PoloMultiSelect({
               );
             })
           )}
+        </div>
+
+        <div className="mt-2 pt-2 border-t border-border flex justify-end">
+          <Button
+            size="sm"
+            className="w-full h-8 text-xs font-bold bg-brand-gradient text-white"
+            onClick={() => setOpen(false)}
+          >
+            Aplicar ({selectedIds.length === 0 || selectedIds.length === polos.length ? "Todos" : selectedIds.length})
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

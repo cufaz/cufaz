@@ -50,7 +50,7 @@ function FinanceiroPage() {
 
   const [dataInicio, setDataInicio] = useState<string>("2026-08-01");
   const [dataFim, setDataFim] = useState<string>("2026-08-31");
-  const [poloId, setPoloId] = useState<string>("");
+  const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
   const [isFilterLoading, setIsFilterLoading] = useState<boolean>(false);
   const [form, setForm] = useState<Row | null>(null);
 
@@ -58,8 +58,8 @@ function FinanceiroPage() {
   const [valorDisplay, setValorDisplay] = useState("0,00");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["financeiro", dataInicio, dataFim, poloId],
-    queryFn: () => fetchFinanceiro({ data: poloId ? { poloId } : {} }),
+    queryKey: ["financeiro", dataInicio, dataFim],
+    queryFn: () => fetchFinanceiro({ data: {} }),
   });
 
   function triggerLoading(action: () => void) {
@@ -70,8 +70,8 @@ function FinanceiroPage() {
     }, 450);
   }
 
-  function handlePoloChange(val: string) {
-    triggerLoading(() => setPoloId(val));
+  function handlePoloChange(val: string[]) {
+    triggerLoading(() => setSelectedPoloIds(val));
   }
 
   function handleDataInicioChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -104,29 +104,36 @@ function FinanceiroPage() {
       return salvar({ data: payload });
     },
     onSuccess: () => {
-      setForm(null);
       toast.success("Lançamento salvo com sucesso!");
-      qc.invalidateQueries();
+      setForm(null);
+      qc.invalidateQueries({ queryKey: ["financeiro"] });
     },
-    onError: (e: Error) => toast.error("Erro ao salvar", { description: e.message }),
+    onError: (err: Error) => {
+      toast.error("Erro ao salvar lançamento", { description: err.message });
+    },
   });
 
   const mApagar = useMutation({
     mutationFn: (id: string) => apagar({ data: { id } }),
     onSuccess: () => {
-      toast.success("Lançamento removido");
-      qc.invalidateQueries();
+      toast.success("Lançamento removido!");
+      qc.invalidateQueries({ queryKey: ["financeiro"] });
+    },
+    onError: (err: Error) => {
+      toast.error("Erro ao apagar lançamento", { description: err.message });
     },
   });
 
+  const polosList: Row[] = data?.polos ?? [];
   const categorias: Row[] = data?.categorias ?? [];
   const lancamentos: Row[] = data?.lancamentos ?? [];
-  const polosList: Row[] = data?.polos ?? [];
   const itens: Row[] = data?.itens ?? [];
+
+  const isAllSelected = selectedPoloIds.length === 0 || selectedPoloIds.length === polosList.length;
 
   // Filter lancamentos by polo & data
   const lancamentosFiltrados = lancamentos.filter((l) => {
-    const pMatch = !poloId || String(l['polo_id']) === poloId;
+    const pMatch = isAllSelected || selectedPoloIds.includes(String(l['polo_id']));
     const dMatch = (!dataInicio || String(l['competencia'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
                    (!dataFim || String(l['competencia'] || l['created_at'] || "").slice(0, 10) <= dataFim);
     return pMatch && dMatch;
@@ -137,18 +144,10 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items (Anexo 1 & 2)
-  const poloObjPrev = polosList.find((p) => String(p['id']) === poloId);
-  const poloNomePrev = poloObjPrev ? String(poloObjPrev['nome']).toLowerCase() : "";
-
-  // 1. Preset Official Items
+  // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items
   const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
-    if (!poloId || poloId === "todos") return true;
-    if (item.poloId === poloId) return true;
-    if (poloNomePrev.includes("penha") && item.poloId === "penha") return true;
-    if (poloNomePrev.includes("madureira") && item.poloId === "madureira") return true;
-    if ((poloNomePrev.includes("paraisópolis") || poloNomePrev.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-    return false;
+    if (isAllSelected) return true;
+    return selectedPoloIds.includes(item.poloId);
   });
 
   // 2. Custom Database Budget Items (from activities budget modal & activities cost)
@@ -159,11 +158,7 @@ function FinanceiroPage() {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
 
-    const matchPolo =
-      !poloId ||
-      poloId === "todos" ||
-      itemPoloId === poloId ||
-      (poloNomePrev && (itemPoloNome.includes(poloNomePrev) || poloNomePrev.includes(itemPoloNome)));
+    const matchPolo = isAllSelected || selectedPoloIds.includes(itemPoloId);
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
@@ -175,7 +170,7 @@ function FinanceiroPage() {
 
       dbCustomItems.push({
         id: String(i['id'] || `db-${Math.random()}`),
-        poloId: itemPoloId || poloId,
+        poloId: itemPoloId || selectedPoloIds[0] || "",
         atividade: ativNome,
         categoria: catNome,
         item: itemNome,
@@ -190,8 +185,7 @@ function FinanceiroPage() {
   // Fallback: If polo has activities with custo_mensal (e.g. Vôlei R$ 5.000,00) but no detailed items yet
   const poloAtividades = atividadesList.filter((a) => {
     const aPoloId = String(a['polo_id'] || "");
-    const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
-    return !poloId || poloId === "todos" || aPoloId === poloId || (poloNomePrev && aPoloNome.includes(poloNomePrev));
+    return isAllSelected || selectedPoloIds.includes(aPoloId);
   });
 
   poloAtividades.forEach((a) => {
@@ -200,7 +194,7 @@ function FinanceiroPage() {
     if (!alreadyInDbCustom && Number(a['custo_mensal'] || 0) > 0) {
       dbCustomItems.push({
         id: `ativ-${a['id']}`,
-        poloId: String(a['polo_id'] || poloId),
+        poloId: String(a['polo_id'] || selectedPoloIds[0] || "todos"),
         atividade: ativNome,
         categoria: "Pessoal",
         item: `Equipe e Operação ${ativNome}`,
@@ -214,11 +208,6 @@ function FinanceiroPage() {
 
   const poloItensPrevisto = [...presetItems, ...dbCustomItems];
   let previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
-
-  // Additional Fallback for custom polos if items list is empty
-  if (previstoTotal === 0 && poloId && poloObjPrev && Number(poloObjPrev['orcamento_mensal']) > 0) {
-    previstoTotal = Number(poloObjPrev['orcamento_mensal']);
-  }
 
   const previstoPorCategoria = categorias
     .filter((c) => c['tipo'] === "despesa")
@@ -282,7 +271,7 @@ function FinanceiroPage() {
       polos: exportPolos,
       lancamentos: exportLancamentos,
       categoriasDespesas: exportCatDespesas,
-      selectedPoloId: poloId || "todos",
+      selectedPoloId: selectedPoloIds[0] || "todos",
       dataInicio,
       dataFim,
     });
@@ -313,7 +302,7 @@ function FinanceiroPage() {
       polos: exportPolos,
       lancamentos: exportLancamentos,
       categoriasDespesas: exportCatDespesas,
-      selectedPoloId: poloId || "todos",
+      selectedPoloId: selectedPoloIds[0] || "todos",
       dataInicio,
       dataFim,
     });
@@ -354,7 +343,7 @@ function FinanceiroPage() {
                 descricao: "",
                 valor: 0,
                 competencia: dataInicio.slice(0, 7),
-                polo_id: poloId || null,
+                polo_id: selectedPoloIds[0] || null,
                 categoria_id: null,
               });
             }}
@@ -402,8 +391,8 @@ function FinanceiroPage() {
           </Label>
           <PoloMultiSelect
             polos={polosList.map((p: Row) => ({ id: String(p['id']), nome: String(p['nome']) }))}
-            selectedIds={poloId ? [poloId] : []}
-            onChange={(ids) => handlePoloChange(ids[0] || "")}
+            selectedIds={selectedPoloIds}
+            onChange={(ids) => handlePoloChange(ids)}
             placeholder="Filtrar polos..."
           />
         </div>
