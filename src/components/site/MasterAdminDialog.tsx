@@ -73,17 +73,31 @@ export function MasterAdminDialog({
     return () => window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
   }, []);
 
-  const [alunosData, setAlunosData] = useState([
-    { id: "a1", nome: "Carlos Eduardo Silva", email: "carlos.silva@email.com", senha: "aluno123", polo: "Complexo da Penha", atividade: "Jiu Jitsu" },
-    { id: "a2", nome: "Beatriz Souza", email: "beatriz.souza@email.com", senha: "aluno456", polo: "Viaduto de Madureira", atividade: "Corte e Costura" },
-    { id: "a3", nome: "Gabriel Santos", email: "gabriel.santos@email.com", senha: "aluno789", polo: "Paraisópolis", atividade: "Karatê" },
-  ]);
+  const [alunosData, setAlunosData] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_alunos_polo");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
 
-  const [professoresData, setProfessoresData] = useState([
-    { id: "p1", nome: "Prof. Marcos Faixa Preta", email: "marcos.jiujitsu@cufa.com.br", senha: "prof2026", disciplina: "Jiu Jitsu", polo: "Complexo da Penha" },
-    { id: "p2", nome: "Prof.ª Lucimar Moda", email: "lucimar.costura@cufa.com.br", senha: "prof2026", disciplina: "Corte e Costura", polo: "Viaduto de Madureira" },
-    { id: "p3", nome: "Prof. Sensei Renato", email: "renato.karate@cufa.com.br", senha: "prof2026", disciplina: "Karatê", polo: "Paraisópolis" },
-  ]);
+  const [professoresData, setProfessoresData] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_professores_solicitacoes");
+      if (stored) {
+        const list = JSON.parse(stored);
+        return list.map((p: any) => ({
+          id: p.id,
+          nome: p.professorNome,
+          email: p.email || `${p.professorNome.toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
+          senha: p.senha || "prof2026",
+          disciplina: p.atividadeNome,
+          polo: p.poloNome,
+        }));
+      }
+    } catch {}
+    return [];
+  });
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -305,30 +319,34 @@ export function MasterAdminDialog({
                   </div>
 
                   <div className="rounded-2xl border border-border bg-card p-5 overflow-x-auto shadow-xs">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-xs uppercase text-muted-foreground font-bold">
-                          <th className="pb-3">Nome do Aluno</th>
-                          <th className="pb-3">E-mail</th>
-                          <th className="pb-3">Senha</th>
-                          <th className="pb-3">Polo</th>
-                          <th className="pb-3">Atividade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {alunosData.map((a) => (
-                          <tr key={a.id} className="hover:bg-muted/30">
-                            <td className="py-3 font-bold text-foreground">{a.nome}</td>
-                            <td className="py-3 text-muted-foreground">{a.email}</td>
-                            <td className="py-3 font-mono text-xs font-bold text-blue-600 bg-blue-500/10 px-2.5 py-1 rounded-md inline-block">
-                              {a.senha}
-                            </td>
-                            <td className="py-3 font-medium">{a.polo}</td>
-                            <td className="py-3 font-semibold text-primary">{a.atividade}</td>
+                    {alunosData.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6">Nenhum aluno cadastrado no momento.</p>
+                    ) : (
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-xs uppercase text-muted-foreground font-bold">
+                            <th className="pb-3">Nome do Aluno</th>
+                            <th className="pb-3">E-mail</th>
+                            <th className="pb-3">Senha</th>
+                            <th className="pb-3">Polo</th>
+                            <th className="pb-3">Atividade</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {alunosData.map((a) => (
+                            <tr key={a.id} className="hover:bg-muted/30">
+                              <td className="py-3 font-bold text-foreground">{a.nome}</td>
+                              <td className="py-3 text-muted-foreground">{a.email}</td>
+                              <td className="py-3 font-mono text-xs font-bold text-blue-600 bg-blue-500/10 px-2.5 py-1 rounded-md inline-block">
+                                {a.senha}
+                              </td>
+                              <td className="py-3 font-medium">{a.polo}</td>
+                              <td className="py-3 font-semibold text-primary">{a.atividade}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               )}
@@ -343,30 +361,34 @@ export function MasterAdminDialog({
                   </div>
 
                   <div className="rounded-2xl border border-border bg-card p-5 overflow-x-auto shadow-xs">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-xs uppercase text-muted-foreground font-bold">
-                          <th className="pb-3">Nome do Professor</th>
-                          <th className="pb-3">E-mail</th>
-                          <th className="pb-3">Senha</th>
-                          <th className="pb-3">Disciplina / Oficina</th>
-                          <th className="pb-3">Polo</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {professoresData.map((p) => (
-                          <tr key={p.id} className="hover:bg-muted/30">
-                            <td className="py-3 font-bold text-foreground">{p.nome}</td>
-                            <td className="py-3 text-muted-foreground">{p.email}</td>
-                            <td className="py-3 font-mono text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-md inline-block">
-                              {p.senha}
-                            </td>
-                            <td className="py-3 font-semibold text-primary">{p.disciplina}</td>
-                            <td className="py-3 font-medium">{p.polo}</td>
+                    {professoresData.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6">Nenhum professor cadastrado no momento.</p>
+                    ) : (
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-xs uppercase text-muted-foreground font-bold">
+                            <th className="pb-3">Nome do Professor</th>
+                            <th className="pb-3">E-mail</th>
+                            <th className="pb-3">Senha</th>
+                            <th className="pb-3">Disciplina / Oficina</th>
+                            <th className="pb-3">Polo</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {professoresData.map((p) => (
+                            <tr key={p.id} className="hover:bg-muted/30">
+                              <td className="py-3 font-bold text-foreground">{p.nome}</td>
+                              <td className="py-3 text-muted-foreground">{p.email}</td>
+                              <td className="py-3 font-mono text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-md inline-block">
+                                {p.senha}
+                              </td>
+                              <td className="py-3 font-semibold text-primary">{p.disciplina}</td>
+                              <td className="py-3 font-medium">{p.polo}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               )}

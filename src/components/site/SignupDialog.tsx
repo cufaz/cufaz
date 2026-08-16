@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -96,6 +97,46 @@ function SeletorComunidade() {
   );
 }
 
+function FileUploadBtn({
+  id,
+  label,
+  fileName,
+  onSelect,
+}: {
+  id: string;
+  label: string;
+  fileName: string | null;
+  onSelect: (name: string | null) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[11px] font-bold text-muted-foreground block">{label}</Label>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor={id}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs cursor-pointer shadow-xs transition-all shrink-0"
+        >
+          <Upload className="size-3.5" />
+          <span>Escolher arquivo</span>
+          <input
+            id={id}
+            type="file"
+            accept=".pdf,image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              onSelect(file ? file.name : null);
+            }}
+          />
+        </label>
+        <span className="text-[11px] text-muted-foreground font-medium truncate max-w-[150px]">
+          {fileName ? fileName : "Nenhum arquivo escolhido"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function SignupDialog({
   open,
   onOpenChange,
@@ -112,7 +153,32 @@ export function SignupDialog({
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
+  // Uploaded File Name States (Anexo 3)
+  const [docIdName, setDocIdName] = useState<string | null>(null);
+  const [docResName, setDocResName] = useState<string | null>(null);
+  const [docFuncName, setDocFuncName] = useState<string | null>(null);
+  const [cert1Name, setCert1Name] = useState<string | null>(null);
+  const [cert2Name, setCert2Name] = useState<string | null>(null);
+  const [cert3Name, setCert3Name] = useState<string | null>(null);
+  const [cert4Name, setCert4Name] = useState<string | null>(null);
+
   const atual = perfis.find((p) => p.id === perfil);
+
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayMsg, setOverlayMsg] = useState("Criando sua conta...");
+  const [targetUrl, setTargetUrl] = useState("");
+
+  function triggerAuthRedirect(url: string, message: string) {
+    setTargetUrl(url);
+    setOverlayMsg(message);
+    setOverlayOpen(true);
+  }
+
+  function handleOverlayComplete() {
+    if (targetUrl) {
+      window.location.href = targetUrl;
+    }
+  }
 
   function fechar(v: boolean) {
     onOpenChange(v);
@@ -185,13 +251,25 @@ export function SignupDialog({
       const pNome = nome.trim() ? (nome.trim().startsWith("Prof") ? nome.trim() : `Prof. ${nome.trim()}`) : "Prof. Novo Professor";
       const pMod = modalidade || "Jiu Jitsu";
       const pUni = unidade || "Complexo da Penha";
+      const pEmail = email.trim().toLowerCase();
+      const pSenha = senha.trim();
 
       const novaSolicitacao = {
         id: `solic-${Date.now()}`,
         professorNome: pNome,
+        email: pEmail,
+        senha: pSenha,
+        telefone: telefone.trim(),
         atividadeNome: pMod,
         poloNome: pUni,
         status: "pendente",
+        docIdName: docIdName || null,
+        docResName: docResName || null,
+        docFuncName: docFuncName || null,
+        cert1Name: cert1Name || null,
+        cert2Name: cert2Name || null,
+        cert3Name: cert3Name || null,
+        cert4Name: cert4Name || null,
         dataSolicitacao: new Date().toISOString().slice(0, 10),
       };
 
@@ -200,12 +278,28 @@ export function SignupDialog({
         let list = stored ? JSON.parse(stored) : [];
         list.push(novaSolicitacao);
         localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(list));
+
+        // Also add to registered list for login
+        const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+        let listCad = storedCad ? JSON.parse(storedCad) : [];
+        listCad.push(novaSolicitacao);
+        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listCad));
+
         window.dispatchEvent(new Event("cufa_professores_updated"));
       } catch {}
 
-      toast.success("Cadastro de Professor enviado com sucesso!", {
-        description: `A solicitação para ministrar ${pMod} no ${pUni} foi enviada e aguarda aprovação do responsável pelo polo.`,
+      localStorage.setItem("cufa_logged_user", pEmail);
+      localStorage.setItem("cufa_logged_role", "professor");
+      localStorage.setItem("cufa_professor_nome", pNome);
+      localStorage.setItem("cufa_polo_atribuido", pUni);
+
+      toast.success("Conta de Professor criada com sucesso!", {
+        description: `Acesso liberado. A modalidade ${pMod} aguarda homologação do polo.`,
       });
+
+      fechar(false);
+      triggerAuthRedirect("/professor", "Acessando Painel do Professor...");
+      return;
     } else {
       toast.success("Cadastro realizado com sucesso!", {
         description: "Seu acesso à plataforma foi liberado imediatamente.",
@@ -216,7 +310,9 @@ export function SignupDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={fechar}>
+    <>
+      <AuthLoadingOverlay open={overlayOpen} message={overlayMsg} onComplete={handleOverlayComplete} />
+      <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="text-left">
           <DialogTitle className="text-2xl">
@@ -338,7 +434,7 @@ export function SignupDialog({
                   </Select>
                 </div>
 
-                {/* Upload de Documentação e Certificados do Professor (Anexo 3) */}
+                {/* Upload de Documentação e Certificados do Professor com Botão Estilizado (Anexo 3) */}
                 <div className="border-t border-border pt-4 mt-2 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-primary">
                     <Upload className="size-4" />
@@ -346,50 +442,37 @@ export function SignupDialog({
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-muted-foreground">
-                        Documento de Identificação (RG / CPF)
-                      </Label>
-                      <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-muted-foreground">
-                        Comprovante de Residência
-                      </Label>
-                      <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                    </div>
+                    <FileUploadBtn
+                      id="doc-id"
+                      label="Documento de Identificação (RG / CPF)"
+                      fileName={docIdName}
+                      onSelect={(n) => setDocIdName(n)}
+                    />
+                    <FileUploadBtn
+                      id="doc-res"
+                      label="Comprovante de Residência"
+                      fileName={docResName}
+                      onSelect={(n) => setDocResName(n)}
+                    />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-bold text-muted-foreground">
-                      Comprovante Funcional / Carteira Profissional (Opcional)
-                    </Label>
-                    <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                  </div>
+                  <FileUploadBtn
+                    id="doc-func"
+                    label="Comprovante Funcional / Carteira Profissional (Opcional)"
+                    fileName={docFuncName}
+                    onSelect={(n) => setDocFuncName(n)}
+                  />
 
                   {/* Até 4 Certificados / Graduação */}
                   <div className="space-y-2 pt-2 border-t border-border/60">
                     <Label className="text-[11px] font-extrabold uppercase tracking-wider text-foreground">
                       Certificados / Graduação (Até 4 arquivos)
                     </Label>
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 1</span>
-                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 2</span>
-                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 3</span>
-                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-semibold text-muted-foreground">Certificado 4</span>
-                        <Input type="file" accept=".pdf,image/*" className="text-xs file:text-xs cursor-pointer" />
-                      </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FileUploadBtn id="cert-1" label="Certificado 1" fileName={cert1Name} onSelect={(n) => setCert1Name(n)} />
+                      <FileUploadBtn id="cert-2" label="Certificado 2" fileName={cert2Name} onSelect={(n) => setCert2Name(n)} />
+                      <FileUploadBtn id="cert-3" label="Certificado 3" fileName={cert3Name} onSelect={(n) => setCert3Name(n)} />
+                      <FileUploadBtn id="cert-4" label="Certificado 4" fileName={cert4Name} onSelect={(n) => setCert4Name(n)} />
                     </div>
                   </div>
                 </div>
@@ -436,5 +519,6 @@ export function SignupDialog({
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 }

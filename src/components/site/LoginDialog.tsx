@@ -129,7 +129,39 @@ export function LoginDialog({
       return;
     }
 
-    // 5. Fallback check for Professor login
+    // 5. Check registered professors in solicitacoes or cadastrados
+    let profList: any[] = [];
+    try {
+      const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSol) profList = [...profList, ...JSON.parse(storedSol)];
+      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+      if (storedCad) profList = [...profList, ...JSON.parse(storedCad)];
+    } catch {}
+
+    const matchedProf = profList.find(
+      (p: any) => p.email && String(p.email).toLowerCase() === cleanEmail
+    );
+
+    if (matchedProf) {
+      if (matchedProf.senha && matchedProf.senha !== cleanSenha) {
+        toast.error("Senha incorreta!", {
+          description: "Verifique a senha informada e tente novamente.",
+        });
+        return;
+      }
+
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem("cufa_logged_role", "professor");
+      localStorage.setItem("cufa_professor_nome", matchedProf.professorNome || matchedProf.nome || "Professor");
+      localStorage.setItem("cufa_polo_atribuido", matchedProf.poloNome || "Complexo da Penha");
+
+      toast.success("Login autorizado! Bem-vindo, Professor.");
+      onOpenChange(false);
+      triggerAuthRedirect("/professor", "Acessando Painel do Professor...");
+      return;
+    }
+
+    // 6. Fallback check for default Professor email
     if (cleanEmail === "professor@cufa.com.br" || cleanEmail.includes("prof")) {
       localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_logged_role", "professor");
@@ -140,7 +172,7 @@ export function LoginDialog({
       return;
     }
 
-    // 6. User not found
+    // 7. User not found
     toast.error("Usuário não cadastrado!", {
       description: "Verifique o e-mail informado ou realize o cadastro de acesso.",
     });
