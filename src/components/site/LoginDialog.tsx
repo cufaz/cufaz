@@ -102,6 +102,16 @@ export function LoginDialog({
       }
 
       localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem(`cufa_logged_name_${cleanEmail}`, matched.nome || "Responsável CUFA");
+      localStorage.setItem(`cufa_responsavel_perfil_${cleanEmail}`, JSON.stringify({
+        nome: matched.nome || "Responsável CUFA",
+        email: cleanEmail,
+        polo: matched.poloNome || "Complexo da Penha",
+        telefone: matched.telefone || "",
+        fotoUrl: localStorage.getItem(`cufa_perfil_foto_${cleanEmail}`) || "",
+        biografia: matched.biografia || "",
+      }));
+
       if (matched.tipo === "geral") {
         toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
         onOpenChange(false);
@@ -125,6 +135,15 @@ export function LoginDialog({
       }
       localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
+      localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Ricardo Brito");
+      localStorage.setItem(`cufa_responsavel_perfil_${cleanEmail}`, JSON.stringify({
+        nome: "Ricardo Brito",
+        email: cleanEmail,
+        polo: "Complexo da Penha",
+        telefone: "11951012933",
+        fotoUrl: localStorage.getItem(`cufa_perfil_foto_${cleanEmail}`) || "",
+        biografia: "Coordenador operacional da CUFA com mais de 8 anos de atuação em projetos sociais.",
+      }));
       toast.success("Login autorizado! Unidade Complexo da Penha.");
       onOpenChange(false);
       triggerAuthRedirect("/polo", "Acessando painel da unidade Complexo da Penha...");

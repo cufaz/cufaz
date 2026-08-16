@@ -301,9 +301,26 @@ export function SignupDialog({
         window.dispatchEvent(new Event("cufa_gestores_updated"));
       } catch {}
 
+      localStorage.setItem("cufa_logged_user", gEmail);
+      localStorage.setItem("cufa_logged_role", "responsavel");
+      localStorage.setItem("cufa_polo_atribuido", uNome);
+      localStorage.setItem(`cufa_logged_name_${gEmail}`, gNome);
+      localStorage.setItem(`cufa_responsavel_perfil_${gEmail}`, JSON.stringify({
+        nome: gNome,
+        email: gEmail,
+        telefone: telefone.trim(),
+        polo: uNome,
+        fotoUrl: "",
+        biografia: "",
+      }));
+
       toast.success("Cadastro de Responsável liberado com sucesso!", {
         description: `Acesso liberado para a unidade ${uNome}. E-mail: ${gEmail}`,
       });
+
+      fechar(false);
+      triggerAuthRedirect("/polo", `Acessando Painel da Unidade ${uNome}...`);
+      return;
     } else if (perfil === "professor") {
       const pNome = nome.trim() ? (nome.trim().startsWith("Prof") ? nome.trim() : `Prof. ${nome.trim()}`) : "Prof. Novo Professor";
       const pEmail = email.trim().toLowerCase();

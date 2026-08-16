@@ -64,13 +64,41 @@ export function PoloResponsavelShell({
     return (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
   });
 
-  const [responsavelNome, setResponsavelNome] = useState(() => {
+  function getValidLoggedName(email: string) {
+    const clean = email.toLowerCase().trim();
+    if (!clean) return "Responsável CUFA";
+
     try {
-      const stored = localStorage.getItem("cufa_responsavel_perfil");
-      if (stored) return JSON.parse(stored).nome;
+      const storedUserPerfil = localStorage.getItem(`cufa_responsavel_perfil_${clean}`);
+      if (storedUserPerfil) {
+        const p = JSON.parse(storedUserPerfil);
+        if (p.nome) return p.nome;
+      }
+
+      const nameUser = localStorage.getItem(`cufa_logged_name_${clean}`);
+      if (nameUser) return nameUser;
+
+      const storedUsers = localStorage.getItem("cufa_usuarios_cadastrados");
+      if (storedUsers) {
+        const users = JSON.parse(storedUsers);
+        if (Array.isArray(users)) {
+          const found = users.find((u: any) => String(u.email || "").toLowerCase() === clean);
+          if (found && found.nome) return found.nome;
+        }
+      }
+
+      const storedGlobal = localStorage.getItem("cufa_responsavel_perfil");
+      if (storedGlobal) {
+        const p = JSON.parse(storedGlobal);
+        if (p.email && p.email.toLowerCase() === clean && p.nome) return p.nome;
+      }
     } catch {}
-    return "Ricardo Brito";
-  });
+
+    const prefix = clean.split("@")[0] || "Responsável";
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
+
+  const [responsavelNome, setResponsavelNome] = useState(() => getValidLoggedName(loggedUserEmail));
 
   function getValidFoto() {
     const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
@@ -79,6 +107,12 @@ export function PoloResponsavelShell({
     try {
       const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
       if (fUser && !fUser.includes("unsplash.com")) return fUser;
+
+      const storedUserPerfil = localStorage.getItem(`cufa_responsavel_perfil_${email}`);
+      if (storedUserPerfil) {
+        const p = JSON.parse(storedUserPerfil);
+        if (p.fotoUrl && !p.fotoUrl.includes("unsplash.com")) return p.fotoUrl;
+      }
 
       const storedPerfil = localStorage.getItem("cufa_responsavel_perfil");
       if (storedPerfil) {
@@ -95,15 +129,19 @@ export function PoloResponsavelShell({
   const [responsavelFoto, setResponsavelFoto] = useState(() => getValidFoto());
 
   useEffect(() => {
-    function syncFoto() {
+    function syncState() {
+      const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+      setResponsavelNome(getValidLoggedName(email));
       setResponsavelFoto(getValidFoto());
     }
-    syncFoto();
-    window.addEventListener("cufa_perfil_foto_updated", syncFoto);
-    window.addEventListener("storage", syncFoto);
+    syncState();
+    window.addEventListener("cufa_perfil_foto_updated", syncState);
+    window.addEventListener("cufa_perfil_updated", syncState);
+    window.addEventListener("storage", syncState);
     return () => {
-      window.removeEventListener("cufa_perfil_foto_updated", syncFoto);
-      window.removeEventListener("storage", syncFoto);
+      window.removeEventListener("cufa_perfil_foto_updated", syncState);
+      window.removeEventListener("cufa_perfil_updated", syncState);
+      window.removeEventListener("storage", syncState);
     };
   }, []);
 

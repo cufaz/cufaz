@@ -16,20 +16,66 @@ export const Route = createFileRoute("/_authenticated/polo/perfil")({
 
 export function PoloPerfilPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const loggedEmail = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
 
   const [perfil, setPerfil] = useState(() => {
-    try {
-      const stored = localStorage.getItem("cufa_responsavel_perfil");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    const loggedEmail = localStorage.getItem("cufa_logged_user") || "britonascimento@hotmail.com.br";
+    if (loggedEmail) {
+      try {
+        const storedUser = localStorage.getItem(`cufa_responsavel_perfil_${loggedEmail}`);
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed && parsed.nome) return parsed;
+        }
+      } catch {}
+
+      const userPhoto = localStorage.getItem(`cufa_perfil_foto_${loggedEmail}`) || "";
+
+      let userName = localStorage.getItem(`cufa_logged_name_${loggedEmail}`);
+      let userPhone = "";
+      try {
+        const storedUsers = localStorage.getItem("cufa_usuarios_cadastrados");
+        if (storedUsers) {
+          const users = JSON.parse(storedUsers);
+          if (Array.isArray(users)) {
+            const found = users.find((u: any) => String(u.email || "").toLowerCase() === loggedEmail);
+            if (found) {
+              if (found.nome) userName = found.nome;
+              if (found.telefone) userPhone = found.telefone;
+            }
+          }
+        }
+      } catch {}
+
+      if (loggedEmail.includes("britonascimento") || loggedEmail.includes("ricardo")) {
+        return {
+          nome: userName || "Ricardo Brito",
+          email: loggedEmail,
+          telefone: userPhone || "11951012933",
+          dataNascimento: "1996-01-24",
+          fotoUrl: userPhoto,
+          biografia: "Coordenador operacional da CUFA com mais de 8 anos de atuação em projetos sociais de esporte, cultura e educação para jovens periféricos.",
+        };
+      }
+
+      const prefix = (loggedEmail || "responsavel").split("@")[0] || "responsavel";
+      const formattedName = userName || (prefix.charAt(0).toUpperCase() + prefix.slice(1));
+      return {
+        nome: formattedName,
+        email: loggedEmail,
+        telefone: userPhone,
+        dataNascimento: "",
+        fotoUrl: userPhoto,
+        biografia: "",
+      };
+    }
+
     return {
-      nome: "Ricardo Brito",
+      nome: "Responsável CUFA",
       email: loggedEmail,
-      telefone: "11951012933",
-      dataNascimento: "1996-01-24",
-      fotoUrl: localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300",
-      biografia: "Coordenador operacional da CUFA com mais de 8 anos de atuação em projetos sociais de esporte, cultura e educação para jovens periféricos.",
+      telefone: "",
+      dataNascimento: "",
+      fotoUrl: "",
+      biografia: "",
     };
   });
 
@@ -48,8 +94,8 @@ export function PoloPerfilPage() {
         const base64 = event.target?.result as string;
         setFotoUrl(base64);
         try {
-          localStorage.setItem("cufa_perfil_foto", base64);
-          localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, base64);
+          const userKey = (email || loggedEmail).toLowerCase().trim();
+          localStorage.setItem(`cufa_perfil_foto_${userKey}`, base64);
           window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
         } catch {}
         toast.success("Foto de perfil atualizada!");
@@ -60,9 +106,10 @@ export function PoloPerfilPage() {
 
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
+    const userKey = (email || loggedEmail).toLowerCase().trim();
     const novoPerfil = {
       nome,
-      email,
+      email: userKey,
       telefone,
       dataNascimento,
       fotoUrl,
@@ -70,16 +117,19 @@ export function PoloPerfilPage() {
     };
     setPerfil(novoPerfil);
     try {
-      localStorage.setItem("cufa_responsavel_perfil", JSON.stringify(novoPerfil));
+      localStorage.setItem(`cufa_responsavel_perfil_${userKey}`, JSON.stringify(novoPerfil));
+      localStorage.setItem(`cufa_logged_name_${userKey}`, nome);
       if (fotoUrl) {
-        localStorage.setItem("cufa_perfil_foto", fotoUrl);
-        localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, fotoUrl);
+        localStorage.setItem(`cufa_perfil_foto_${userKey}`, fotoUrl);
+      } else {
+        localStorage.removeItem(`cufa_perfil_foto_${userKey}`);
       }
+      window.dispatchEvent(new Event("cufa_perfil_updated"));
       window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
     } catch {}
 
     toast.success("Perfil do Responsável atualizado com sucesso!", {
-      description: "Suas informações pessoais e foto foram salvas permanentemente na plataforma.",
+      description: "Suas informações pessoais foram salvas para este usuário.",
     });
   }
 
