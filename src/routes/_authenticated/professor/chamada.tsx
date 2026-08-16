@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ClipboardCheck, UserCheck, UserX, Calendar, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ProfessorShell } from "@/components/professor/ProfessorShell";
@@ -42,11 +42,19 @@ function ProfessorChamadaPage() {
   const [turmaSelecionada, setTurmaSelecionada] = useState(() => turmasDisponiveis[0] || "Jiu Jitsu — Turma 1");
   const [busca, setBusca] = useState("");
 
-  const [alunos, setAlunos] = useState<any[]>(() => {
-    return loadAlunosList();
-  });
+  function loadAlunosList(selectedTurma = turmaSelecionada, selectedDate = dataChamada) {
+    // Check if there is a saved state for this specific class and date
+    const saveKey = `cufa_saved_chamada_${selectedTurma}_${selectedDate}`;
+    try {
+      const storedState = localStorage.getItem(saveKey);
+      if (storedState) {
+        const parsedState = JSON.parse(storedState);
+        if (Array.isArray(parsedState) && parsedState.length > 0) {
+          return parsedState;
+        }
+      }
+    } catch {}
 
-  function loadAlunosList() {
     const listMap = new Map<string, any>();
 
     // 1. Read registered students in platform
@@ -61,6 +69,7 @@ function ProfessorChamadaPage() {
               listMap.set(key, {
                 id: a.id || `aluno-cad-${idx}`,
                 nome: a.nome,
+                email: a.email || "",
                 presente: false,
                 presencaPct: "100%",
               });
@@ -82,6 +91,7 @@ function ProfessorChamadaPage() {
               listMap.set(key, {
                 id: a.id || `aluno-polo-${idx}`,
                 nome: a.nome,
+                email: a.email || "",
                 presente: false,
                 presencaPct: "100%",
               });
@@ -94,10 +104,26 @@ function ProfessorChamadaPage() {
     return Array.from(listMap.values());
   }
 
+  const [alunos, setAlunos] = useState<any[]>(() => {
+    return loadAlunosList(turmasDisponiveis[0] || "Jiu Jitsu — Turma 1", dataChamada);
+  });
+
+  // Reload state whenever date or class changes
+  useEffect(() => {
+    setAlunos(loadAlunosList(turmaSelecionada, dataChamada));
+  }, [turmaSelecionada, dataChamada]);
+
   function handleSalvarChamada() {
     try {
+      const saveKey = `cufa_saved_chamada_${turmaSelecionada}_${dataChamada}`;
+      localStorage.setItem(saveKey, JSON.stringify(alunos));
+
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
       let history: any[] = stored ? JSON.parse(stored) : [];
+
+      // Replace existing entry for same date and class if re-saving
+      history = history.filter((h) => !(h.data === dataChamada && h.turma === turmaSelecionada));
+
       const session = {
         id: `chamada-${Date.now()}`,
         data: dataChamada,

@@ -581,6 +581,31 @@ export function AtividadesPage() {
                 </div>
               </div>
 
+              {/* Faixa Etária & Requisitos para o Aluno (Anexo 1) */}
+              <div className="border-t border-border pt-3 mt-2 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Informações Exibidas na Vitrine do Aluno
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Faixa Etária Recomendada</Label>
+                    <Input
+                      placeholder="Ex: 06 a 17 anos"
+                      value={String(form['faixa_etaria'] ?? "")}
+                      onChange={(e) => setForm({ ...form, faixa_etaria: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Requisitos de Inscrição</Label>
+                    <Input
+                      placeholder="Ex: Atestado médico e kimono básico"
+                      value={String(form['requisitos'] ?? "")}
+                      onChange={(e) => setForm({ ...form, requisitos: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="submit" className="bg-brand-gradient font-bold text-white">
                   Salvar

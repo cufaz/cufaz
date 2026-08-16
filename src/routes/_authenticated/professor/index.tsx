@@ -46,6 +46,13 @@ function ProfessorDashboardPage() {
 
   const [chamadasHistory, setChamadasHistory] = useState<any[]>(() => {
     try {
+      // Purge old auto-generated test history entries without saved roll-call state
+      const isReset = localStorage.getItem("cufa_chamadas_history_reset_v1");
+      if (!isReset) {
+        localStorage.removeItem("cufa_professor_chamadas_history");
+        localStorage.setItem("cufa_chamadas_history_reset_v1", "true");
+        return [];
+      }
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
       if (stored) return JSON.parse(stored);
     } catch {}
