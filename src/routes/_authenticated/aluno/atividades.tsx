@@ -367,6 +367,43 @@ function VitrineAtividadesAlunoPage() {
 
   const vitrineList = loadVitrineMergedList();
 
+  const todosOsPolos = (() => {
+    const polosSet = new Set<string>();
+
+    const defaultPolos = [
+      "Complexo da Penha",
+      "Viaduto de Madureira",
+      "Paraisópolis",
+      "Cidade de Deus",
+      "Rocinha",
+      "Vila Cruzeiro",
+      "Manguinhos",
+      "Complexo do Alemão",
+      "Realengo",
+      "Bangu",
+      "Polo de Teste",
+    ];
+    defaultPolos.forEach((p) => polosSet.add(p));
+
+    try {
+      const stored = localStorage.getItem("cufa_polos_cadastrados");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((p: any) => {
+            if (p.nome) polosSet.add(p.nome);
+          });
+        }
+      }
+    } catch {}
+
+    vitrineList.forEach((item) => {
+      if (item.polo) polosSet.add(item.polo);
+    });
+
+    return Array.from(polosSet);
+  })();
+
   const vitrineFiltrada = vitrineList.filter((item) => {
     const matchSearch =
       !searchQuery ||
@@ -407,7 +444,7 @@ function VitrineAtividadesAlunoPage() {
                 className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
               >
                 <option value="todos">Todos os Polos</option>
-                {Array.from(new Set(vitrineList.map((i) => i.polo))).map((pName) => (
+                {todosOsPolos.map((pName) => (
                   <option key={pName} value={pName}>
                     {pName}
                   </option>
@@ -434,8 +471,17 @@ function VitrineAtividadesAlunoPage() {
         </div>
 
         {/* Quadro da Vitrine de Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {vitrineFiltrada.map((item) => {
+        {vitrineFiltrada.length === 0 ? (
+          <div className="py-16 px-4 text-center border border-dashed border-border rounded-2xl bg-card space-y-3">
+            <Building2 className="size-12 text-muted-foreground/40 mx-auto" />
+            <h3 className="text-sm font-extrabold text-foreground">Nenhuma oficina encontrada</h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Não encontramos oficinas cadastradas para os filtros selecionados. Tente alterar o polo ou a modalidade.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {vitrineFiltrada.map((item) => {
             const isEnrolled = myInscricoes.includes(item.id);
             const isSubmitting = submittingId === item.id;
             const hasProf = item.professorNome && !item.professorNome.includes("Aguardando");
@@ -579,7 +625,8 @@ function VitrineAtividadesAlunoPage() {
             );
           })}
         </div>
-      </div>
+      )}
+    </div>
 
       {/* Modal com Informações Detalhadas do Professor */}
       <Dialog open={!!selectedProfModal} onOpenChange={(v) => !v && setSelectedProfModal(null)}>
