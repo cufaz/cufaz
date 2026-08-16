@@ -51,40 +51,62 @@ export function PoloResponsavelShell({
     return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150";
   });
 
-  // Notification Bell Popover State
+  // Notification Bell Popover State with localStorage persistence (Anexo 2, 3, 4)
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([
+  const [lidasIds, setLidasIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_notificacoes_lidas");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+  const baseNotificacoes = [
     {
       id: "n1",
       titulo: "Nova Matrícula no Polo",
       desc: "Nova inscrição registrada para a turma do turno da tarde.",
       tempo: "Há 15 minutos",
-      lida: false,
     },
     {
       id: "n2",
       titulo: "Lembrete de Chamada Diária",
       desc: "Registre a frequência das turmas de hoje para manter os indicadores atualizados.",
       tempo: "Há 1 hora",
-      lida: false,
     },
     {
       id: "n3",
       titulo: "Atualização de Solicitação",
       desc: "Pedido de materiais e compras encaminhado para validação.",
       tempo: "Há 3 horas",
-      lida: true,
     },
-  ]);
+  ];
+
+  const notificacoes = baseNotificacoes.map((n) => ({
+    ...n,
+    lida: lidasIds.includes(n.id),
+  }));
 
   const unreadCount = notificacoes.filter((n) => !n.lida).length;
 
   function marcarTodasLidas() {
-    setNotificacoes(notificacoes.map((n) => ({ ...n, lida: true })));
+    const todosIds = baseNotificacoes.map((n) => n.id);
+    setLidasIds(todosIds);
+    try {
+      localStorage.setItem("cufa_notificacoes_lidas", JSON.stringify(todosIds));
+    } catch {}
+    setNotifOpen(false); // Auto-oculta a caixa (Anexo 2)
   }
 
   function marcarLida(id: string) {
-    setNotificacoes(notificacoes.map((n) => (n.id === id ? { ...n, lida: true } : n)));
+    if (!lidasIds.includes(id)) {
+      const novosIds = [...lidasIds, id];
+      setLidasIds(novosIds);
+      try {
+        localStorage.setItem("cufa_notificacoes_lidas", JSON.stringify(novosIds));
+      } catch {}
+    }
+    setNotifOpen(false); // Auto-oculta a caixa (Anexo 2)
   }
 
   const menuItems = [
@@ -171,7 +193,9 @@ export function PoloResponsavelShell({
 
               {/* Notification Popover Card */}
               {notifOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in-50 zoom-in-95">
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in-50 zoom-in-95">
                   <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
                     <div className="flex items-center gap-2">
                       <Bell className="size-4 text-primary" />
@@ -211,6 +235,7 @@ export function PoloResponsavelShell({
                     )}
                   </div>
                 </div>
+              </>
               )}
             </div>
 

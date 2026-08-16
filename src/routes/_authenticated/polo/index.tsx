@@ -39,21 +39,32 @@ function PoloDashboardPage() {
   const taxaFrequencia = totalAlunos > 0 ? "100%" : "0%";
   const comprasPendentes = comprasLista.filter((c: any) => c.status === "pendente").length;
 
-  const atividadesLista = isPenha
+  const baseAtividades = isPenha
     ? [
-        { nome: "Jiu Jitsu", turmas: 2, alunos: 80, vagas: 80, frequencia: "95%" },
-        { nome: "Aula de Inglês", turmas: 1, alunos: 30, vagas: 30, frequencia: "92%" },
-        { nome: "Natação", turmas: 1, alunos: 40, vagas: 40, frequencia: "96%" },
+        { nome: "Jiu Jitsu", turmas: 2, vagas: 80 },
+        { nome: "Aula de Inglês", turmas: 1, vagas: 30 },
+        { nome: "Natação", turmas: 1, vagas: 40 },
       ]
     : isMadureira
     ? [
-        { nome: "Corte e Costura", turmas: 1, alunos: 16, vagas: 16, frequencia: "94%" },
-        { nome: "Futsal", turmas: 2, alunos: 40, vagas: 40, frequencia: "96%" },
-        { nome: "Basquete", turmas: 1, alunos: 25, vagas: 25, frequencia: "91%" },
+        { nome: "Corte e Costura", turmas: 1, vagas: 16 },
+        { nome: "Futsal", turmas: 2, vagas: 40 },
+        { nome: "Basquete", turmas: 1, vagas: 25 },
       ]
     : [
-        { nome: "Karatê", turmas: 2, alunos: 30, vagas: 30, frequencia: "93%" },
+        { nome: "Karatê", turmas: 2, vagas: 30 },
       ];
+
+  const atividadesLista = baseAtividades.map((ativ) => {
+    const realAlunos = alunosLista.filter((a: any) => a.atividade === ativ.nome).length;
+    const pct = Math.round((realAlunos / ativ.vagas) * 100);
+    return {
+      ...ativ,
+      alunos: realAlunos,
+      pctPreenchido: `${pct}% Preenchidas`,
+      frequencia: realAlunos > 0 ? "100%" : "0%",
+    };
+  });
 
   return (
     <PoloResponsavelShell
@@ -62,7 +73,7 @@ function PoloDashboardPage() {
     >
       {/* Cards de KPIs Operacionais (SEM VALORES EM R$) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Alunos Matriculados" value={String(totalAlunos)} hint={`${vagasTotais} vagas ocupadas`} />
+        <Kpi label="Alunos Matriculados" value={String(totalAlunos)} hint={`${totalAlunos} de ${vagasTotais} vagas ocupadas`} />
         <Kpi label="Atividades Ofertadas" value={String(totalAtividades)} hint={`${totalTurmas} turmas ativas`} />
         <Kpi label="Taxa de Frequência Média" value={taxaFrequencia} hint="Últimos 30 dias" />
         <Kpi label="Solicitações de Compras" value={String(comprasPendentes)} hint="Aguardando aprovação" />
@@ -103,7 +114,7 @@ function PoloDashboardPage() {
                   </div>
                   <div>
                     <span className="block font-semibold text-foreground">{ativ.vagas} vagas</span>
-                    <span>100% Preenchidas</span>
+                    <span>{ativ.pctPreenchido}</span>
                   </div>
                 </div>
 
