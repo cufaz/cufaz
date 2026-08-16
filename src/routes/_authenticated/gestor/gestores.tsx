@@ -44,9 +44,9 @@ const DEFAULT_GESTORES: GestorItem[] = [
   },
   {
     id: "g-ricardo",
-    nome: "Ricardo",
-    email: "ricardo@cufa.com.br",
-    senha: "ricardo2026",
+    nome: "Ricardo Brito",
+    email: "britonascimento@hotmail.com",
+    senha: "complexodapenha2026!",
     tipo: "polo",
     poloNome: "Complexo da Penha",
     dataCriacao: "2026-08-01",

@@ -72,12 +72,12 @@ export function LoginDialog({
     } catch {}
 
     // Include Ricardo in default list if missing
-    if (!list.some((g: any) => String(g.email).toLowerCase() === "ricardo@cufa.com.br")) {
+    if (!list.some((g: any) => String(g.email).toLowerCase() === "britonascimento@hotmail.com")) {
       list.push({
         id: "g-ricardo",
-        nome: "Ricardo",
-        email: "ricardo@cufa.com.br",
-        senha: "ricardo2026",
+        nome: "Ricardo Brito",
+        email: "britonascimento@hotmail.com",
+        senha: "complexodapenha2026!",
         tipo: "polo",
         poloNome: "Complexo da Penha",
       });
@@ -109,8 +109,8 @@ export function LoginDialog({
     }
 
     // 4. Fallback check for Ricardo specifically if not in list
-    if (cleanEmail === "ricardo@cufa.com.br") {
-      if (cleanSenha !== "ricardo2026" && cleanSenha !== "penha2026") {
+    if (cleanEmail === "britonascimento@hotmail.com" || cleanEmail === "ricardo@cufa.com.br") {
+      if (cleanSenha !== "complexodapenha2026!" && cleanSenha !== "ricardo2026") {
         toast.error("Senha incorreta!", {
           description: "Verifique a senha informada e tente novamente.",
         });

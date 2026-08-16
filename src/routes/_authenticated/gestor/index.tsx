@@ -97,8 +97,17 @@ function DashboardPage() {
     return selectedPoloIds.includes(String(p.polo_id));
   });
 
-  // Filter Lancamentos by selected polos & date range
+  const deletedLancamentosIds: string[] = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_deleted_lancamentos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  })();
+
+  // Filter Lancamentos by selected polos & date range & non-deleted
   const lancamentos = (finData?.lancamentos ?? []).filter((l: any) => {
+    if (deletedLancamentosIds.includes(String(l.id))) return false;
     const pMatch = selectedPoloIds.length === 0 || selectedPoloIds.includes(String(l.polo_id));
     const dMatch = (!dataInicio || String(l.competencia || l.created_at || "").slice(0, 10) >= dataInicio) &&
                    (!dataFim || String(l.competencia || l.created_at || "").slice(0, 10) <= dataFim);

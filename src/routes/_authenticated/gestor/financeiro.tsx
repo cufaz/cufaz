@@ -163,9 +163,19 @@ function FinanceiroPage() {
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
   // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items
+  const selectedPoloNames = polosList
+    .filter((p) => selectedPoloIds.includes(String(p['id'])))
+    .map((p) => String(p['nome']).toLowerCase());
+
   const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
     if (isAllSelected) return true;
-    return selectedPoloIds.includes(item.poloId);
+    if (selectedPoloIds.includes(item.poloId)) return true;
+    return selectedPoloNames.some((pName) => {
+      if (pName.includes("penha") && item.poloId === "penha") return true;
+      if (pName.includes("madureira") && item.poloId === "madureira") return true;
+      if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
+      return false;
+    });
   });
 
   // 2. Custom Database Budget Items (from activities budget modal & activities cost)
@@ -176,7 +186,10 @@ function FinanceiroPage() {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
 
-    const matchPolo = isAllSelected || selectedPoloIds.includes(itemPoloId);
+    const matchPolo =
+      isAllSelected ||
+      selectedPoloIds.includes(itemPoloId) ||
+      selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome));
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
@@ -203,7 +216,12 @@ function FinanceiroPage() {
   // Fallback: If polo has activities with custo_mensal (e.g. Vôlei R$ 5.000,00) but no detailed items yet
   const poloAtividades = atividadesList.filter((a) => {
     const aPoloId = String(a['polo_id'] || "");
-    return isAllSelected || selectedPoloIds.includes(aPoloId);
+    const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
+    return (
+      isAllSelected ||
+      selectedPoloIds.includes(aPoloId) ||
+      selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome))
+    );
   });
 
   poloAtividades.forEach((a) => {
@@ -229,11 +247,29 @@ function FinanceiroPage() {
 
   const previstoPorCategoria = categorias
     .filter((c) => c['tipo'] === "despesa")
-    .map((c) => ({
-      categoria: c,
-      previsto: itens.filter((i) => i['categoria_id'] === c['id']).reduce((s, i) => s + Number(i['custo_mensal']), 0),
-      realizado: despesas.filter((l) => l['categoria_id'] === c['id']).reduce((s, l) => s + Number(l['valor']), 0),
-    }))
+    .map((c) => {
+      const catNomeStr = String(c['nome']).toLowerCase();
+      const catPrevisto = poloItensPrevisto
+        .filter((i) => {
+          const itemCat = i.categoria.toLowerCase();
+          return itemCat === catNomeStr || catNomeStr.includes(itemCat) || itemCat.includes(catNomeStr);
+        })
+        .reduce((s, i) => s + i.previsto, 0);
+
+      const catRealizado = despesas
+        .filter((l) => {
+          const lCatId = String(l['categoria_id'] || "");
+          const lCatNome = String(l['categoria_nome'] || l['categoria'] || "").toLowerCase();
+          return lCatId === String(c['id']) || lCatNome === catNomeStr;
+        })
+        .reduce((s, l) => s + Number(l['valor']), 0);
+
+      return {
+        categoria: c,
+        previsto: catPrevisto,
+        realizado: catRealizado,
+      };
+    })
     .filter((r) => r.previsto > 0 || r.realizado > 0);
 
   function handleValorInputChange(e: React.ChangeEvent<HTMLInputElement>) {
