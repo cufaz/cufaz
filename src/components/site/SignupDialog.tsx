@@ -47,12 +47,38 @@ const perfis: { id: Perfil; titulo: string; desc: string; Icon: typeof UserRound
   },
 ];
 
+function getRegisteredPolosList(): string[] {
+  const listMap = new Set<string>();
+
+  try {
+    const stored = localStorage.getItem("cufa_polos_cadastrados");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((p: any) => {
+          if (p.nome) listMap.add(p.nome);
+        });
+      }
+    }
+  } catch {}
+
+  if (listMap.size === 0) {
+    listMap.add("Complexo da Penha");
+    listMap.add("Paraisópolis");
+    listMap.add("Viaduto de Madureira");
+    listMap.add("Heliópolis");
+    listMap.add("Polo de Teste");
+  }
+
+  return Array.from(listMap);
+}
+
 const comunidades = [
   "Madureira",
   "Complexo da Penha",
   "Paraisópolis",
-  "Cidade de Deus",
   "Heliópolis",
+  "Polo de Teste",
 ];
 
 const modalidades = [
@@ -478,7 +504,7 @@ export function SignupDialog({
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {comunidades.map((c) => (
+                      {getRegisteredPolosList().map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>

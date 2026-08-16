@@ -52,8 +52,6 @@ export function ProfessorShell({
     const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
     const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
     if (fUser && !fUser.includes("unsplash.com")) return fUser;
-    const fGlobal = localStorage.getItem("cufa_perfil_foto");
-    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
     return "";
   });
 
@@ -61,8 +59,7 @@ export function ProfessorShell({
     function loadProfState() {
       const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
       const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
-      const fGlobal = localStorage.getItem("cufa_perfil_foto");
-      setProfFoto((fUser && !fUser.includes("unsplash.com")) ? fUser : ((fGlobal && !fGlobal.includes("unsplash.com")) ? fGlobal : ""));
+      setProfFoto((fUser && !fUser.includes("unsplash.com")) ? fUser : "");
 
       const savedName = localStorage.getItem("cufa_professor_nome");
       if (savedName) setProfNome(savedName);

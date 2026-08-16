@@ -40,13 +40,36 @@ export function PoloComprasPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Zeroed mock by default for clean testing (Anexo 2 & 3)
-  const [pedidos, setPedidos] = useState<PedidoItem[]>(() => {
+  function loadPoloPedidosList(unitName: string) {
+    const cleanUnit = unitName.toLowerCase().trim();
+    let list: PedidoItem[] = [];
+
     try {
-      const stored = localStorage.getItem("cufa_compras_polo");
-      if (stored) return JSON.parse(stored);
+      const storedUnit = localStorage.getItem(`cufa_compras_${cleanUnit}`);
+      if (storedUnit) {
+        const parsedUnit = JSON.parse(storedUnit);
+        if (Array.isArray(parsedUnit)) {
+          return parsedUnit;
+        }
+      }
+
+      const storedAll = localStorage.getItem("cufa_compras_polo") || localStorage.getItem("cufa_compras_all");
+      if (storedAll) {
+        const parsed = JSON.parse(storedAll);
+        if (Array.isArray(parsed)) {
+          list = parsed.filter((p: any) => {
+            const pName = String(p.polo_nome || p.polo || "").toLowerCase();
+            return pName.includes(cleanUnit) || cleanUnit.includes(pName);
+          });
+        }
+      }
     } catch {}
-    return [];
+
+    return list;
+  }
+
+  const [pedidos, setPedidos] = useState<PedidoItem[]>(() => {
+    return loadPoloPedidosList(poloNome);
   });
 
   const BASE_CATEGORIAS_CUFA = [
@@ -126,10 +149,18 @@ export function PoloComprasPage() {
       dataSolicitacao: new Date().toLocaleDateString("pt-BR"),
     };
 
+    const cleanUnit = currentPoloNome.toLowerCase().trim();
     const atualizados = [novo, ...pedidos];
     setPedidos(atualizados);
     try {
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(atualizados));
+      localStorage.setItem(`cufa_compras_${cleanUnit}`, JSON.stringify(atualizados));
+
+      const storedAll = localStorage.getItem("cufa_compras_polo") || localStorage.getItem("cufa_compras_all");
+      let allList: any[] = storedAll ? JSON.parse(storedAll) : [];
+      allList = [novo, ...allList.filter((p) => p.id !== novo.id)];
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(allList));
+      localStorage.setItem("cufa_compras_all", JSON.stringify(allList));
+
       window.dispatchEvent(new Event("cufa_pedidos_updated"));
     } catch {}
 

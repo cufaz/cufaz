@@ -201,7 +201,95 @@ function VitrineAtividadesAlunoPage() {
       faixaEtaria: "08 a 17 anos",
       requisitos: "Calçado esportivo",
     },
+    {
+      id: "v-teste-capoeira",
+      nome: "Capoeira & Cultura",
+      polo: "Polo de Teste",
+      turmaNome: "Turma 1 - Tarde (14h - 16h)",
+      horario: "Seg e Quat - 14:00 às 16:00",
+      professorNome: "Prof.ª Santana Silva",
+      professorEmail: "santana@cufa.com.br",
+      professorTelefone: "(11) 94830-0321",
+      professorBio: "Instrutor qualificado no ensino de capoeira regional e valores culturais.",
+      vagasTotais: 30,
+      alunosMatriculados: 0,
+      descricao: "Oficina prática de ginga, roda de capoeira, instrumentos tradicionais e vivência cultural.",
+      faixaEtaria: "06 a 17 anos",
+      requisitos: "Roupas brancas e disposição física",
+    },
   ];
+
+  function loadVitrineMergedList() {
+    const listMap = new Map<string, VitrineCardItem>();
+
+    // 1. Add default vitrine cards
+    defaultVitrine.forEach((item) => {
+      listMap.set(item.id, item);
+    });
+
+    // 2. Read activities created by Gestor in cufa_atividades_gestor
+    try {
+      const storedGestor = localStorage.getItem("cufa_atividades_gestor");
+      if (storedGestor) {
+        const parsed = JSON.parse(storedGestor);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((g: any, idx: number) => {
+            const id = g.id || `v-gestor-${idx}`;
+            const poloName = g.polo_nome || g.polo || "Polo de Teste";
+            listMap.set(id, {
+              id,
+              nome: g.nome || "Oficina Interativa",
+              polo: poloName,
+              turmaNome: g.turmaNome || "Turma 1 - Tarde (14h - 16h)",
+              horario: g.dias || "Seg e Quat - 14:00 às 16:00",
+              professorNome: g.professorNome || "Aguardando Instrutor",
+              professorEmail: g.professorEmail || "contato@cufa.com.br",
+              professorTelefone: "(11) 98877-6655",
+              professorBio: "Instrutor credenciado da Central Única das Favelas.",
+              vagasTotais: Number(g.vagas || 40),
+              alunosMatriculados: 0,
+              descricao: g.descricao || "Oficina prática focada no desenvolvimento socioeducativo e cultural.",
+              faixaEtaria: g.faixa_etaria || g.faixaEtaria || "06 a 17 anos",
+              requisitos: g.requisitos || "Roupas confortáveis e vontade de aprender",
+            });
+          });
+        }
+      }
+    } catch {}
+
+    // 3. Read activities created by Polo in cufa_atividades_polo
+    try {
+      const storedPolo = localStorage.getItem("cufa_atividades_polo");
+      if (storedPolo) {
+        const parsed = JSON.parse(storedPolo);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((p: any, idx: number) => {
+            const id = p.id || `v-polo-${idx}`;
+            if (!listMap.has(id)) {
+              listMap.set(id, {
+                id,
+                nome: p.nome || "Oficina Comunitária",
+                polo: p.polo_nome || p.polo || "Polo de Teste",
+                turmaNome: p.turmaNome || "Turma 1 - Tarde (14h - 16h)",
+                horario: p.horario || p.dias || "Ter e Qui - 14:00 às 16:00",
+                professorNome: p.professorNome || "Aguardando Instrutor",
+                professorEmail: "contato@cufa.com.br",
+                professorTelefone: "(11) 98877-6655",
+                professorBio: "Instrutor credenciado da Central Única das Favelas.",
+                vagasTotais: Number(p.vagas || 30),
+                alunosMatriculados: 0,
+                descricao: p.descricao || "Oficina formativa da unidade.",
+                faixaEtaria: p.faixa_etaria || p.faixaEtaria || "06 a 17 anos",
+                requisitos: p.requisitos || "Atestado de saúde ou autorização do responsável",
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    return Array.from(listMap.values());
+  }
 
   function loadInscricoesState() {
     const uEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
@@ -292,7 +380,9 @@ function VitrineAtividadesAlunoPage() {
     }, 800);
   }
 
-  const vitrineFiltrada = defaultVitrine.filter((item) => {
+  const vitrineList = loadVitrineMergedList();
+
+  const vitrineFiltrada = vitrineList.filter((item) => {
     const matchSearch =
       !searchQuery ||
       cleanStr(item.nome).includes(cleanStr(searchQuery)) ||
@@ -325,25 +415,18 @@ function VitrineAtividadesAlunoPage() {
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-muted-foreground uppercase whitespace-nowrap">Polo:</span>
+              <span className="text-xs font-bold text-muted-foreground uppercase whitespace-nowrap">POLO:</span>
               <select
                 value={filtroPolo}
                 onChange={(e) => setFiltroPolo(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-56"
+                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
               >
                 <option value="todos">Todos os Polos</option>
-                <option value="penha">Complexo da Penha</option>
-                <option value="madureira">Viaduto de Madureira</option>
-                <option value="paraisopolis">Paraisópolis</option>
-                <option value="heliopolis">Heliópolis</option>
-                <option value="cidade-de-deus">Cidade de Deus</option>
-                <option value="rocinha">Rocinha</option>
-                <option value="vila-cruzeiro">Vila Cruzeiro</option>
-                <option value="manguinhos">Manguinhos</option>
-                <option value="complexo-do-alemao">Complexo do Alemão</option>
-                <option value="realengo">Realengo</option>
-                <option value="bangu">Bangu</option>
-                <option value="teste">Polo de Teste</option>
+                {Array.from(new Set(vitrineList.map((i) => i.polo))).map((pName) => (
+                  <option key={pName} value={pName}>
+                    {pName}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -355,16 +438,11 @@ function VitrineAtividadesAlunoPage() {
                 className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-56"
               >
                 <option value="todas">Todas as Oficinas</option>
-                <option value="jiu">Jiu Jitsu</option>
-                <option value="ingles">Aula de Inglês</option>
-                <option value="natacao">Natação</option>
-                <option value="karate">Karatê</option>
-                <option value="costura">Corte e Costura</option>
-                <option value="futsal">Futsal</option>
-                <option value="basquete">Basquete</option>
-                <option value="capoeira">Capoeira</option>
-                <option value="teatro">Teatro & Dança</option>
-                <option value="musica">Música & Percussão</option>
+                {Array.from(new Set(vitrineList.map((i) => i.nome))).map((oName) => (
+                  <option key={oName} value={oName}>
+                    {oName}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

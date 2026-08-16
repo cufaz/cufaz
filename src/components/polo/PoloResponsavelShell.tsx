@@ -73,20 +73,21 @@ export function PoloResponsavelShell({
   });
 
   function getValidFoto() {
+    const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    if (!email) return "";
+
     try {
+      const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
+      if (fUser && !fUser.includes("unsplash.com")) return fUser;
+
       const storedPerfil = localStorage.getItem("cufa_responsavel_perfil");
       if (storedPerfil) {
         const p = JSON.parse(storedPerfil);
-        if (p.fotoUrl && !p.fotoUrl.includes("unsplash.com")) return p.fotoUrl;
+        if (p.email?.toLowerCase() === email && p.fotoUrl && !p.fotoUrl.includes("unsplash.com")) {
+          return p.fotoUrl;
+        }
       }
     } catch {}
-
-    const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
-    const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
-    if (fUser && !fUser.includes("unsplash.com")) return fUser;
-
-    const fGlobal = localStorage.getItem("cufa_perfil_foto");
-    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
 
     return "";
   }

@@ -49,7 +49,7 @@ export function AlunoShell({ children, title, description }: AlunoShellProps) {
       } catch {}
     }
 
-    const fUser = localStorage.getItem(`cufa_perfil_foto_${userEmail}`) || localStorage.getItem("cufa_perfil_foto");
+    const fUser = localStorage.getItem(`cufa_perfil_foto_${userEmail}`);
     setFotoPerfil(fUser || null);
   }
 

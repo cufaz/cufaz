@@ -39,20 +39,33 @@ export function PoloGaleriaPage() {
     ? ["Futsal"]
     : ["Jiu Jitsu", "Aula de Inglês", "Natação"];
 
-  // ZERO Mock Data by default for clean testing (Anexo 2)
-  const [fotos, setFotos] = useState<FotoItem[]>(() => {
+  function loadUnitFotos(unitName: string) {
+    const cleanUnit = unitName.toLowerCase().trim();
     try {
-      const stored = localStorage.getItem("cufa_galeria_fotos");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
+      const storedUnit = localStorage.getItem(`cufa_galeria_${cleanUnit}`);
+      if (storedUnit) {
+        const parsed = JSON.parse(storedUnit);
+        if (Array.isArray(parsed)) return parsed;
+      }
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("cufa_galeria_fotos", JSON.stringify(fotos));
+      const storedAll = localStorage.getItem("cufa_polo_galeria_fotos") || localStorage.getItem("cufa_galeria_fotos");
+      if (storedAll) {
+        const parsed = JSON.parse(storedAll);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((f: any) => {
+            const fPolo = String(f.polo || f.poloNome || "").toLowerCase();
+            return fPolo.includes(cleanUnit) || cleanUnit.includes(fPolo);
+          });
+        }
+      }
     } catch {}
-  }, [fotos]);
+
+    return [];
+  }
+
+  const [fotos, setFotos] = useState<FotoItem[]>(() => {
+    return loadUnitFotos(poloNome);
+  });
 
   const [atividade, setAtividade] = useState(atividadesPolo[0]);
   const [titulo, setTitulo] = useState("");
@@ -77,21 +90,35 @@ export function PoloGaleriaPage() {
         const base64Url = event.target?.result as string;
         newItems.push({
           id: `f-${Date.now()}-${index}`,
+          polo: poloNome,
           atividade: atividade || atividadesPolo[0] || "Jiu Jitsu",
           titulo: titulo ? `${titulo} (${index + 1})` : file.name.replace(/\.[^/.]+$/, ""),
           url: base64Url || "",
           dataUpload: new Date().toLocaleDateString("pt-BR"),
-        });
+        } as any);
 
         processed++;
         if (processed === selectedFiles.length) {
-          setFotos((prev) => [...newItems, ...prev]);
+          setFotos((prev) => {
+            const updated = [...newItems, ...prev];
+            const cleanUnit = poloNome.toLowerCase().trim();
+            try {
+              localStorage.setItem(`cufa_galeria_${cleanUnit}`, JSON.stringify(updated));
+
+              const storedAll = localStorage.getItem("cufa_polo_galeria_fotos") || localStorage.getItem("cufa_galeria_fotos");
+              let allList: any[] = storedAll ? JSON.parse(storedAll) : [];
+              allList = [...newItems, ...allList.filter((f: any) => !newItems.some((n) => n.id === f.id))];
+              localStorage.setItem("cufa_polo_galeria_fotos", JSON.stringify(allList));
+              localStorage.setItem("cufa_galeria_fotos", JSON.stringify(allList));
+            } catch {}
+            return updated;
+          });
           setIsUploading(false);
           setModalOpen(false);
           setTitulo("");
           setSelectedFiles(null);
           toast.success(`${processed} foto(s) adicionada(s) à galeria!`, {
-            description: `Exibidas e salvas permanentemente para os alunos de ${atividade}.`,
+            description: `Exibidas e salvas para os alunos de ${atividade} no ${poloNome}.`,
           });
         }
       };
