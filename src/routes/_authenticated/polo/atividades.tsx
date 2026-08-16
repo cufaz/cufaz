@@ -276,11 +276,26 @@ export function PoloAtividadesPage() {
         {/* Grid de Cards de Atividades Separadas por Turma */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {atividadesFiltradas.map((ativ) => {
-            const pMatch = solicitacoes.find(
-              (s) =>
+            const pMatch = solicitacoes.find((s) => {
+              const ativMatch =
                 cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
-                cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome))
-            );
+                cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome));
+              if (!ativMatch) return false;
+
+              if (s.turmaNome) {
+                const sTurmaClean = cleanStr(s.turmaNome);
+                const ativTurmaClean = cleanStr(ativ.turmaNome);
+
+                if (sTurmaClean.includes("2") || sTurmaClean.includes("t2") || sTurmaClean.includes("tardeb")) {
+                  return ativTurmaClean.includes("2");
+                }
+                if (sTurmaClean.includes("1") || sTurmaClean.includes("t1") || sTurmaClean.includes("tardea")) {
+                  return ativTurmaClean.includes("1");
+                }
+              }
+
+              return cleanStr(ativ.turmaNome).includes("1");
+            });
 
             return (
               <Card key={ativ.id} className="border-border shadow-xs flex flex-col justify-between">
@@ -369,20 +384,18 @@ export function PoloAtividadesPage() {
                     <div>
                       <span className="text-muted-foreground block text-[11px]">Turmas</span>
                       <span className="font-extrabold text-foreground text-sm flex items-center gap-1">
-                        <Clock className="size-3.5 text-primary" /> {ativ.turmas.length} turmas
+                        <Clock className="size-3.5 text-primary" /> 1 turma
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <span className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground">
-                      Turmas e Horários
+                      Turma e Horário
                     </span>
-                    {ativ.turmas.map((t: string) => (
-                      <div key={t} className="p-2 rounded-lg bg-background border border-border text-foreground font-medium">
-                        {t}
-                      </div>
-                    ))}
+                    <div className="p-2 rounded-lg bg-background border border-border text-foreground font-medium">
+                      {ativ.turmaDetalhe}
+                    </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-950 space-y-1">
