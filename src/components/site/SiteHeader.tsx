@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, ShieldCheck, Download } from "lucide-react";
+import { Menu, X, ShieldCheck, Download, LogIn } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
@@ -133,6 +133,18 @@ export function SiteHeader() {
       {menu && (
         <nav className="border-t border-border/60 px-4 py-3 lg:hidden">
           <ul className="grid gap-1">
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenu(false);
+                  setLogin(true);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-extrabold text-primary-foreground bg-brand-gradient shadow-brand mb-2"
+              >
+                <LogIn className="size-4" /> Entrar
+              </button>
+            </li>
             {links.map((l) => (
               <li key={l.href}>
                 {l.isAdm ? (
@@ -168,18 +180,6 @@ export function SiteHeader() {
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-primary"
               >
                 <Download className="size-4" /> Instalar App no Celular
-              </button>
-            </li>
-            <li className="sm:hidden">
-              <button
-                type="button"
-                onClick={() => {
-                  setMenu(false);
-                  setLogin(true);
-                }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-primary"
-              >
-                Entrar
               </button>
             </li>
           </ul>

@@ -61,7 +61,7 @@ function ProfessorChamadaPage() {
               listMap.set(key, {
                 id: a.id || `aluno-cad-${idx}`,
                 nome: a.nome,
-                presente: true,
+                presente: false,
                 presencaPct: "100%",
               });
             }
@@ -82,7 +82,7 @@ function ProfessorChamadaPage() {
               listMap.set(key, {
                 id: a.id || `aluno-polo-${idx}`,
                 nome: a.nome,
-                presente: true,
+                presente: false,
                 presencaPct: "100%",
               });
             }
@@ -94,9 +94,27 @@ function ProfessorChamadaPage() {
     return Array.from(listMap.values());
   }
 
+  function syncHistory(updatedAlunos: any[]) {
+    try {
+      const stored = localStorage.getItem("cufa_professor_chamadas_history");
+      let history: any[] = stored ? JSON.parse(stored) : [];
+      const session = {
+        id: `chamada-${Date.now()}`,
+        data: dataChamada,
+        turma: turmaSelecionada,
+        profEmail,
+        totalAlunos: updatedAlunos.length,
+        totalPresentes: updatedAlunos.filter((a) => a.presente).length,
+      };
+      history.push(session);
+      localStorage.setItem("cufa_professor_chamadas_history", JSON.stringify(history));
+      window.dispatchEvent(new Event("cufa_chamadas_updated"));
+    } catch {}
+  }
+
   function togglePresenca(id: string) {
-    setAlunos((prev) =>
-      prev.map((a) => {
+    setAlunos((prev) => {
+      const next = prev.map((a) => {
         if (a.id === id) {
           const novoEstado = !a.presente;
           toast.success(
@@ -108,12 +126,18 @@ function ProfessorChamadaPage() {
           return { ...a, presente: novoEstado };
         }
         return a;
-      })
-    );
+      });
+      syncHistory(next);
+      return next;
+    });
   }
 
   function marcarTodos(presente: boolean) {
-    setAlunos((prev) => prev.map((a) => ({ ...a, presente })));
+    setAlunos((prev) => {
+      const next = prev.map((a) => ({ ...a, presente }));
+      syncHistory(next);
+      return next;
+    });
     toast.success(
       presente
         ? "Todos os alunos foram marcados como Presentes."

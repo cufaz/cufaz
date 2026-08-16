@@ -59,6 +59,8 @@ export interface AlunoRecord {
   docResData?: string | null;
   foto?: string | null;
   dataCriacao?: string;
+  frequenciaGeral?: string;
+  qtdAtividades?: number;
 }
 
 function cleanStr(str: string = "") {
@@ -99,17 +101,33 @@ function GestorAlunosDashboardPage() {
             let userMod = cad.modalidade || "Jiu Jitsu";
             let userTurma = cad.turma || "Turma 1 - Tarde";
 
+            let totalInsc = 1;
+            let freqCalc = "100% Presença";
+
             try {
               const inscStored = localStorage.getItem(`cufa_aluno_inscricoes_${cEmail}`);
               if (inscStored) {
                 const inscList = JSON.parse(inscStored);
                 if (Array.isArray(inscList) && inscList.length > 0) {
-                  const activeInsc = inscList.find((i: any) => i.status === "ativa") || inscList[0];
+                  const activeList = inscList.filter((i: any) => i.status === "ativa");
+                  totalInsc = Math.max(activeList.length, 1);
+                  const activeInsc = activeList[0] || inscList[0];
                   if (activeInsc) {
                     userPolo = activeInsc.poloNome || userPolo;
                     userMod = activeInsc.atividadeNome || userMod;
                     userTurma = activeInsc.turmaNome || userTurma;
                   }
+                }
+              }
+            } catch {}
+
+            try {
+              const freqStored = localStorage.getItem(`cufa_aluno_frequencia_${cEmail}`);
+              if (freqStored) {
+                const freqList = JSON.parse(freqStored);
+                if (Array.isArray(freqList) && freqList.length > 0) {
+                  const pres = freqList.filter((f: any) => f.presente).length;
+                  freqCalc = `${Math.round((pres / freqList.length) * 100)}% Presença`;
                 }
               }
             } catch {}
@@ -138,6 +156,8 @@ function GestorAlunosDashboardPage() {
                 docResData: cad.docResData,
                 foto: fUser || null,
                 dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
+                frequenciaGeral: freqCalc,
+                qtdAtividades: totalInsc,
               });
             }
           });
@@ -437,6 +457,7 @@ DOCUMENTOS ANEXADOS:
                       <th className="p-3.5">Oficina & Turma</th>
                       <th className="p-3.5">Responsável & Família</th>
                       <th className="p-3.5">Escola & Turno</th>
+                      <th className="p-3.5">Frequência Geral</th>
                       <th className="p-3.5">Documentos (ZIP)</th>
                       <th className="p-3.5 text-right">Ações</th>
                     </tr>
@@ -488,6 +509,19 @@ DOCUMENTOS ANEXADOS:
                           <div>
                             <p className="font-bold text-foreground text-xs">{aluno.nomeEscola || "Não informada"}</p>
                             <p className="text-[10px] text-muted-foreground">{aluno.anoEscolar} • {aluno.turnoEscolar}</p>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <div className="space-y-0.5">
+                            <Badge className="bg-emerald-500/10 text-emerald-600 font-extrabold border-emerald-500/20 text-xs">
+                              {aluno.frequenciaGeral || "100% Presença"}
+                            </Badge>
+                            {aluno.qtdAtividades && aluno.qtdAtividades > 1 ? (
+                              <span className="text-[10px] text-muted-foreground font-semibold block">
+                                Soma de {aluno.qtdAtividades} oficinas
+                              </span>
+                            ) : null}
                           </div>
                         </td>
 
