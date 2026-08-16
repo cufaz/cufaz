@@ -73,8 +73,22 @@ export function PoloResponsavelShell({
   });
 
   const [responsavelFoto, setResponsavelFoto] = useState(() => {
-    return localStorage.getItem(`cufa_perfil_foto_${loggedUserEmail}`) || "";
+    return localStorage.getItem(`cufa_perfil_foto_${loggedUserEmail}`) || localStorage.getItem("cufa_perfil_foto") || "";
   });
+
+  useEffect(() => {
+    function syncFoto() {
+      const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+      const f = localStorage.getItem(`cufa_perfil_foto_${email}`) || localStorage.getItem("cufa_perfil_foto") || "";
+      setResponsavelFoto(f);
+    }
+    window.addEventListener("cufa_perfil_foto_updated", syncFoto);
+    window.addEventListener("storage", syncFoto);
+    return () => {
+      window.removeEventListener("cufa_perfil_foto_updated", syncFoto);
+      window.removeEventListener("storage", syncFoto);
+    };
+  }, []);
 
   const [pendingProfCount, setPendingProfCount] = useState(0);
 

@@ -20,7 +20,30 @@ export const Route = createFileRoute("/_authenticated/polo/atividades")({
   component: PoloAtividadesPage,
 });
 
-function PoloAtividadesPage() {
+function cleanStr(str: string = "") {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao[] {
+  const seen = new Set<string>();
+  const cleanList: ProfessorSolicitacao[] = [];
+
+  for (const item of list) {
+    const key = `${cleanStr(item.professorNome)}-${cleanStr(item.atividadeNome)}-${cleanStr(item.poloNome)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      cleanList.push(item);
+    }
+  }
+  return cleanList;
+}
+
+export function PoloAtividadesPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [filtroOficina, setFiltroOficina] = useState("todas");
   const [dataDe, setDataDe] = useState("");
@@ -37,7 +60,12 @@ function PoloAtividadesPage() {
   const [solicitacoes, setSolicitacoes] = useState<ProfessorSolicitacao[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const list = JSON.parse(stored);
+        const deduped = deduplicateRequests(list);
+        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(deduped));
+        return deduped;
+      }
     } catch {}
     return [];
   });
@@ -46,7 +74,10 @@ function PoloAtividadesPage() {
     function syncProfessores() {
       try {
         const stored = localStorage.getItem("cufa_professores_solicitacoes");
-        if (stored) setSolicitacoes(JSON.parse(stored));
+        if (stored) {
+          const deduped = deduplicateRequests(JSON.parse(stored));
+          setSolicitacoes(deduped);
+        }
       } catch {}
     }
 
@@ -225,9 +256,11 @@ function PoloAtividadesPage() {
           {atividadesFiltradas.map((ativ) => {
             const pMatch = solicitacoes.find(
               (s) =>
-                s.atividadeNome.toLowerCase() === ativ.nome.toLowerCase() &&
-                (s.poloNome.toLowerCase().includes(poloNome.toLowerCase()) ||
-                  poloNome.toLowerCase().includes(s.poloNome.toLowerCase()))
+                (cleanStr(s.atividadeNome).includes(cleanStr(ativ.nome)) ||
+                  cleanStr(ativ.nome).includes(cleanStr(s.atividadeNome))) &&
+                (!s.poloNome ||
+                  cleanStr(s.poloNome).includes(cleanStr(poloNome)) ||
+                  cleanStr(poloNome).includes(cleanStr(s.poloNome)))
             );
 
             return (

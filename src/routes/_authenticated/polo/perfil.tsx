@@ -49,6 +49,8 @@ export function PoloPerfilPage() {
         setFotoUrl(base64);
         try {
           localStorage.setItem("cufa_perfil_foto", base64);
+          localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, base64);
+          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
         } catch {}
         toast.success("Foto de perfil atualizada!");
       };
@@ -69,8 +71,11 @@ export function PoloPerfilPage() {
     setPerfil(novoPerfil);
     try {
       localStorage.setItem("cufa_responsavel_perfil", JSON.stringify(novoPerfil));
-      localStorage.setItem("cufa_perfil_foto", fotoUrl);
-      window.dispatchEvent(new Event("cufa_perfil_updated"));
+      if (fotoUrl) {
+        localStorage.setItem("cufa_perfil_foto", fotoUrl);
+        localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, fotoUrl);
+      }
+      window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
     } catch {}
 
     toast.success("Perfil do Responsável atualizado com sucesso!", {
