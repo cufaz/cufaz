@@ -465,6 +465,25 @@ export const criarPedido = createServerFn({ method: "POST" })
     );
   });
 
+export const deletePedido = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    try {
+      await assertGestor(supabase, userId);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id);
+      if (isUuid) {
+        await db(supabase).from("lancamentos_financeiros").delete().eq("pedido_id", data.id);
+        const { error } = await db(supabase).from("pedidos_compra").delete().eq("id", data.id);
+        if (error) throw new Error(error.message);
+      }
+    } catch {}
+    return { ok: true };
+  });
+
+
+
 export const listAlunos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

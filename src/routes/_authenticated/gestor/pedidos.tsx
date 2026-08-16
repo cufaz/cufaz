@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Loader2, Check, X, Plus, Pencil, Trash2, Settings, Tag } from "lucide-react";
 import { toast } from "sonner";
 
-import { listPedidos, decidirPedido, criarPedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
+import { listPedidos, decidirPedido, criarPedido, deletePedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ function PedidosPage() {
   const fetchPedidos = useServerFn(listPedidos);
   const decidir = useServerFn(decidirPedido);
   const criar = useServerFn(criarPedido);
+  const excluir = useServerFn(deletePedido);
   const fetchPolos = useServerFn(listPolos);
   const fetchFin = useServerFn(getFinanceiro);
 
@@ -64,6 +65,17 @@ function PedidosPage() {
     },
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
+
+  const mExcluir = useMutation({
+    mutationFn: (v: { id: string }) => excluir({ data: v }),
+    onSuccess: () => {
+      toast.success("Pedido excluído de todo o sistema");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error("Erro ao excluir", { description: e.message }),
+  });
+
+
 
   const BASE_CATEGORIAS = [
     "Pessoal",
@@ -351,6 +363,36 @@ function PedidosPage() {
     toast.success(novoStatus === "reprovado" ? "Pedido reprovado!" : "Pedido atualizado!");
   }
 
+  const [pedidoExcluir, setPedidoExcluir] = useState<Row | null>(null);
+
+  function handleExcluirPedido() {
+    const p = pedidoExcluir;
+    if (!p) return;
+    const pId = String(p['id']);
+    const itemNome = String(p['item'] ?? p['descricao'] ?? "");
+
+    const updated = localPedidos.filter((l) => String(l['id']) !== pId);
+    setLocalPedidos(updated);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
+      // remove lançamentos financeiros vinculados a este pedido
+      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+      const listLanc: Row[] = storedLanc ? JSON.parse(storedLanc) : [];
+      const limpos = listLanc.filter((l) => {
+        if (String(l['id']) === `lanc-ped-${pId}`) return false;
+        const desc = String(l['descricao'] ?? "");
+        if (itemNome && desc === `[Compra Aprovada] ${itemNome}`) return false;
+        return true;
+      });
+      localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(limpos));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+      window.dispatchEvent(new Event("cufa_lancamentos_updated"));
+    } catch {}
+
+    mExcluir.mutate({ id: pId });
+    setPedidoExcluir(null);
+  }
+
   const serverPedidos: Row[] = data ?? [];
   const pedidos: Row[] = [
     ...localPedidos,
@@ -442,6 +484,15 @@ function PedidosPage() {
                         onClick={() => openEditModal(p)}
                       >
                         <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Excluir pedido"
+                        onClick={() => setPedidoExcluir(p)}
+                      >
+                        <Trash2 className="size-3.5" />
                       </Button>
                     </div>
                     <p className="text-[11px] text-muted-foreground font-medium">
@@ -857,6 +908,30 @@ function PedidosPage() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(pedidoExcluir)} onOpenChange={(v) => !v && setPedidoExcluir(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir pedido de compra</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir <span className="font-bold text-foreground">{String(pedidoExcluir?.['item'] ?? "")}</span>?
+            O pedido será removido de todo o sistema, incluindo lançamentos no financeiro, relatórios e cálculos. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPedidoExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-destructive font-bold text-white hover:bg-destructive/90"
+              onClick={handleExcluirPedido}
+              disabled={mExcluir.isPending}
+            >
+              {mExcluir.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Trash2 className="mr-1 size-4" />}
+              Excluir definitivamente
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </GestorShell>
