@@ -74,8 +74,8 @@ const defaultProfessoresBase: ProfessorRecord[] = [
     polo: "Complexo da Penha",
     modalidade: "Jiu Jitsu",
     turma: "Turma 1 - Tarde (14h - 16h)",
-    alunosCount: 40,
-    frequencia: 98.5,
+    alunosCount: 0,
+    frequencia: 0,
     status: "aprovado",
     dataCriacao: "2026-08-14",
   },
@@ -118,8 +118,8 @@ function ProfessoresDashboardPage() {
                 polo: solic.poloNome || "Complexo da Penha",
                 modalidade: solic.atividadeNome || "Oficina Esportiva",
                 turma: solic.turmaNome || "Turma 1 - Tarde",
-                alunosCount: 40,
-                frequencia: 98.0,
+                alunosCount: 0,
+                frequencia: 0,
                 status: solic.status === "aprovado" ? "aprovado" : "pendente",
                 foto: fUser || null,
                 dataCriacao: solic.dataSolicitacao || new Date().toISOString().slice(0, 10),
@@ -165,8 +165,8 @@ function ProfessoresDashboardPage() {
                 polo: "Complexo da Penha",
                 modalidade: "Jiu Jitsu",
                 turma: "Turma 1 - Tarde",
-                alunosCount: 40,
-                frequencia: 98.0,
+                alunosCount: 0,
+                frequencia: 0,
                 status: "aprovado",
                 foto: fUser || null,
                 dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
@@ -371,11 +371,13 @@ startxref
           <Card className="border-border shadow-xs bg-card">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Alunos Impactados</p>
-                <p className="text-2xl font-black text-primary mt-0.5">{totalAlunos}</p>
-                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">Soma de todas as turmas</span>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Alunos Matriculados</p>
+                <p className="text-2xl font-black text-foreground mt-0.5">{totalAlunos}</p>
+                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">
+                  {totalAlunos > 0 ? "Alunos nas turmas ativas" : "Sem matrículas registradas"}
+                </span>
               </div>
-              <div className="size-11 rounded-2xl bg-brand-gradient text-white flex items-center justify-center font-black shadow-brand">
+              <div className="size-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black">
                 <Users className="size-6" />
               </div>
             </CardContent>
@@ -385,9 +387,11 @@ startxref
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Frequência Média</p>
-                <p className="text-2xl font-black text-emerald-600 mt-0.5">{freqMedia}%</p>
-                <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1 mt-1">
-                  <TrendingUp className="size-3" /> Presença excelente
+                <p className="text-2xl font-black text-foreground mt-0.5">
+                  {Number(freqMedia) > 0 ? `${freqMedia}%` : "-"}
+                </p>
+                <span className="text-[10px] text-muted-foreground font-medium mt-1 block">
+                  {Number(freqMedia) > 0 ? "Presença acumulada" : "Aguardando registros de chamadas"}
                 </span>
               </div>
               <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-black">
@@ -511,14 +515,20 @@ startxref
 
                         <td className="p-3.5">
                           <span className="font-extrabold text-foreground text-xs flex items-center gap-1">
-                            <Users className="size-3.5 text-primary" /> {prof.alunosCount} alunos
+                            <Users className="size-3.5 text-muted-foreground" /> {prof.alunosCount > 0 ? `${prof.alunosCount} alunos` : "0 alunos"}
                           </span>
                         </td>
 
                         <td className="p-3.5">
-                          <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-xs">
-                            {prof.frequencia}% Presença
-                          </Badge>
+                          {prof.frequencia && prof.frequencia > 0 ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-xs">
+                              {prof.frequencia}% Presença
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground font-medium text-[11px] border-border bg-muted/20">
+                              Sem registros
+                            </Badge>
+                          )}
                         </td>
 
                         <td className="p-3.5">
