@@ -204,7 +204,32 @@ export function AtividadesPage() {
   const [dataFim, setDataFim] = useState<string>("2026-08-31");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const polos: Row[] = data?.polos ?? [];
+  const defaultAllPolos: Row[] = [
+    { id: "polo-penha", nome: "Complexo da Penha" },
+    { id: "polo-madureira", nome: "Viaduto de Madureira" },
+    { id: "polo-paraisopolis", nome: "Paraisópolis" },
+    { id: "polo-heliopolis", nome: "Heliópolis" },
+    { id: "polo-cidade-de-deus", nome: "Cidade de Deus" },
+    { id: "polo-rocinha", nome: "Rocinha" },
+    { id: "polo-vila-cruzeiro", nome: "Vila Cruzeiro" },
+    { id: "polo-manguinhos", nome: "Manguinhos" },
+    { id: "polo-alemao", nome: "Complexo do Alemão" },
+    { id: "polo-realengo", nome: "Realengo" },
+    { id: "polo-bangu", nome: "Bangu" },
+  ];
+
+  const polos: Row[] = (() => {
+    const fetched = (data?.polos as Row[]) ?? [];
+    const seen = new Set(fetched.map((p) => String(p['nome']).toLowerCase()));
+    const merged = [...fetched];
+    defaultAllPolos.forEach((p) => {
+      if (!seen.has(String(p['nome']).toLowerCase())) {
+        merged.push(p);
+      }
+    });
+    return merged;
+  })();
+
   const atividades: Row[] = data?.atividades ?? [];
 
   // Filter activities dynamically by multi-polo, date, and search term

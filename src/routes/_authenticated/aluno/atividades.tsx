@@ -10,6 +10,14 @@ import {
   Search,
   Loader2,
   PlusCircle,
+  FileText,
+  Info,
+  Mail,
+  Phone,
+  Instagram,
+  Linkedin,
+  Facebook,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AlunoShell } from "@/components/aluno/AlunoShell";
@@ -17,6 +25,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InscricaoAluno } from "./index";
 
 export const Route = createFileRoute("/_authenticated/aluno/atividades")({
@@ -30,8 +46,15 @@ export interface VitrineCardItem {
   turmaNome: string;
   horario: string;
   professorNome?: string | null | undefined;
+  professorEmail?: string;
+  professorTelefone?: string;
+  professorFoto?: string | null;
+  professorBio?: string;
   vagasTotais: number;
   alunosMatriculados: number;
+  descricao?: string;
+  faixaEtaria?: string;
+  requisitos?: string;
 }
 
 function cleanStr(str: string = "") {
@@ -51,7 +74,20 @@ function VitrineAtividadesAlunoPage() {
   const [myInscricoes, setMyInscricoes] = useState<string[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  // Default Vitrine Items across Polos
+  // Professor Details Modal State
+  const [selectedProfModal, setSelectedProfModal] = useState<{
+    nome: string;
+    oficina: string;
+    polo: string;
+    email: string;
+    telefone: string;
+    foto?: string | null;
+    bio: string;
+    instagram?: string;
+    linkedin?: string;
+  } | null>(null);
+
+  // Expanded Vitrine Items across all CUFA Polos
   const defaultVitrine: VitrineCardItem[] = [
     {
       id: "v-penha-jiu-t1",
@@ -60,8 +96,14 @@ function VitrineAtividadesAlunoPage() {
       turmaNome: "Turma 1 - Tarde (14h - 16h)",
       horario: "Seg, Quat e Sex - 14:00 às 16:00",
       professorNome: "Prof.ª Santana Silva",
+      professorEmail: "santana@cufa.com.br",
+      professorTelefone: "(11) 94830-0321",
+      professorBio: "Faixa preta de Jiu Jitsu com mais de 8 anos de experiência no ensino de artes marciais e valores sociais para jovens e crianças da comunidade.",
       vagasTotais: 40,
       alunosMatriculados: 0,
+      descricao: "Treinamentos práticos de arte marcial, foco em defesa pessoal, disciplina, respeito e desenvolvimento físico.",
+      faixaEtaria: "06 a 17 anos",
+      requisitos: "Atestado médico e kimono básico",
     },
     {
       id: "v-penha-jiu-t2",
@@ -70,8 +112,14 @@ function VitrineAtividadesAlunoPage() {
       turmaNome: "Turma 2 - Tarde (16h - 18h)",
       horario: "Seg, Quat e Sex - 16:00 às 18:00",
       professorNome: "Prof.ª Santana Silva",
+      professorEmail: "santana@cufa.com.br",
+      professorTelefone: "(11) 94830-0321",
+      professorBio: "Faixa preta de Jiu Jitsu com mais de 8 anos de experiência no ensino de artes marciais e valores sociais para jovens e crianças da comunidade.",
       vagasTotais: 40,
       alunosMatriculados: 0,
+      descricao: "Treinamentos práticos de arte marcial, foco em defesa pessoal, disciplina, respeito e desenvolvimento físico.",
+      faixaEtaria: "06 a 17 anos",
+      requisitos: "Atestado médico e kimono básico",
     },
     {
       id: "v-penha-ingles",
@@ -82,6 +130,9 @@ function VitrineAtividadesAlunoPage() {
       professorNome: "Aguardando Instrutor",
       vagasTotais: 30,
       alunosMatriculados: 0,
+      descricao: "Aulas de conversação básica, gramática contextualizada e preparação de jovens para oportunidades no mercado de trabalho.",
+      faixaEtaria: "08 a 18 anos",
+      requisitos: "Caderno e caneta",
     },
     {
       id: "v-madureira-natacao",
@@ -92,6 +143,9 @@ function VitrineAtividadesAlunoPage() {
       professorNome: "Aguardando Instrutor",
       vagasTotais: 25,
       alunosMatriculados: 0,
+      descricao: "Aulas de natação para iniciantes e avançados, desenvolvimento de resistência respiratória e nado seguro.",
+      faixaEtaria: "06 a 16 anos",
+      requisitos: "Touca, óculos de natação e atestado de aptidão física",
     },
     {
       id: "v-madureira-karate",
@@ -102,6 +156,9 @@ function VitrineAtividadesAlunoPage() {
       professorNome: "Aguardando Instrutor",
       vagasTotais: 35,
       alunosMatriculados: 0,
+      descricao: "Treinamento tradicional de Karatê, exercícios de cata, defesa pessoal e coordenação motora.",
+      faixaEtaria: "07 a 17 anos",
+      requisitos: "Roupas esportivas confortáveis",
     },
     {
       id: "v-paraisopolis-costura",
@@ -112,6 +169,9 @@ function VitrineAtividadesAlunoPage() {
       professorNome: "Aguardando Instrutor",
       vagasTotais: 20,
       alunosMatriculados: 0,
+      descricao: "Capacitação técnica profissional em modelagem, corte, costura reta e confecção de peças de vestuário.",
+      faixaEtaria: "A partir de 14 anos",
+      requisitos: "Vontade de aprender e dedicação prática",
     },
     {
       id: "v-paraisopolis-futsal",
@@ -122,6 +182,35 @@ function VitrineAtividadesAlunoPage() {
       professorNome: "Aguardando Instrutor",
       vagasTotais: 40,
       alunosMatriculados: 0,
+      descricao: "Fundamentos do futebol de salão, trabalho em equipe, condicionamento aeróbico e torneios comunitários.",
+      faixaEtaria: "06 a 17 anos",
+      requisitos: "Tênis de futsal e atestado de saúde",
+    },
+    {
+      id: "v-heliopolis-basquete",
+      nome: "Basquete",
+      polo: "Heliópolis",
+      turmaNome: "Turma 1 - Tarde (16h - 18h)",
+      horario: "Seg e Quat - 16:00 às 18:00",
+      professorNome: "Aguardando Instrutor",
+      vagasTotais: 30,
+      alunosMatriculados: 0,
+      descricao: "Fundamentos de passe, arremesso, táticas de quadra e torneios esportivos comunitários.",
+      faixaEtaria: "08 a 17 anos",
+      requisitos: "Calçado esportivo",
+    },
+    {
+      id: "v-cidade-de-deus-informatica",
+      nome: "Informática & Tecnologia",
+      polo: "Cidade de Deus",
+      turmaNome: "Turma 1 - Manhã (10h - 12h)",
+      horario: "Ter e Qui - 10:00 às 12:00",
+      professorNome: "Aguardando Instrutor",
+      vagasTotais: 25,
+      alunosMatriculados: 0,
+      descricao: "Lógica de programação básica, ferramentas de produtividade, navegação segura na internet e criação de projetos digitais.",
+      faixaEtaria: "10 a 18 anos",
+      requisitos: "Nenhum requisito prévio",
     },
   ];
 
@@ -148,6 +237,27 @@ function VitrineAtividadesAlunoPage() {
     };
   }, []);
 
+  function handleOpenProfModal(item: VitrineCardItem) {
+    if (!item.professorNome || item.professorNome.includes("Aguardando")) {
+      toast.info("Instrutor em fase de atribuição pela equipe técnica.");
+      return;
+    }
+
+    const fUser = localStorage.getItem(`cufa_perfil_foto_${item.professorEmail}`) || localStorage.getItem("cufa_perfil_foto");
+
+    setSelectedProfModal({
+      nome: item.professorNome,
+      oficina: item.nome,
+      polo: item.polo,
+      email: item.professorEmail || "santana@cufa.com.br",
+      telefone: item.professorTelefone || "(11) 94830-0321",
+      foto: fUser || null,
+      bio: item.professorBio || "Instrutor credenciado da rede de oficinas comunitárias da CUFA.",
+      instagram: "@prof.santana.jiujitsu",
+      linkedin: "linkedin.com/in/santana-silva-cufa",
+    });
+  }
+
   function handleInscrever(item: VitrineCardItem) {
     if (!alunoEmail) {
       toast.error("Faça login para se inscrever.");
@@ -160,7 +270,6 @@ function VitrineAtividadesAlunoPage() {
         const stored = localStorage.getItem(`cufa_aluno_inscricoes_${alunoEmail}`);
         let list: InscricaoAluno[] = stored ? JSON.parse(stored) : [];
 
-        // Check if already enrolled
         if (list.some((i) => i.atividadeId === item.id && i.status === "ativa")) {
           toast.info("Você já está matriculado nesta turma!");
           setSubmittingId(null);
@@ -213,7 +322,7 @@ function VitrineAtividadesAlunoPage() {
       description="Escolha livremente as oficinas e modalidades de seu interesse em qualquer um dos polos oficiais da CUFA."
     >
       <div className="space-y-6">
-        {/* Barra de Filtros Inteligentes */}
+        {/* Barra de Filtros Inteligentes com TODOS os Polos e TODAS as Oficinas */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
@@ -231,12 +340,20 @@ function VitrineAtividadesAlunoPage() {
               <select
                 value={filtroPolo}
                 onChange={(e) => setFiltroPolo(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
+                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-56"
               >
                 <option value="todos">Todos os Polos</option>
                 <option value="penha">Complexo da Penha</option>
                 <option value="madureira">Viaduto de Madureira</option>
                 <option value="paraisopolis">Paraisópolis</option>
+                <option value="heliopolis">Heliópolis</option>
+                <option value="cidade-de-deus">Cidade de Deus</option>
+                <option value="rocinha">Rocinha</option>
+                <option value="vila-cruzeiro">Vila Cruzeiro</option>
+                <option value="manguinhos">Manguinhos</option>
+                <option value="complexo-do-alemao">Complexo do Alemão</option>
+                <option value="realengo">Realengo</option>
+                <option value="bangu">Bangu</option>
               </select>
             </div>
 
@@ -245,7 +362,7 @@ function VitrineAtividadesAlunoPage() {
               <select
                 value={filtroOficina}
                 onChange={(e) => setFiltroOficina(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
+                className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-56"
               >
                 <option value="todas">Todas as Oficinas</option>
                 <option value="jiu">Jiu Jitsu</option>
@@ -254,6 +371,11 @@ function VitrineAtividadesAlunoPage() {
                 <option value="karate">Karatê</option>
                 <option value="costura">Corte e Costura</option>
                 <option value="futsal">Futsal</option>
+                <option value="basquete">Basquete</option>
+                <option value="capoeira">Capoeira</option>
+                <option value="teatro">Teatro & Dança</option>
+                <option value="informatica">Informática & Tecnologia</option>
+                <option value="musica">Música & Percussão</option>
               </select>
             </div>
           </div>
@@ -264,6 +386,7 @@ function VitrineAtividadesAlunoPage() {
           {vitrineFiltrada.map((item) => {
             const isEnrolled = myInscricoes.includes(item.id);
             const isSubmitting = submittingId === item.id;
+            const hasProf = item.professorNome && !item.professorNome.includes("Aguardando");
 
             return (
               <Card key={item.id} className="border-border bg-card shadow-xs hover:border-primary/50 transition-colors flex flex-col justify-between">
@@ -282,20 +405,52 @@ function VitrineAtividadesAlunoPage() {
                 </CardHeader>
 
                 <CardContent className="pt-4 space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                       <Clock className="size-3.5 text-primary shrink-0" />
                       <span>{item.horario}</span>
                     </div>
 
+                    {/* Nome do Professor como Botão Interativo */}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                       <UserCheck className="size-3.5 text-emerald-600 shrink-0" />
-                      <span>Instrutor: <strong>{item.professorNome || "Aguardando Instrutor"}</strong></span>
+                      <span>
+                        Instrutor:{" "}
+                        {hasProf ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenProfModal(item)}
+                            className="font-extrabold text-primary hover:underline hover:text-primary/80 transition-colors cursor-pointer"
+                          >
+                            {item.professorNome}
+                          </button>
+                        ) : (
+                          <strong className="text-muted-foreground">{item.professorNome}</strong>
+                        )}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                       <Users className="size-3.5 text-primary shrink-0" />
                       <span>Vagas: <strong>{item.vagasTotais} vagas disponíveis</strong></span>
+                    </div>
+
+                    {/* Detalhes da Oficina definidos pelo Gestor */}
+                    <div className="pt-2.5 border-t border-border/50 space-y-1.5">
+                      <p className="text-[11px] font-bold text-foreground flex items-center gap-1">
+                        <Info className="size-3 text-primary" /> Detalhes da Oficina:
+                      </p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {item.descricao || "Oficina focada na formação cidadã, disciplina e aperfeiçoamento de habilidades."}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <Badge variant="outline" className="text-[10px] border-border bg-muted/30 text-muted-foreground font-semibold">
+                          Faixa Etária: {item.faixaEtaria || "06 a 17 anos"}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] border-border bg-muted/30 text-muted-foreground font-semibold">
+                          Requisitos: {item.requisitos || "Atestado de aptidão física"}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
@@ -332,6 +487,79 @@ function VitrineAtividadesAlunoPage() {
           })}
         </div>
       </div>
+
+      {/* Modal com Informações Detalhadas do Professor */}
+      <Dialog open={!!selectedProfModal} onOpenChange={(v) => !v && setSelectedProfModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          {selectedProfModal && (
+            <>
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-lg font-black flex items-center gap-2">
+                  <GraduationCap className="size-5 text-primary" />
+                  <span>Ficha do Instrutor</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Informações profissionais e redes de contato do professor responsável.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/40 border border-border">
+                  <Avatar className="size-14 border-2 border-primary/40 shadow-xs">
+                    {selectedProfModal.foto && (
+                      <AvatarImage src={selectedProfModal.foto} alt={selectedProfModal.nome} className="object-cover" />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
+                      {selectedProfModal.nome.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-foreground">{selectedProfModal.nome}</h4>
+                    <p className="text-xs font-bold text-primary">{selectedProfModal.oficina}</p>
+                    <Badge variant="outline" className="mt-1 text-[10px] border-primary/30 text-foreground font-semibold">
+                      {selectedProfModal.polo}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="size-4 text-primary shrink-0" />
+                    <span>E-mail: <strong>{selectedProfModal.email}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="size-4 text-primary shrink-0" />
+                    <span>WhatsApp: <strong>{selectedProfModal.telefone}</strong></span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t border-border">
+                  <span className="text-xs font-extrabold text-foreground block">Biografia / Experiência:</span>
+                  <p className="text-xs text-muted-foreground leading-relaxed bg-card p-3 rounded-xl border border-border">
+                    {selectedProfModal.bio}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <span className="text-xs font-extrabold text-foreground block">Redes Sociais & Portfólio:</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedProfModal.instagram && (
+                      <Badge className="bg-rose-500/10 text-rose-600 font-bold border-rose-500/20 text-xs flex items-center gap-1">
+                        <Instagram className="size-3" /> {selectedProfModal.instagram}
+                      </Badge>
+                    )}
+                    {selectedProfModal.linkedin && (
+                      <Badge className="bg-blue-500/10 text-blue-600 font-bold border-blue-500/20 text-xs flex items-center gap-1">
+                        <Linkedin className="size-3" /> LinkedIn
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AlunoShell>
   );
 }

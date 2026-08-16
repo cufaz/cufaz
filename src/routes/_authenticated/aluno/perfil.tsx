@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
 import { AlunoShell } from "@/components/aluno/AlunoShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -197,7 +198,7 @@ function PerfilAlunoPage() {
             <div className="grid gap-4 sm:grid-cols-2 pt-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome Completo do Aluno</Label>
-                <Input value={nome} onChange={(e) => setNome(e.target.value)} required className="text-xs font-medium" />
+                <Input value={nome} onChange={(e) => setNome(capitalizeWords(e.target.value))} required className="text-xs font-medium" />
               </div>
 
               <div className="space-y-1.5">
@@ -207,7 +208,7 @@ function PerfilAlunoPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Telefone / WhatsApp</Label>
-                <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" className="text-xs font-medium" />
+                <Input value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" className="text-xs font-medium" />
               </div>
 
               <div className="space-y-1.5">
@@ -230,7 +231,7 @@ function PerfilAlunoPage() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5 sm:col-span-1">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome da Escola em que Estuda</Label>
-                <Input value={nomeEscola} onChange={(e) => setNomeEscola(e.target.value)} placeholder="ex.: E.M. Paulo Freire" className="text-xs font-medium" />
+                <Input value={nomeEscola} onChange={(e) => setNomeEscola(capitalizeWords(e.target.value))} placeholder="ex.: E.M. Paulo Freire" className="text-xs font-medium" />
               </div>
 
               <div className="space-y-1.5">
@@ -290,17 +291,17 @@ function PerfilAlunoPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome do Responsável</Label>
-                <Input value={nomeResponsavel} onChange={(e) => setNomeResponsavel(e.target.value)} placeholder="ex.: Maria da Silva" className="text-xs font-medium" />
+                <Input value={nomeResponsavel} onChange={(e) => setNomeResponsavel(capitalizeWords(e.target.value))} placeholder="ex.: Maria da Silva" className="text-xs font-medium" />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">CPF do Responsável</Label>
-                <Input value={cpfResponsavel} onChange={(e) => setCpfResponsavel(e.target.value)} placeholder="000.000.000-00" className="text-xs font-medium" />
+                <Input value={cpfResponsavel} onChange={(e) => setCpfResponsavel(formatCPF(e.target.value))} placeholder="000.000.000-00" className="text-xs font-medium" />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Telefone do Responsável</Label>
-                <Input value={telResponsavel} onChange={(e) => setTelResponsavel(e.target.value)} placeholder="(00) 00000-0000" className="text-xs font-medium" />
+                <Input value={telResponsavel} onChange={(e) => setTelResponsavel(formatPhone(e.target.value))} placeholder="(00) 00000-0000" className="text-xs font-medium" />
               </div>
             </div>
           </CardContent>

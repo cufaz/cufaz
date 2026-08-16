@@ -3,6 +3,7 @@ import { GraduationCap, ShieldCheck, UserRound, ArrowLeft, Upload, Camera } from
 import { toast } from "sonner";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -439,11 +440,11 @@ export function SignupDialog({
               required
               placeholder={perfil === "aluno" ? "Nome do aluno" : "Seu nome"}
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => setNome(capitalizeWords(e.target.value))}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo id="email" label="E-mail" type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+              <Campo id="tel" label="Telefone / WhatsApp" required placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -669,17 +670,17 @@ export function SignupDialog({
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Campo id="qtd-pessoas" label="Pessoas que residem com o aluno" type="number" min={1} placeholder="ex.: 4" value={qtdPessoasResidencia} onChange={(e) => setQtdPessoasResidencia(e.target.value)} />
-                  <Campo id="cpf-resp" label="CPF do Responsável" placeholder="000.000.000-00" value={cpfResponsavel} onChange={(e) => setCpfResponsavel(e.target.value)} />
+                  <Campo id="cpf-resp" label="CPF do Responsável" placeholder="000.000.000-00" value={cpfResponsavel} onChange={(e) => setCpfResponsavel(formatCPF(e.target.value))} />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Campo id="resp-nome" label="Nome do Responsável Legal" placeholder="ex.: Maria da Silva" value={nomeResponsavel} onChange={(e) => setNomeResponsavel(e.target.value)} />
-                  <Campo id="resp-tel" label="Telefone do Responsável" placeholder="(00) 00000-0000" value={telResponsavel} onChange={(e) => setTelResponsavel(e.target.value)} />
+                  <Campo id="resp-nome" label="Nome do Responsável Legal" placeholder="ex.: Maria da Silva" value={nomeResponsavel} onChange={(e) => setNomeResponsavel(capitalizeWords(e.target.value))} />
+                  <Campo id="resp-tel" label="Telefone do Responsável" placeholder="(00) 00000-0000" value={telResponsavel} onChange={(e) => setTelResponsavel(formatPhone(e.target.value))} />
                 </div>
 
                 <div className="border-t border-border pt-4 mt-2 space-y-3">
                   <Label className="text-xs font-bold uppercase tracking-wider text-primary block">
-                    Documentos do Aluno (Opcional)
+                    Documentos do Aluno
                   </Label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <FileUploadBtn
