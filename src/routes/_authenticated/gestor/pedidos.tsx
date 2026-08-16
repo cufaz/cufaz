@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { Loader2, Check, X, Plus } from "lucide-react";
+import { Loader2, Check, X, Plus, Pencil, Trash2, Settings, Tag } from "lucide-react";
 import { toast } from "sonner";
 
 import { listPedidos, decidirPedido, criarPedido, listPolos, getFinanceiro } from "@/lib/gestao.functions";
@@ -111,6 +111,9 @@ function PedidosPage() {
 
   const [novaCatModalOpen, setNovaCatModalOpen] = useState(false);
   const [novaCatNome, setNovaCatNome] = useState("");
+  const [manageCatModalOpen, setManageCatModalOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
 
   function handleCriarCategoria(e: React.FormEvent) {
     e.preventDefault();
@@ -131,6 +134,37 @@ function PedidosPage() {
     setNovaCatModalOpen(false);
   }
 
+  function handleSalvarEdicaoCategoria(idx: number) {
+    if (!editingText.trim()) return;
+    const novoNome = editingText.trim();
+    const atualizadas = [...categorias];
+    atualizadas[idx] = novoNome;
+    const deduplicadas = Array.from(new Set(atualizadas));
+    setCategorias(deduplicadas);
+    try {
+      localStorage.setItem("cufa_categorias_pedidos", JSON.stringify(deduplicadas));
+      window.dispatchEvent(new Event("cufa_categorias_updated"));
+    } catch {}
+    toast.success("Categoria atualizada com sucesso!");
+    setEditingIndex(null);
+    setEditingText("");
+  }
+
+  function handleExcluirCategoria(idx: number) {
+    const catRemovida = categorias[idx];
+    if (categorias.length <= 1) {
+      toast.error("É necessário manter ao menos uma categoria cadastrada.");
+      return;
+    }
+    const atualizadas = categorias.filter((_, i) => i !== idx);
+    setCategorias(atualizadas);
+    try {
+      localStorage.setItem("cufa_categorias_pedidos", JSON.stringify(atualizadas));
+      window.dispatchEvent(new Event("cufa_categorias_updated"));
+    } catch {}
+    toast.success(`Categoria "${catRemovida}" removida!`);
+  }
+
   const pedidos: Row[] = data ?? [];
 
   return (
@@ -139,6 +173,13 @@ function PedidosPage() {
       description="Solicitações dos responsáveis CUFA. Ao aprovar, o valor entra no financeiro como despesa realizada."
       actions={
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="font-bold border-primary text-primary hover:bg-primary/10"
+            onClick={() => setManageCatModalOpen(true)}
+          >
+            <Settings className="mr-1 size-4" /> Gerenciar categorias
+          </Button>
           <Button
             variant="outline"
             className="font-bold border-primary text-primary hover:bg-primary/10"
@@ -332,6 +373,112 @@ function PedidosPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Administrar / Gerenciar Categorias (Anexo 1) */}
+      <Dialog open={manageCatModalOpen} onOpenChange={setManageCatModalOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Settings className="size-5 text-primary" /> Administrar Categorias
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Form para Adicionar rapidamente */}
+          <form onSubmit={handleCriarCategoria} className="flex items-center gap-2 py-2 border-b border-border">
+            <Input
+              placeholder="Nome da nova categoria..."
+              value={novaCatNome}
+              onChange={(e) => setNovaCatNome(e.target.value)}
+              className="font-medium h-9"
+            />
+            <Button type="submit" size="sm" className="bg-brand-gradient font-bold text-white shrink-0">
+              <Plus className="mr-1 size-4" /> Adicionar
+            </Button>
+          </form>
+
+          {/* Listagem de Categorias com Editar / Excluir */}
+          <div className="space-y-2 py-2">
+            <p className="text-xs font-bold uppercase text-muted-foreground">
+              Categorias Cadastradas ({categorias.length})
+            </p>
+
+            <div className="grid gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {categorias.map((cat, idx) => (
+                <div
+                  key={`${cat}-${idx}`}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 hover:border-primary/50 transition-colors"
+                >
+                  {editingIndex === idx ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        className="h-8 font-medium text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="size-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => handleSalvarEdicaoCategoria(idx)}
+                      >
+                        <Check className="size-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="size-8 p-0 text-muted-foreground hover:bg-muted"
+                        onClick={() => setEditingIndex(null)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Tag className="size-3.5 text-primary/70" /> {cat}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="size-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          title="Editar categoria"
+                          onClick={() => {
+                            setEditingIndex(idx);
+                            setEditingText(cat);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="size-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title="Excluir categoria"
+                          onClick={() => handleExcluirCategoria(idx)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-border">
+            <Button
+              variant="outline"
+              className="w-full font-bold"
+              onClick={() => setManageCatModalOpen(false)}
+            >
+              Concluir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </GestorShell>
