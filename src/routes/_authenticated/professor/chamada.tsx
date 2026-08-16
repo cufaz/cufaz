@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ClipboardCheck, CheckCircle2, UserCheck, UserX, Calendar, Search } from "lucide-react";
+import { ClipboardCheck, UserCheck, UserX, Calendar, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ProfessorShell } from "@/components/professor/ProfessorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,31 @@ export const Route = createFileRoute("/_authenticated/professor/chamada")({
 
 function ProfessorChamadaPage() {
   const [dataChamada, setDataChamada] = useState(() => new Date().toISOString().slice(0, 10));
-  const [turmaSelecionada, setTurmaSelecionada] = useState("Jiu Jitsu — Turma Tarde A");
+  const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "").toLowerCase());
+  const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "");
+
+  // Read approved/requested turmas specifically for this professor
+  const turmasDisponiveis = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_professores_solicitacoes");
+      if (stored) {
+        const list = JSON.parse(stored);
+        const minhas = list.filter(
+          (item: any) =>
+            (profEmail && item.email && String(item.email).toLowerCase() === profEmail) ||
+            (profNome && item.professorNome && String(item.professorNome).toLowerCase() === profNome.toLowerCase())
+        );
+
+        if (minhas.length > 0) {
+          return minhas.map((m: any) => `${m.atividadeNome} — ${m.turmaNome || "Turma 1"} (14:00 - 16:00)`);
+        }
+      }
+    } catch {}
+
+    return ["Jiu Jitsu — Turma 1 - Tarde (14:00 - 16:00)"];
+  })();
+
+  const [turmaSelecionada, setTurmaSelecionada] = useState(() => turmasDisponiveis[0] || "Jiu Jitsu — Turma 1");
   const [busca, setBusca] = useState("");
 
   const [alunos, setAlunos] = useState<any[]>(() => {
@@ -100,8 +124,11 @@ function ProfessorChamadaPage() {
               onChange={(e) => setTurmaSelecionada(e.target.value)}
               className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
             >
-              <option value="Jiu Jitsu — Turma Tarde A">Jiu Jitsu — Turma Tarde A (14:00 - 15:30)</option>
-              <option value="Jiu Jitsu — Turma Tarde B">Jiu Jitsu — Turma Tarde B (15:30 - 17:00)</option>
+              {turmasDisponiveis.map((t: string) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -118,10 +145,10 @@ function ProfessorChamadaPage() {
               <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold">
                 Presentes: {totalPresentes} / {alunos.length}
               </Badge>
-              <Button variant="outline" size="sm" onClick={() => marcarTodos(true)} className="text-xs">
+              <Button variant="outline" size="sm" onClick={() => marcarTodos(true)} className="text-xs font-bold">
                 <UserCheck className="size-3.5 mr-1" /> Marcar Todos
               </Button>
-              <Button variant="outline" size="sm" onClick={() => marcarTodos(false)} className="text-xs text-destructive">
+              <Button variant="outline" size="sm" onClick={() => marcarTodos(false)} className="text-xs font-bold text-destructive">
                 <UserX className="size-3.5 mr-1" /> Limpar
               </Button>
             </div>
@@ -144,23 +171,26 @@ function ProfessorChamadaPage() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-border/60 rounded-xl border border-border overflow-hidden">
+              <div className="divide-y divide-border/60 rounded-xl border border-border overflow-hidden bg-card">
                 {alunosFiltrados.map((aluno) => (
                   <div
                     key={aluno.id}
                     onClick={() => togglePresenca(aluno.id)}
-                    className={`flex items-center justify-between p-3.5 text-xs transition-colors cursor-pointer ${
-                      aluno.presente ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "bg-card hover:bg-muted/50"
+                    className={`flex items-center justify-between p-3.5 cursor-pointer transition-colors ${
+                      aluno.presente
+                        ? "bg-emerald-500/5 hover:bg-emerald-500/10"
+                        : "bg-red-500/5 hover:bg-red-500/10"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <Checkbox
                         checked={aluno.presente}
                         onCheckedChange={() => togglePresenca(aluno.id)}
+                        className="size-5 rounded-md"
                       />
                       <div>
-                        <span className="font-bold text-foreground block text-sm">{aluno.nome}</span>
-                        <span className="text-[10px] text-muted-foreground">Frequência acumulada: {aluno.presencaPct}</span>
+                        <p className="text-xs font-extrabold text-foreground">{aluno.nome}</p>
+                        <span className="text-[10px] text-muted-foreground">Presença acumulada: {aluno.presencaPct}</span>
                       </div>
                     </div>
 

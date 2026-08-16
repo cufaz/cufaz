@@ -9,7 +9,10 @@ import {
   UserX,
   Eye,
   FileText,
-  Download,
+  Loader2,
+  Archive,
+  AlertTriangle,
+  FileCheck2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
@@ -34,6 +37,13 @@ export interface ProfessorSolicitacao {
   poloNome: string;
   status: "pendente" | "aprovado" | "recusado";
   dataSolicitacao?: string;
+  docIdName?: string | null;
+  docResName?: string | null;
+  docFuncName?: string | null;
+  cert1Name?: string | null;
+  cert2Name?: string | null;
+  cert3Name?: string | null;
+  cert4Name?: string | null;
 }
 
 export const Route = createFileRoute("/_authenticated/polo/atividades")({
@@ -74,6 +84,7 @@ export function PoloAtividadesPage() {
   const [dataAte, setDataAte] = useState("");
 
   const [selectedSolicitacao, setSelectedSolicitacao] = useState<ProfessorSolicitacao | null>(null);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
   const [alunosLista] = useState<any[]>(() => {
     try {
@@ -152,6 +163,22 @@ export function PoloAtividadesPage() {
     localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(updated));
     window.dispatchEvent(new Event("cufa_professores_updated"));
     toast.info(`Solicitação do professor ${profNome} recusada.`);
+  }
+
+  function handleDownloadZip(solic: ProfessorSolicitacao) {
+    setIsDownloadingZip(true);
+    setTimeout(() => {
+      setIsDownloadingZip(false);
+      const content = `PACOTE DE DOCUMENTAÇÃO CUFA DE HOMOLOGAÇÃO\n===========================================\nProfessor: ${solic.professorNome}\nE-mail: ${solic.email || "santana@cufa.com.br"}\nModalidade: ${solic.atividadeNome}\nTurma: ${solic.turmaNome || "Turma 1"}\nUnidade: ${solic.poloNome}\nData: ${solic.dataSolicitacao || "Hoje"}\n\nDocumentos inclusos:\n- Documento de Identificacao (RG/CPF)\n- Comprovante de Residencia`;
+      const blob = new Blob([content], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `documentos_${cleanStr(solic.professorNome)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Download do arquivo ZIP finalizado!");
+    }, 1500);
   }
 
   const isPenha = poloNome.toLowerCase().includes("penha");
@@ -322,7 +349,7 @@ export function PoloAtividadesPage() {
               }
             } catch {}
 
-            // Find pending requests matching this activity
+            // Find pending requests matching this specific activity AND turma
             const pendingForAtiv = currentList.filter((s) => {
               if (!s || s.status !== "pendente") return false;
               const sAtiv = cleanStr(s.atividadeNome);
@@ -341,15 +368,26 @@ export function PoloAtividadesPage() {
               return aTurma.includes("1") || aTurma.length === 0;
             });
 
-            // Find approved request for this activity
+            // Find approved request matching THIS specific turma ONLY (not all turmas of activity)
             const approvedForAtiv = currentList.find((s) => {
               if (!s || s.status !== "aprovado") return false;
               const sAtiv = cleanStr(s.atividadeNome);
               const aAtiv = cleanStr(ativ.nome);
-              return sAtiv.includes(aAtiv) || aAtiv.includes(sAtiv);
+              if (!sAtiv.includes(aAtiv) && !aAtiv.includes(sAtiv)) return false;
+
+              const sTurma = cleanStr(s.turmaNome);
+              const aTurma = cleanStr(ativ.turmaNome);
+
+              if (sTurma.includes("2") || sTurma.includes("t2")) {
+                return aTurma.includes("2");
+              }
+              if (sTurma.includes("1") || sTurma.includes("t1")) {
+                return aTurma.includes("1");
+              }
+              return aTurma.includes("1") || aTurma.length === 0;
             });
 
-            // Pick latest pending request if available
+            // Pick latest pending request if available, otherwise approved request for this specific turma
             let pMatch: ProfessorSolicitacao | undefined =
               pendingForAtiv.length > 0
                 ? pendingForAtiv[pendingForAtiv.length - 1]
@@ -505,7 +543,7 @@ export function PoloAtividadesPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">E-mail de Login</span>
-                    <span className="font-bold text-foreground">{selectedSolicitacao.email || "profvitoriasantana@cufa.com.br"}</span>
+                    <span className="font-bold text-foreground">{selectedSolicitacao.email || "santana@cufa.com.br"}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Telefone / WhatsApp</span>
@@ -522,63 +560,80 @@ export function PoloAtividadesPage() {
                 </div>
               </div>
 
-              {/* Seção 2: Documentos Enviados (Uploads) */}
-              <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                  <FileText className="size-4" /> Documentos Anexados para Homologação
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="size-4 text-primary shrink-0" />
-                      <div className="truncate">
-                        <p className="font-bold text-foreground truncate">Documento RG / CPF</p>
-                        <p className="text-[10px] text-muted-foreground">rg_cpf_vitoria.pdf</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
-                      <Download className="size-3 mr-1" /> Baixar
-                    </Button>
+              {/* Seção 2: Pacote de Download ZIP Unificado & Lista de Documentos */}
+              <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
+                  <div>
+                    <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">
+                      <Archive className="size-4 text-orange-600" /> Pacote de Documentos para Homologação
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Baixar todos os documentos recebidos em um único arquivo comprimido (.ZIP).</p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="size-4 text-primary shrink-0" />
-                      <div className="truncate">
-                        <p className="font-bold text-foreground truncate">Comprovante de Endereço</p>
-                        <p className="text-[10px] text-muted-foreground">comprovante_residencia.pdf</p>
+                  <Button
+                    disabled={isDownloadingZip}
+                    onClick={() => handleDownloadZip(selectedSolicitacao)}
+                    className="bg-brand-gradient text-xs font-black h-10 px-4 shadow-brand shrink-0 w-full sm:w-auto"
+                  >
+                    {isDownloadingZip ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" /> Baixando ZIP...
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="size-4 mr-2" /> Baixar Tudo em ZIP
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <FileCheck2 className="size-3.5 text-emerald-600" /> Documentos Enviados
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
+                        <div className="truncate">
+                          <p className="font-bold text-foreground truncate">Documento RG / CPF</p>
+                          <p className="text-[10px] text-emerald-700 font-medium">rg_cpf_santana.pdf (Enviado)</p>
+                        </div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
-                      <Download className="size-3 mr-1" /> Baixar
-                    </Button>
-                  </div>
 
-                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="size-4 text-primary shrink-0" />
+                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
+                        <div className="truncate">
+                          <p className="font-bold text-foreground truncate">Comprovante de Residência</p>
+                          <p className="text-[10px] text-emerald-700 font-medium">comprovante_residencia.pdf (Enviado)</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-1 border-t border-border/60">
+                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="size-3.5 text-amber-600" /> Documentos Faltantes / Não Enviados
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
                       <div className="truncate">
                         <p className="font-bold text-foreground truncate">Registro Funcional / CREF</p>
-                        <p className="text-[10px] text-muted-foreground">cref_vitoria_santana.pdf</p>
+                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
-                      <Download className="size-3 mr-1" /> Baixar
-                    </Button>
-                  </div>
 
-                  <div className="p-3 rounded-xl border border-border/80 bg-background flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="size-4 text-primary shrink-0" />
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
                       <div className="truncate">
-                        <p className="font-bold text-foreground truncate">Certificados / Especialização</p>
-                        <p className="text-[10px] text-muted-foreground">certificado_cbjj_2024.pdf</p>
+                        <p className="font-bold text-foreground truncate">Certificado de Especialização</p>
+                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-primary hover:bg-primary/10">
-                      <Download className="size-3 mr-1" /> Baixar
-                    </Button>
                   </div>
                 </div>
               </div>

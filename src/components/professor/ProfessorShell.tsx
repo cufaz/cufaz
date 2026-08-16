@@ -48,10 +48,12 @@ export function ProfessorShell({
   });
 
   const [profFoto] = useState(() => {
-    return (
-      localStorage.getItem("cufa_perfil_foto") ||
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-    );
+    const email = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    const fUser = localStorage.getItem(`cufa_perfil_foto_${email}`);
+    if (fUser && !fUser.includes("unsplash.com")) return fUser;
+    const fGlobal = localStorage.getItem("cufa_perfil_foto");
+    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
+    return "";
   });
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -80,11 +82,6 @@ export function ProfessorShell({
       icon: BookOpen,
     },
     {
-      to: "/professor/oportunidades",
-      label: "Vagas para Ministrar",
-      icon: Sparkles,
-    },
-    {
       to: "/professor/chamada",
       label: "Chamada / Frequência",
       icon: ClipboardCheck,
@@ -93,6 +90,11 @@ export function ProfessorShell({
       to: "/professor/perfil",
       label: "Meu Perfil",
       icon: User,
+    },
+    {
+      to: "/professor/oportunidades",
+      label: "Vagas para Ministrar",
+      icon: Sparkles,
     },
   ];
 
