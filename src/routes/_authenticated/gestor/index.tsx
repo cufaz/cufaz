@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Filter, Calendar, Loader2 } from "lucide-react";
 
 import { getResumoGestor, getFinanceiro } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
+import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
 import { Kpi } from "@/components/admin/Kpi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brl } from "@/lib/format";
@@ -16,6 +18,17 @@ export const Route = createFileRoute("/_authenticated/gestor/")({
 function DashboardPage() {
   const fetchResumo = useServerFn(getResumoGestor);
   const fetchFinanceiro = useServerFn(getFinanceiro);
+
+  const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
+  const [dataInicio, setDataInicio] = useState("2026-08-01");
+  const [dataFim, setDataFim] = useState("2026-08-31");
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  function triggerLoading(fn: () => void) {
+    setIsFiltering(true);
+    fn();
+    setTimeout(() => setIsFiltering(false), 400);
+  }
 
   const { data: resumoData, isLoading: loadingResumo } = useQuery({
     queryKey: ["resumo"],
@@ -46,7 +59,10 @@ function DashboardPage() {
   const pedidos = resumoData.pedidos ?? [];
   const lancamentos = finData?.lancamentos ?? [];
 
-  const activePolos = polos.filter((p: { ativo: boolean }) => p.ativo);
+  const activePolosAll = polos.filter((p: { ativo: boolean }) => p.ativo);
+  const activePolos = selectedPoloIds.length === 0
+    ? activePolosAll
+    : activePolosAll.filter((p: { id: string }) => selectedPoloIds.includes(String(p.id)));
 
   // Dynamic sum of beneficiarios projetados (Fix Requirement 4: "nao esta somando beneficiarios")
   const beneficiariosPolos = activePolos.reduce(
@@ -135,6 +151,56 @@ function DashboardPage() {
       title="Dashboard"
       description="Visão geral da plataforma CUFA — polos, atividades, vagas e orçamento."
     >
+      {/* Barra de Filtros de Polo e Período (Anexo 1) */}
+      <div className="relative mb-6 rounded-2xl border border-border bg-card p-4 shadow-xs">
+        {/* Centered Circle Loading Spinner when filtering */}
+        {isFiltering && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-background/80 backdrop-blur-xs">
+            <Loader2 className="size-10 animate-spin text-primary" />
+            <p className="mt-2 text-xs font-bold text-foreground">Atualizando indicadores...</p>
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {/* Filtro Lista Suspensa de Polos */}
+          <div className="space-y-1">
+            <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Filter className="size-3.5 text-primary" /> Polo / Unidade
+            </label>
+            <PoloMultiSelect
+              polos={activePolosAll.map((p: any) => ({ id: String(p.id), nome: String(p.nome) }))}
+              selectedIds={selectedPoloIds}
+              onChange={(ids) => triggerLoading(() => setSelectedPoloIds(ids))}
+            />
+          </div>
+
+          {/* Filtro Período Início */}
+          <div className="space-y-1">
+            <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-primary" /> Período de (Início)
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => triggerLoading(() => setDataInicio(e.target.value))}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          {/* Filtro Período Fim */}
+          <div className="space-y-1">
+            <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-primary" /> Período até (Fim)
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => triggerLoading(() => setDataFim(e.target.value))}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+      </div>
       {/* Cards de KPIs Principais (Anexo 1, 2 & 3) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
