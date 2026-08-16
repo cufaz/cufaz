@@ -12,6 +12,8 @@ import {
   Building2,
   Bell,
   CheckCircle2,
+  Menu,
+  X,
 } from "lucide-react";
 import logo from "@/assets/cufa-z-logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,6 +38,7 @@ export function PoloResponsavelShell({
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function handleSair() {
     setIsLoggingOut(true);
@@ -181,7 +184,7 @@ export function PoloResponsavelShell({
         localStorage.setItem("cufa_notificacoes_lidas", JSON.stringify(novosIds));
       } catch {}
     }
-    setNotifOpen(false); // Auto-oculta a caixa (Anexo 2)
+    setNotifOpen(false);
   }
 
   const menuItems = [
@@ -250,7 +253,7 @@ export function PoloResponsavelShell({
             </Badge>
           </div>
 
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Interactive Bell Icon & Notification Menu */}
             <div className="relative">
               <Button
@@ -267,58 +270,58 @@ export function PoloResponsavelShell({
                 )}
               </Button>
 
-              {/* Notification Popover Card */}
+              {/* Notification Popover Card (Fixed for Mobile - Anexo 1) */}
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in-50 zoom-in-95">
-                  <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Bell className="size-4 text-primary" />
-                      <h4 className="font-extrabold text-sm text-foreground">Notificações do Polo</h4>
-                    </div>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={marcarTodasLidas}
-                        className="text-[11px] font-bold text-primary hover:underline"
-                      >
-                        Marcar todas como lidas
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                    {notificacoes.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-4">Nenhuma notificação por enquanto.</p>
-                    ) : (
-                      notificacoes.map((n) => (
-                        <div
-                          key={n.id}
-                          onClick={() => marcarLida(n.id)}
-                          className={`p-3 rounded-xl border text-xs transition-colors cursor-pointer ${
-                            !n.lida
-                              ? "bg-primary/5 border-primary/20 text-foreground font-semibold"
-                              : "bg-muted/20 border-border text-muted-foreground font-normal"
-                          }`}
+                  <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-2xl z-50 animate-in fade-in-50 zoom-in-95">
+                    <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Bell className="size-4 text-primary" />
+                        <h4 className="font-extrabold text-sm text-foreground">Notificações do Polo</h4>
+                      </div>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={marcarTodasLidas}
+                          className="text-[11px] font-bold text-primary hover:underline"
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-extrabold text-foreground">{n.titulo}</span>
-                            <span className="text-[10px] opacity-75">{n.tempo}</span>
+                          Marcar todas como lidas
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                      {notificacoes.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhuma notificação por enquanto.</p>
+                      ) : (
+                        notificacoes.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => marcarLida(n.id)}
+                            className={`p-3 rounded-xl border text-xs transition-colors cursor-pointer ${
+                              !n.lida
+                                ? "bg-primary/5 border-primary/20 text-foreground font-semibold"
+                                : "bg-muted/20 border-border text-muted-foreground font-normal"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-extrabold text-foreground">{n.titulo}</span>
+                              <span className="text-[10px] opacity-75">{n.tempo}</span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed opacity-90">{n.desc}</p>
                           </div>
-                          <p className="text-[11px] leading-relaxed opacity-90">{n.desc}</p>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              </>
+                </>
               )}
             </div>
 
             <div className="h-6 w-px bg-border hidden sm:block" />
 
             <div className="flex items-center gap-2">
-              <Avatar className="size-9 border border-primary/20">
+              <Avatar className="size-8 sm:size-9 border border-primary/20">
                 <AvatarImage src={responsavelFoto} />
                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
                   {responsavelNome.slice(0, 2).toUpperCase()}
@@ -333,13 +336,67 @@ export function PoloResponsavelShell({
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs font-bold text-destructive hover:bg-destructive/10"
+              className="text-xs font-bold text-destructive hover:bg-destructive/10 hidden sm:flex"
               onClick={handleSair}
             >
               <LogOut className="size-4 mr-1" /> Sair
             </Button>
+
+            {/* Mobile Hamburger Menu Button (Anexo 1 & 2) */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="md:hidden size-9 rounded-xl border-border shrink-0 text-foreground"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Abrir Menu do Polo"
+            >
+              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </Button>
           </div>
         </div>
+
+        {/* Collapsible Mobile Navigation Drawer (Anexo 1 & 2) */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border bg-card p-4 space-y-2 animate-in slide-in-from-top-2">
+            <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+              Menu do Polo — Unidade {poloNome}
+            </div>
+            {menuItems.map((item) => {
+              const isActive =
+                item.to === "/polo"
+                  ? currentPath === "/polo" || currentPath === "/polo/"
+                  : currentPath.startsWith(item.to);
+
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                    isActive
+                      ? "bg-brand-gradient text-white shadow-brand"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+
+            <div className="pt-2 border-t border-border mt-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10"
+                onClick={handleSair}
+              >
+                <LogOut className="size-4 mr-2" /> Sair do Painel
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       <div className="flex-1 flex overflow-hidden">
