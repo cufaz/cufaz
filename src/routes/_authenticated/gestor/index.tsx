@@ -117,13 +117,13 @@ function DashboardPage() {
   // Calculate Custo Mensal Previsto based on selected polos (Official preset sum)
   let custoMensalPrevisto = 0;
   if (selectedPoloIds.length === 0) {
-    custoMensalPrevisto = 208938.39; // Penha (109.017,99) + Madureira (64.800,00) + Paraisópolis (34.620,40) + Teste (500,00)
+    custoMensalPrevisto = 218440.16; // Penha (109.017,99) + Madureira (74.301,77) + Paraisópolis (34.620,40) + Teste (500,00)
   } else {
     selectedPoloIds.forEach((pId) => {
       const pObj = activePolosAll.find((p: any) => String(p.id) === pId);
       const pName = pObj ? String(pObj.nome).toLowerCase() : "";
       if (pName.includes("penha")) custoMensalPrevisto += 109017.99;
-      else if (pName.includes("madureira")) custoMensalPrevisto += 64800.00;
+      else if (pName.includes("madureira")) custoMensalPrevisto += 74301.77;
       else if (pName.includes("paraisópolis") || pName.includes("paraisopolis")) custoMensalPrevisto += 34620.40;
       else if (pName.includes("teste")) custoMensalPrevisto += 500.00;
       else if (pObj && Number(pObj.orcamento_mensal || 0) > 0) custoMensalPrevisto += Number(pObj.orcamento_mensal);
