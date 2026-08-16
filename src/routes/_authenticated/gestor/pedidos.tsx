@@ -165,7 +165,77 @@ function PedidosPage() {
     toast.success(`Categoria "${catRemovida}" removida!`);
   }
 
-  const pedidos: Row[] = data ?? [];
+  const [localPedidos, setLocalPedidos] = useState<Row[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_compras_polo");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    function syncLocal() {
+      try {
+        const stored = localStorage.getItem("cufa_compras_polo");
+        if (stored) setLocalPedidos(JSON.parse(stored));
+      } catch {}
+    }
+    window.addEventListener("cufa_pedidos_updated", syncLocal);
+    window.addEventListener("storage", syncLocal);
+    return () => {
+      window.removeEventListener("cufa_pedidos_updated", syncLocal);
+      window.removeEventListener("storage", syncLocal);
+    };
+  }, []);
+
+  function handleDecidirLocal(id: string, novoStatus: "aprovado" | "reprovado", pObj: Row) {
+    let updated = localPedidos.map((p) => {
+      if (String(p['id']) === String(id)) {
+        return { ...p, status: novoStatus };
+      }
+      return p;
+    });
+
+    if (!localPedidos.some((p) => String(p['id']) === String(id))) {
+      updated = [{ ...pObj, status: novoStatus }, ...localPedidos];
+    }
+
+    setLocalPedidos(updated);
+    try {
+      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+    } catch {}
+
+    // If approved, add as a realized despesa in financeiro!
+    if (novoStatus === "aprovado") {
+      const novoLanc = {
+        id: `lanc-ped-${Date.now()}`,
+        polo_id: pObj['polo_id'] || "penha",
+        descricao: `[Compra Aprovada] ${pObj['item'] || pObj['descricao'] || 'Pedido de Compra'}`,
+        valor: Number(pObj['valor_total'] || pObj['valor'] || 0),
+        tipo: "despesa",
+        natureza: "realizado",
+        categoria_id: pObj['categoria_id'] || "cat-7",
+        categoria_nome: pObj['categoria'] || "Materiais / consumo",
+        competencia: "2026-08-01",
+        created_at: new Date().toISOString(),
+      };
+      try {
+        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+        const listLanc = storedLanc ? JSON.parse(storedLanc) : [];
+        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
+      } catch {}
+    }
+
+    mDecidir.mutate({ id, status: novoStatus });
+    toast.success(novoStatus === "aprovado" ? "Pedido APROVADO e lançado no financeiro!" : "Pedido rejeitado!");
+  }
+
+  const serverPedidos: Row[] = data ?? [];
+  const pedidos: Row[] = [
+    ...localPedidos,
+    ...serverPedidos.filter((s) => !localPedidos.some((l) => String(l['id']) === String(s['id']))),
+  ];
 
   return (
     <GestorShell
@@ -225,10 +295,10 @@ function PedidosPage() {
                   </Badge>
                   <h2 className="text-base font-bold">{String(p['item'])}</h2>
                   <p className="text-xs text-muted-foreground">
-                    {p['polos']?.nome ?? "Geral"} · {p['categorias_custo']?.nome ?? "Sem categoria"} ·{" "}
+                    {p['polo_nome'] ?? p['polos']?.nome ?? "Geral"} · {p['categoria'] ?? p['categorias_custo']?.nome ?? "Sem categoria"} ·{" "}
                     {competenciaLabel(String(p['competencia']))}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">{String(p['descricao'] ?? "")}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{String(p['descricao'] ?? p['observacao'] ?? "")}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-primary">{brl(p['valor_total'])}</p>
@@ -240,7 +310,7 @@ function PedidosPage() {
                       <Button
                         size="sm"
                         className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
-                        onClick={() => mDecidir.mutate({ id: String(p['id']), status: "aprovado" })}
+                        onClick={() => handleDecidirLocal(String(p['id']), "aprovado", p)}
                       >
                         <Check className="mr-1 size-4" /> Aprovar
                       </Button>
@@ -248,7 +318,7 @@ function PedidosPage() {
                         size="sm"
                         variant="outline"
                         className="font-bold text-destructive"
-                        onClick={() => mDecidir.mutate({ id: String(p['id']), status: "reprovado" })}
+                        onClick={() => handleDecidirLocal(String(p['id']), "reprovado", p)}
                       >
                         <X className="mr-1 size-4" /> Reprovar
                       </Button>

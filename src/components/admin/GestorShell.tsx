@@ -14,12 +14,14 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
 const nav = [
   { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -52,16 +54,45 @@ export function GestorShell({
   const fetching = useIsFetching();
   const carregando = fetching > 0 || pendingTo !== null;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [pendingPedidosCount, setPendingPedidosCount] = useState<number>(0);
+
+  useEffect(() => {
+    function calcPending() {
+      try {
+        const stored = localStorage.getItem("cufa_compras_polo");
+        if (stored) {
+          const list = JSON.parse(stored);
+          const pend = list.filter((p: any) => p.status === "pendente").length;
+          setPendingPedidosCount(pend);
+          return;
+        }
+      } catch {}
+      setPendingPedidosCount(0);
+    }
+
+    calcPending();
+    window.addEventListener("cufa_pedidos_updated", calcPending);
+    window.addEventListener("storage", calcPending);
+    return () => {
+      window.removeEventListener("cufa_pedidos_updated", calcPending);
+      window.removeEventListener("storage", calcPending);
+    };
+  }, []);
 
   async function sair() {
+    setIsLoggingOut(true);
+    await new Promise((r) => setTimeout(r, 800));
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    localStorage.removeItem("cufa_logged_user");
+    window.location.href = "/";
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row relative">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans">
+      <AuthLoadingOverlay open={isLoggingOut} message="Encerrando sessão com segurança..." />
       {/* Centered Circle Loading Spinner Overlay for Page Transitions (Anexo 5) */}
       {carregando ? (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">
@@ -133,6 +164,11 @@ export function GestorShell({
                     <n.icon className="size-4 shrink-0" />
                   )}
                   <span>{n.label}</span>
+                  {n.label === "Pedidos" && pendingPedidosCount > 0 ? (
+                    <Badge className="ml-auto bg-amber-500 hover:bg-amber-600 font-extrabold text-[11px] text-white px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                      {pendingPedidosCount}
+                    </Badge>
+                  ) : null}
                 </Link>
               );
             })}

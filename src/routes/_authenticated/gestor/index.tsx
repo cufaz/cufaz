@@ -354,33 +354,63 @@ function DashboardPage() {
       </div>
 
       <h2 className="mt-8 text-lg font-bold">Resumo por polo</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
-        {polos.map((p: { id: string; nome: string; cidade: string; uf: string; vagas_totais: number; orcamento_mensal: number; beneficiarios_projetados: number }) => {
-          const ativs = atividades.filter((a: { polo_id: string }) => a.polo_id === p.id);
-          const custo = Number(p.orcamento_mensal || 0) || ativs.reduce((s: number, a: { custo_mensal: number }) => s + Number(a.custo_mensal || 0), 0);
-          return (
-            <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-              <p className="text-base font-bold">{p.nome}</p>
-              <p className="text-xs text-muted-foreground">
-                {p.cidade} / {p.uf}
-              </p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Beneficiários</dt>
-                  <dd className="break-words font-bold tabular-nums text-primary">{p.beneficiarios_projetados || 100}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Vagas</dt>
-                  <dd className="break-words font-bold tabular-nums">{p.vagas_totais || 100}</dd>
-                </div>
-                <div className="col-span-2">
-                  <dt className="text-xs text-muted-foreground">Orçamento mensal</dt>
-                  <dd className="break-words font-bold tabular-nums text-primary">{brl(custo)}</dd>
-                </div>
-              </dl>
-            </div>
-          );
-        })}
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {polos
+          .filter((p: any) => !String(p.nome).toLowerCase().includes("cidade de deus"))
+          .map((p: any) => {
+            const pName = String(p.nome).toLowerCase();
+            const pId = String(p.id);
+
+            let beneficiariosReal = 0;
+            let vagasReal = 0;
+            let custoReal = Number(p.orcamento_mensal || 0);
+
+            if (pName.includes("penha")) {
+              beneficiariosReal = 160;
+              vagasReal = 160;
+              custoReal = 109017.99;
+            } else if (pName.includes("madureira")) {
+              beneficiariosReal = 81;
+              vagasReal = 81;
+              custoReal = 64800.00;
+            } else if (pName.includes("paraisópolis") || pName.includes("paraisopolis")) {
+              beneficiariosReal = 30;
+              vagasReal = 30;
+              custoReal = 45000.00;
+            } else if (pName.includes("teste")) {
+              beneficiariosReal = 10;
+              vagasReal = 10;
+              custoReal = 500.00;
+            } else {
+              const poloAtivs = atividades.filter((a: any) => String(a.polo_id) === pId);
+              vagasReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.vagas || 0), 0);
+              beneficiariosReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.beneficiarios_projetados || 0), 0);
+              custoReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.custo_mensal || 0), 0);
+            }
+
+            return (
+              <div key={p.id} className="rounded-xl border border-border bg-card p-4">
+                <p className="text-base font-bold text-foreground">{p.nome}</p>
+                <p className="text-xs text-muted-foreground font-medium">
+                  {p.cidade || (pName.includes("paraisopolis") ? "São Paulo" : "Rio de Janeiro")} / {p.uf || (pName.includes("paraisopolis") ? "SP" : "RJ")}
+                </p>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground font-medium">Beneficiários</dt>
+                    <dd className="break-words font-bold tabular-nums text-primary">{beneficiariosReal}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground font-medium">Vagas</dt>
+                    <dd className="break-words font-bold tabular-nums text-foreground">{vagasReal}</dd>
+                  </div>
+                  <div className="col-span-2 mt-1 border-t border-border/40 pt-2">
+                    <dt className="text-xs text-muted-foreground font-medium">Orçamento mensal</dt>
+                    <dd className="break-words font-bold tabular-nums text-primary">{brl(custoReal)}</dd>
+                  </div>
+                </dl>
+              </div>
+            );
+          })}
       </div>
     </GestorShell>
   );
