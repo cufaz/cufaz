@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertGestor, unwrap, competenciaAtual, db } from "./gestao.server";
+import { assertGestor, assertGestorWrite, unwrap, competenciaAtual, db } from "./gestao.server";
 
 const defaultPolos = [
   { id: "penha", nome: "Complexo da Penha", slug: "penha", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ricardo Brito", ativo: true, orcamento_mensal: 109017.99 },
@@ -89,6 +89,7 @@ export const savePolo = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id) {
@@ -103,6 +104,7 @@ export const deletePolo = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { error } = await db(supabase).from("polos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -138,6 +140,7 @@ export const saveAtividade = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id) {
@@ -155,6 +158,7 @@ export const deleteAtividade = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { error } = await db(supabase).from("atividades").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -166,6 +170,7 @@ export const saveTurma = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id) {
@@ -180,6 +185,7 @@ export const deleteTurma = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { error } = await db(supabase).from("turmas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -210,6 +216,7 @@ export const saveItemOrcamento = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id)
@@ -227,6 +234,7 @@ export const deleteItemOrcamento = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { error } = await db(supabase).from("itens_orcamento").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -477,6 +485,7 @@ export const saveMatricula = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
     if (id)
@@ -492,6 +501,7 @@ export const deleteMatricula = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    assertGestorWrite(userId);
     await assertGestor(supabase, userId);
     const { error } = await db(supabase).from("matriculas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
