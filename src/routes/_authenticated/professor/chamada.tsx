@@ -18,28 +18,34 @@ function ProfessorChamadaPage() {
   const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "").toLowerCase());
   const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "");
 
-  // Read approved/requested turmas specifically for this professor
+  // Read approved turmas specifically for this professor
   const turmasDisponiveis = (() => {
+    if (!profEmail) return [];
     try {
-      const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) {
-        const list = JSON.parse(stored);
+      const storedCand = localStorage.getItem(`cufa_professor_candidaturas_${profEmail}`);
+      if (storedCand) {
+        const list = JSON.parse(storedCand);
+        if (Array.isArray(list) && list.length > 0) {
+          return list.map((m: any) => `${m.atividadeNome || m.nome} — ${m.turmaNome || "Turma 1"}`);
+        }
+      }
+      const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSol) {
+        const list = JSON.parse(storedSol);
         const minhas = list.filter(
           (item: any) =>
-            (profEmail && item.email && String(item.email).toLowerCase() === profEmail) ||
-            (profNome && item.professorNome && String(item.professorNome).toLowerCase() === profNome.toLowerCase())
+            item.email && String(item.email).toLowerCase() === profEmail && (item.status === "aprovado" || item.status === "ativo")
         );
-
         if (minhas.length > 0) {
-          return minhas.map((m: any) => `${m.atividadeNome} — ${m.turmaNome || "Turma 1"} (14:00 - 16:00)`);
+          return minhas.map((m: any) => `${m.atividadeNome} — ${m.turmaNome || "Turma 1"}`);
         }
       }
     } catch {}
 
-    return ["Jiu Jitsu — Turma 1 - Tarde (14:00 - 16:00)"];
+    return [];
   })();
 
-  const [turmaSelecionada, setTurmaSelecionada] = useState(() => turmasDisponiveis[0] || "Jiu Jitsu — Turma 1");
+  const [turmaSelecionada, setTurmaSelecionada] = useState(() => turmasDisponiveis[0] || "");
   const [busca, setBusca] = useState("");
 
   function loadAlunosList(selectedTurma = turmaSelecionada, selectedDate = dataChamada) {
@@ -192,6 +198,23 @@ function ProfessorChamadaPage() {
   );
 
   const totalPresentes = alunos.filter((a) => a.presente).length;
+
+  if (turmasDisponiveis.length === 0) {
+    return (
+      <ProfessorShell
+        title="Chamada / Frequência de Alunos"
+        description="A presença é registrada pelo professor responsável da turma."
+      >
+        <div className="text-center py-16 px-4 border border-dashed border-border rounded-2xl bg-card space-y-3">
+          <ClipboardCheck className="size-12 text-muted-foreground/40 mx-auto" />
+          <h3 className="text-sm font-extrabold text-foreground">Nenhuma turma vinculada a este professor</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            Você ainda não possui turmas ou oficinas aprovadas. Acesse a aba <strong>"Vagas para Ministrar"</strong> para se candidatar às modalidades do seu polo.
+          </p>
+        </div>
+      </ProfessorShell>
+    );
+  }
 
   return (
     <ProfessorShell

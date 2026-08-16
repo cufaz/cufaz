@@ -92,23 +92,70 @@ export function MasterAdminDialog({
       } catch {}
     }
 
+    function syncMasterAlunos() {
+      setAlunosData(loadMasterAlunos());
+    }
+
     window.addEventListener("cufa_gestores_updated", syncMasterGestores);
     window.addEventListener("cufa_professores_updated", syncMasterProfessores);
+    window.addEventListener("cufa_alunos_updated", syncMasterAlunos);
     window.addEventListener("storage", syncMasterProfessores);
+    window.addEventListener("storage", syncMasterAlunos);
     return () => {
       window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
       window.removeEventListener("cufa_professores_updated", syncMasterProfessores);
+      window.removeEventListener("cufa_alunos_updated", syncMasterAlunos);
       window.removeEventListener("storage", syncMasterProfessores);
+      window.removeEventListener("storage", syncMasterAlunos);
     };
   }, []);
 
-  const [alunosData, setAlunosData] = useState<any[]>(() => {
+  function loadMasterAlunos() {
+    const listMap = new Map<string, any>();
     try {
-      const stored = localStorage.getItem("cufa_alunos_polo");
-      if (stored) return JSON.parse(stored);
+      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
+      if (storedCad) {
+        const parsed = JSON.parse(storedCad);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const id = a.id || `cad-${idx}`;
+            listMap.set(id, {
+              id,
+              nome: a.nome || "Aluno",
+              email: a.email || "aluno@cufa.com.br",
+              senha: a.senha || "aluno2026",
+              polo: a.polo_nome || a.polo || "Complexo da Penha",
+              atividade: a.atividade || a.oficina || "Geral",
+            });
+          });
+        }
+      }
+
+      const storedPolo = localStorage.getItem("cufa_alunos_polo");
+      if (storedPolo) {
+        const parsed = JSON.parse(storedPolo);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any, idx: number) => {
+            const id = a.id || `polo-al-${idx}`;
+            if (!listMap.has(id)) {
+              listMap.set(id, {
+                id,
+                nome: a.nome || "Aluno",
+                email: a.email || "aluno@cufa.com.br",
+                senha: a.senha || "aluno2026",
+                polo: a.polo_nome || a.polo || "Complexo da Penha",
+                atividade: a.atividade || a.oficina || "Geral",
+              });
+            }
+          });
+        }
+      }
     } catch {}
-    return [];
-  });
+
+    return Array.from(listMap.values());
+  }
+
+  const [alunosData, setAlunosData] = useState<any[]>(() => loadMasterAlunos());
 
   const [professoresData, setProfessoresData] = useState<any[]>(() => {
     try {

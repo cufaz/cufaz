@@ -15,69 +15,83 @@ export const Route = createFileRoute("/_authenticated/professor/perfil")({
 });
 
 function ProfessorPerfilPage() {
-  const [nome, setNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "Prof. Instrutor");
-  const [email] = useState(() => localStorage.getItem("cufa_logged_user") || "professor@cufa.com.br");
+  const pEmail = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+
+  const [nome, setNome] = useState(() => {
+    if (!pEmail) return "Prof. Instrutor";
+    const nameUser = localStorage.getItem(`cufa_logged_name_${pEmail}`);
+    if (nameUser) return nameUser;
+    try {
+      const stored = localStorage.getItem("cufa_professores_cadastrados");
+      if (stored) {
+        const list = JSON.parse(stored);
+        const found = list.find((p: any) => p.email && String(p.email).toLowerCase() === pEmail);
+        if (found && (found.professorNome || found.nome)) return found.professorNome || found.nome;
+      }
+    } catch {}
+    const prefix = (pEmail || "professor").split("@")[0] || "professor";
+    return `Prof. ${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`;
+  });
+
+  const [email] = useState(pEmail);
   const [polo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
-  const [modalidade] = useState(() => localStorage.getItem("cufa_professor_modalidade") || "Jiu Jitsu");
+  const [modalidade] = useState(() => localStorage.getItem("cufa_professor_modalidade") || "Sem modalidade vinculada");
   const [telefone, setTelefone] = useState(() => {
-    const saved = localStorage.getItem("cufa_professor_telefone");
+    const saved = localStorage.getItem(`cufa_professor_telefone_${pEmail}`);
     if (saved) return saved;
     try {
       const stored = localStorage.getItem("cufa_professores_cadastrados");
       if (stored) {
         const list = JSON.parse(stored);
-        const logged = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
-        const found = list.find((p: any) => p.email && String(p.email).toLowerCase() === logged);
+        const found = list.find((p: any) => p.email && String(p.email).toLowerCase() === pEmail);
         if (found && found.telefone) return found.telefone;
       }
     } catch {}
     return "";
   });
-  const [biografia, setBiografia] = useState(() => localStorage.getItem("cufa_professor_biografia") || "Instrutor capacitado focado no desenvolvimento social e esportivo dos alunos.");
+  const [biografia, setBiografia] = useState(() => localStorage.getItem(`cufa_professor_biografia_${pEmail}`) || "");
 
   // Social networks
-  const [instagram, setInstagram] = useState(() => localStorage.getItem("cufa_professor_instagram") || "");
-  const [facebook, setFacebook] = useState(() => localStorage.getItem("cufa_professor_facebook") || "");
-  const [linkedin, setLinkedin] = useState(() => localStorage.getItem("cufa_professor_linkedin") || "");
+  const [instagram, setInstagram] = useState(() => localStorage.getItem(`cufa_professor_instagram_${pEmail}`) || "");
+  const [facebook, setFacebook] = useState(() => localStorage.getItem(`cufa_professor_facebook_${pEmail}`) || "");
+  const [linkedin, setLinkedin] = useState(() => localStorage.getItem(`cufa_professor_linkedin_${pEmail}`) || "");
 
   // Photo state
   const [foto, setFoto] = useState<string | null>(() => {
-    const pEmail = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+    if (!pEmail) return null;
     const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`);
     if (fUser && !fUser.includes("unsplash.com")) return fUser;
-    const fGlobal = localStorage.getItem("cufa_perfil_foto");
-    if (fGlobal && !fGlobal.includes("unsplash.com")) return fGlobal;
     return null;
   });
-  const [fotoNome, setFotoNome] = useState<string | null>(() => localStorage.getItem("cufa_perfil_foto_name"));
+  const [fotoNome, setFotoNome] = useState<string | null>(() => localStorage.getItem(`cufa_perfil_foto_name_${pEmail}`));
 
   function handleFotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
       setFotoNome(file.name);
-      localStorage.setItem("cufa_perfil_foto_name", file.name);
+      localStorage.setItem(`cufa_perfil_foto_name_${pEmail}`, file.name);
       const reader = new FileReader();
       reader.onload = (evt) => {
-        const res = evt.target?.result as string;
-        setFoto(res);
-        localStorage.setItem("cufa_perfil_foto", res);
-        if (email) {
-          localStorage.setItem(`cufa_perfil_foto_${email.toLowerCase()}`, res);
-        }
+        const base64 = evt.target?.result as string;
+        setFoto(base64);
+        localStorage.setItem(`cufa_perfil_foto_${pEmail}`, base64);
         window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
+        toast.success("Foto enviada com sucesso!");
       };
       reader.readAsDataURL(file);
     }
   }
-
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
-    localStorage.setItem("cufa_professor_nome", nome);
-    localStorage.setItem("cufa_professor_telefone", telefone);
-    localStorage.setItem("cufa_professor_biografia", biografia);
-    localStorage.setItem("cufa_professor_instagram", instagram);
-    localStorage.setItem("cufa_professor_facebook", facebook);
-    localStorage.setItem("cufa_professor_linkedin", linkedin);
+    if (pEmail) {
+      localStorage.setItem(`cufa_logged_name_${pEmail}`, nome);
+      localStorage.setItem(`cufa_professor_telefone_${pEmail}`, telefone);
+      localStorage.setItem(`cufa_professor_biografia_${pEmail}`, biografia);
+      localStorage.setItem(`cufa_professor_instagram_${pEmail}`, instagram);
+      localStorage.setItem(`cufa_professor_facebook_${pEmail}`, facebook);
+      localStorage.setItem(`cufa_professor_linkedin_${pEmail}`, linkedin);
+      window.dispatchEvent(new Event("cufa_perfil_updated"));
+    }
     toast.success("Perfil do professor atualizado com sucesso!");
   }
 

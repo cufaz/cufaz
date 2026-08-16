@@ -16,45 +16,61 @@ function ProfessorDashboardPage() {
 
   // Real activities for this professor
   const minhasAtividades = (() => {
+    if (!profEmail) return [];
     try {
+      const storedCand = localStorage.getItem(`cufa_professor_candidaturas_${profEmail}`);
+      if (storedCand) {
+        const list = JSON.parse(storedCand);
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
       if (stored) {
         const list = JSON.parse(stored);
         return list.filter(
-          (s: any) =>
-            (profEmail && s.email && String(s.email).toLowerCase() === profEmail) ||
-            (profNome && s.professorNome && String(s.professorNome).toLowerCase() === profNome.toLowerCase())
+          (s: any) => s.email && String(s.email).toLowerCase() === profEmail
         );
       }
     } catch {}
     return [];
   })();
 
-  const temAprovada = minhasAtividades.some((a: any) => a.status === "aprovado");
+  const atividadesAprovadas = minhasAtividades.filter((a: any) => a.status === "aprovado" || a.status === "ativo");
+  const temAprovada = atividadesAprovadas.length > 0;
   const temPendente = minhasAtividades.some((a: any) => a.status === "pendente");
 
   const alunosRealCount = (() => {
+    if (!temAprovada) return 0;
     try {
       const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      let count = storedCad ? JSON.parse(storedCad).length : 0;
+      let list: any[] = storedCad ? JSON.parse(storedCad) : [];
       const storedPolo = localStorage.getItem("cufa_alunos_polo");
-      if (storedPolo) count = Math.max(count, JSON.parse(storedPolo).length);
-      return count;
+      if (storedPolo) list = [...list, ...JSON.parse(storedPolo)];
+
+      const cleanPolo = profPolo.toLowerCase().trim();
+      const alunosDoPolo = list.filter((al: any) => {
+        const alPolo = String(al.polo_nome || al.polo || "").toLowerCase();
+        return alPolo.includes(cleanPolo) || cleanPolo.includes(alPolo);
+      });
+      return alunosDoPolo.length;
     } catch {}
     return 0;
   })();
 
   const [chamadasHistory, setChamadasHistory] = useState<any[]>(() => {
     try {
-      // Purge old auto-generated test history entries without saved roll-call state
-      const isReset = localStorage.getItem("cufa_chamadas_history_reset_v1");
-      if (!isReset) {
-        localStorage.removeItem("cufa_professor_chamadas_history");
-        localStorage.setItem("cufa_chamadas_history_reset_v1", "true");
-        return [];
-      }
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((c: any) => {
+            if (!profEmail) return false;
+            return (
+              (c.profEmail && String(c.profEmail).toLowerCase() === profEmail) ||
+              (c.professorNome && profNome && String(c.professorNome).toLowerCase() === profNome.toLowerCase())
+            );
+          });
+        }
+      }
     } catch {}
     return [];
   });
@@ -63,7 +79,19 @@ function ProfessorDashboardPage() {
     function loadChamadas() {
       try {
         const stored = localStorage.getItem("cufa_professor_chamadas_history");
-        if (stored) setChamadasHistory(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const myCalls = parsed.filter((c: any) => {
+              if (!profEmail) return false;
+              return (
+                (c.profEmail && String(c.profEmail).toLowerCase() === profEmail) ||
+                (c.professorNome && profNome && String(c.professorNome).toLowerCase() === profNome.toLowerCase())
+              );
+            });
+            setChamadasHistory(myCalls);
+          }
+        }
       } catch {}
     }
 
@@ -74,12 +102,12 @@ function ProfessorDashboardPage() {
       window.removeEventListener("cufa_chamadas_updated", loadChamadas);
       window.removeEventListener("storage", loadChamadas);
     };
-  }, []);
+  }, [profEmail, profNome]);
 
   const chamadasCount = chamadasHistory.length;
   const frequenciaMediaNum = chamadasCount > 0
     ? Math.round(
-        chamadasHistory.reduce((acc, c) => acc + (c.totalAlunos > 0 ? (c.totalPresentes / c.totalAlunos) * 100 : 100), 0) /
+        chamadasHistory.reduce((acc, c) => acc + (c.totalAlunos > 0 ? (c.totalPresentes / c.totalAlunos) * 100 : 0), 0) /
           chamadasCount
       )
     : 0;
@@ -91,14 +119,14 @@ function ProfessorDashboardPage() {
       description={`Painel de controle e gestão das modalidades do ${profPolo}.`}
     >
       <div className="space-y-6">
-        {/* KPI Indicators */}
+        {/* Indicadores do Professor */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="Minhas Atividades"
-            value={String(Math.max(minhasAtividades.length, 1))}
+            value={String(minhasAtividades.length)}
             hint={
-              temAprovada || minhasAtividades.length === 0
-                ? "Modalidade Aprovada"
+              temAprovada
+                ? `${atividadesAprovadas.length} modalidade(s) aprovada(s)`
                 : temPendente
                 ? "Aguardando Aprovação do Polo"
                 : "Sem atividade vinculada"

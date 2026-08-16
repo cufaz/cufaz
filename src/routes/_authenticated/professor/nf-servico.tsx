@@ -56,21 +56,7 @@ function ProfessorNfServicoPage() {
       }
     } catch {}
 
-    // Default initial mock NF for clean demonstration
-    const defaultNf: NfServicoItem = {
-      id: "nf-demo-1",
-      profEmail,
-      profNome,
-      periodo: "07/2026",
-      valor: 2500,
-      detalhes: "NF referente ao mês de Julho/2026 — Atividades de Artes Marciais",
-      fileName: "NF_Julho_2026_Prof_Santana.pdf",
-      fileDataUrl: "data:application/pdf;base64,JVBERi0xLjQKJ...",
-      dataEnvio: "01/08/2026",
-      status: "Aprovada",
-    };
-    setNfsList([defaultNf]);
-    localStorage.setItem(`cufa_professor_nfs_${profEmail}`, JSON.stringify([defaultNf]));
+    setNfsList([]);
   }
 
   useEffect(() => {
