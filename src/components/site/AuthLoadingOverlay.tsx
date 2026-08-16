@@ -37,7 +37,7 @@ export function AuthLoadingOverlay({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/95 backdrop-blur-lg transition-all duration-300">
+    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background transition-all duration-300">
       <div className="flex flex-col items-center space-y-6 text-center max-w-sm px-6 w-full">
         {/* Animated Glowing Logo */}
         <div className="relative">

@@ -24,87 +24,6 @@ function DashboardPage() {
   const [dataFim, setDataFim] = useState("2026-08-31");
   const [isFiltering, setIsFiltering] = useState(false);
 
-  function triggerLoading(fn: () => void) {
-    setIsFiltering(true);
-    fn();
-    setTimeout(() => setIsFiltering(false), 400);
-  }
-
-  const { data: resumoData, isLoading: loadingResumo } = useQuery({
-    queryKey: ["resumo"],
-    queryFn: () => fetchResumo({}),
-  });
-
-  const { data: finData, isLoading: loadingFin } = useQuery({
-    queryKey: ["financeiro-dashboard"],
-    queryFn: () => fetchFinanceiro({ data: {} }),
-  });
-
-  if (loadingResumo || loadingFin || !resumoData) {
-    return (
-      <GestorShell title="Dashboard" description="Carregando indicadores do projeto...">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
-        </div>
-      </GestorShell>
-    );
-  }
-
-  const polos = resumoData.polos ?? [];
-  const activePolosAll = polos.filter((p: { ativo: boolean }) => p.ativo);
-  const activePolos = selectedPoloIds.length === 0
-    ? activePolosAll
-    : activePolosAll.filter((p: { id: string }) => selectedPoloIds.includes(String(p.id)));
-
-  // Filter Atividades by selected polo filter
-  const atividades = (resumoData.atividades ?? []).filter((a: any) => {
-    if (selectedPoloIds.length === 0) return true;
-    const aPoloId = String(a.polo_id || "");
-    const aPoloObj = activePolosAll.find((p: any) => String(p.id) === aPoloId);
-    const aPoloNome = (aPoloObj ? aPoloObj.nome : String(a.polo || "")).toLowerCase();
-    const aName = String(a.nome || a.slug || "").toLowerCase();
-
-    return selectedPoloIds.some((pId) => {
-      if (aPoloId === pId) return true;
-      const selPoloObj = activePolosAll.find((p: any) => String(p.id) === pId);
-      const selName = (selPoloObj ? selPoloObj.nome : "").toLowerCase();
-
-      if (selName.includes("penha") && (aPoloNome.includes("penha") || aName.includes("jiu") || aName.includes("ingl") || aName.includes("nata"))) return true;
-      if (selName.includes("madureira") && (aPoloNome.includes("madureira") || aName.includes("corte") || aName.includes("futsal") || aName.includes("basq"))) return true;
-      if ((selName.includes("paraisópolis") || selName.includes("paraisopolis")) && (aPoloNome.includes("paraisopolis") || aName.includes("karat"))) return true;
-      if (selName.includes("teste") && (aPoloNome.includes("teste") || aName.includes("vôlei") || aName.includes("volei"))) return true;
-      return false;
-    });
-  });
-
-  // Filter Turmas by filtered Atividades
-  const turmas = (resumoData.turmas ?? []).filter((t: any) =>
-    selectedPoloIds.length === 0 || atividades.some((a: any) => String(a.id) === String(t.atividade_id))
-  );
-
-  // Filter Matriculas by filtered Turmas
-  const matriculas = (resumoData.matriculas ?? [])
-    .filter((m: { status: string }) => m.status === "ativa")
-    .filter((m: any) =>
-      selectedPoloIds.length === 0 || turmas.some((t: any) => String(t.id) === String(m.turma_id))
-    );
-
-  // Filter Pedidos by selected polos
-  const pedidos = (resumoData.pedidos ?? []).filter((p: any) => {
-    if (selectedPoloIds.length === 0) return true;
-    return selectedPoloIds.includes(String(p.polo_id));
-  });
-
-  const deletedLancamentosIds: string[] = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_deleted_lancamentos");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  })();
-
   const [localCustomLancamentos, setLocalCustomLancamentos] = useState<any[]>(() => {
     try {
       const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
@@ -192,6 +111,87 @@ function DashboardPage() {
       window.removeEventListener("storage", syncDashboardLanc);
     };
   }, []);
+
+  function triggerLoading(fn: () => void) {
+    setIsFiltering(true);
+    fn();
+    setTimeout(() => setIsFiltering(false), 400);
+  }
+
+  const { data: resumoData, isLoading: loadingResumo } = useQuery({
+    queryKey: ["resumo"],
+    queryFn: () => fetchResumo({}),
+  });
+
+  const { data: finData, isLoading: loadingFin } = useQuery({
+    queryKey: ["financeiro-dashboard"],
+    queryFn: () => fetchFinanceiro({ data: {} }),
+  });
+
+  if (loadingResumo || loadingFin || !resumoData) {
+    return (
+      <GestorShell title="Dashboard" description="Carregando indicadores do projeto...">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </GestorShell>
+    );
+  }
+
+  const polos = resumoData.polos ?? [];
+  const activePolosAll = polos.filter((p: { ativo: boolean }) => p.ativo);
+  const activePolos = selectedPoloIds.length === 0
+    ? activePolosAll
+    : activePolosAll.filter((p: { id: string }) => selectedPoloIds.includes(String(p.id)));
+
+  // Filter Atividades by selected polo filter
+  const atividades = (resumoData.atividades ?? []).filter((a: any) => {
+    if (selectedPoloIds.length === 0) return true;
+    const aPoloId = String(a.polo_id || "");
+    const aPoloObj = activePolosAll.find((p: any) => String(p.id) === aPoloId);
+    const aPoloNome = (aPoloObj ? aPoloObj.nome : String(a.polo || "")).toLowerCase();
+    const aName = String(a.nome || a.slug || "").toLowerCase();
+
+    return selectedPoloIds.some((pId) => {
+      if (aPoloId === pId) return true;
+      const selPoloObj = activePolosAll.find((p: any) => String(p.id) === pId);
+      const selName = (selPoloObj ? selPoloObj.nome : "").toLowerCase();
+
+      if (selName.includes("penha") && (aPoloNome.includes("penha") || aName.includes("jiu") || aName.includes("ingl") || aName.includes("nata"))) return true;
+      if (selName.includes("madureira") && (aPoloNome.includes("madureira") || aName.includes("corte") || aName.includes("futsal") || aName.includes("basq"))) return true;
+      if ((selName.includes("paraisópolis") || selName.includes("paraisopolis")) && (aPoloNome.includes("paraisopolis") || aName.includes("karat"))) return true;
+      if (selName.includes("teste") && (aPoloNome.includes("teste") || aName.includes("vôlei") || aName.includes("volei"))) return true;
+      return false;
+    });
+  });
+
+  // Filter Turmas by filtered Atividades
+  const turmas = (resumoData.turmas ?? []).filter((t: any) =>
+    selectedPoloIds.length === 0 || atividades.some((a: any) => String(a.id) === String(t.atividade_id))
+  );
+
+  // Filter Matriculas by filtered Turmas
+  const matriculas = (resumoData.matriculas ?? [])
+    .filter((m: { status: string }) => m.status === "ativa")
+    .filter((m: any) =>
+      selectedPoloIds.length === 0 || turmas.some((t: any) => String(t.id) === String(m.turma_id))
+    );
+
+  // Filter Pedidos by selected polos
+  const pedidos = (resumoData.pedidos ?? []).filter((p: any) => {
+    if (selectedPoloIds.length === 0) return true;
+    return selectedPoloIds.includes(String(p.polo_id));
+  });
+
+  const deletedLancamentosIds: string[] = (() => {
+    try {
+      const stored = localStorage.getItem("cufa_deleted_lancamentos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  })();
 
   const selectedPoloNames = activePolosAll
     .filter((p: any) => selectedPoloIds.includes(String(p.id)))

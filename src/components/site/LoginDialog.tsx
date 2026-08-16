@@ -125,7 +125,7 @@ export function LoginDialog({
       localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
       toast.success("Login autorizado! Unidade Complexo da Penha.");
       onOpenChange(false);
-      window.location.href = "/polo";
+      triggerAuthRedirect("/polo", "Acessando painel da unidade Complexo da Penha...");
       return;
     }
 
@@ -136,48 +136,50 @@ export function LoginDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader className="text-left">
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <LogIn className="size-6 text-primary" /> Entrar na plataforma
-          </DialogTitle>
-          <DialogDescription>Acesse com o e-mail cadastrado na CUFA.</DialogDescription>
-        </DialogHeader>
-        <form className="grid gap-4" onSubmit={handleLogin}>
-          <div className="space-y-1.5">
-            <Label htmlFor="login-email" className="text-xs uppercase tracking-wide text-muted-foreground">
-              E-mail
-            </Label>
-            <Input
-              id="login-email"
-              type="email"
-              required
-              placeholder="voce@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="login-senha" className="text-xs uppercase tracking-wide text-muted-foreground">
-              Senha
-            </Label>
-            <Input
-              id="login-senha"
-              type="password"
-              required
-              placeholder="••••••••"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand">
-            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            Entrar
-          </Button>
-        </form>
-      </DialogContent>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <LogIn className="size-6 text-primary" /> Entrar na plataforma
+            </DialogTitle>
+            <DialogDescription>Acesse com o e-mail cadastrado na CUFA.</DialogDescription>
+          </DialogHeader>
+          <form className="grid gap-4" onSubmit={handleLogin}>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-email" className="text-xs uppercase tracking-wide text-muted-foreground">
+                E-mail
+              </Label>
+              <Input
+                id="login-email"
+                type="email"
+                required
+                placeholder="voce@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-senha" className="text-xs uppercase tracking-wide text-muted-foreground">
+                Senha
+              </Label>
+              <Input
+                id="login-senha"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand">
+              {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              Entrar
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
       <AuthLoadingOverlay open={overlayOpen} message={overlayMsg} onComplete={handleOverlayComplete} />
-    </Dialog>
+    </>
   );
 }
