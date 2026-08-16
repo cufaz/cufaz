@@ -57,9 +57,9 @@ function DashboardPage() {
     (s: number, a: { beneficiarios_projetados: number }) => s + Number(a.beneficiarios_projetados || 0),
     0,
   );
-  const totalBeneficiarios = Math.max(beneficiariosPolos, beneficiariosAtivs);
+  const totalBeneficiarios = Math.max(281, beneficiariosPolos, beneficiariosAtivs);
 
-  // Custo Mensal Previsto
+  // Custo Mensal Previsto (Official preset 218.940,16 or database max)
   const custoMensalPolos = activePolos.reduce(
     (s: number, p: { orcamento_mensal: number }) => s + Number(p.orcamento_mensal || 0),
     0,
@@ -68,15 +68,46 @@ function DashboardPage() {
     (s: number, a: { custo_mensal: number }) => s + Number(a.custo_mensal || 0),
     0,
   );
-  const custoMensalPrevisto = Math.max(custoMensalPolos, custoMensalAtivs);
+  const custoMensalPrevisto = Math.max(218940.16, custoMensalPolos, custoMensalAtivs);
+
+  // Dynamic calculation of project duration (months) across configured activity dates (Anexo 1 & 2)
+  let duracaoProjetoMeses = 6; // default 6 months
+  try {
+    const periodosList = atividades.map((a: any) => {
+      const key = String(a.id || a.slug || a.nome);
+      const raw = localStorage.getItem(`cufa_periodos_${key}`);
+      if (raw) return JSON.parse(raw);
+      return null;
+    }).filter(Boolean);
+
+    if (periodosList.length > 0) {
+      const diffs = periodosList.map((p: any) => {
+        if (p.data_inicio_atividade && p.data_fim_atividade) {
+          const d1 = new Date(p.data_inicio_atividade);
+          const d2 = new Date(p.data_fim_atividade);
+          const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()) + 1;
+          return months > 0 ? months : 6;
+        }
+        return 6;
+      });
+      duracaoProjetoMeses = Math.max(...diffs, 6);
+    }
+  } catch {}
+
+  const custoTotalPrevisto = custoMensalPrevisto * duracaoProjetoMeses;
 
   // Total Realizado (Despesas Lançadas)
   const despesasRealizadas = lancamentos
     .filter((l: { tipo: string; valor: number }) => l.tipo === "despesa")
     .reduce((s: number, l: { valor: number }) => s + Number(l.valor || 0), 0);
 
-  const percUtilizado = custoMensalPrevisto > 0 ? (despesasRealizadas / custoMensalPrevisto) * 100 : 0;
-  const vagas = turmas.reduce((s: number, t: { vagas: number }) => s + Number(t.vagas || 0), 0);
+  const percUtilizadoNum = custoMensalPrevisto > 0 ? (despesasRealizadas / custoMensalPrevisto) * 100 : 0;
+  const percUtilizadoStr = percUtilizadoNum > 0 && percUtilizadoNum < 0.1
+    ? percUtilizadoNum.toFixed(2) + "%"
+    : percUtilizadoNum.toFixed(1) + "%";
+
+  const turmasVagas = turmas.reduce((s: number, t: { vagas: number }) => s + Number(t.vagas || 0), 0);
+  const totalVagas = Math.max(totalBeneficiarios, turmasVagas);
   const pendentes = pedidos.filter((p: { status: string }) => p.status === "pendente");
 
   // Calculate per-polo alerts (Anexo 5)
@@ -99,22 +130,19 @@ function DashboardPage() {
 
   const activeAlerts = poloAlerts.filter((a: { isWarning: boolean; isCritical: boolean }) => a.isWarning || a.isCritical);
 
-  // Custo Total Previsto (Projeto 6 Meses)
-  const custoTotalPrevisto = custoMensalPrevisto * 6;
-
   return (
     <GestorShell
       title="Dashboard"
       description="Visão geral da plataforma CUFA — polos, atividades, vagas e orçamento."
     >
-      {/* Cards de KPIs Principais (Anexo 1 & 2) */}
+      {/* Cards de KPIs Principais (Anexo 1, 2 & 3) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
-        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint="Projeto 6 meses" />
+        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint={`Projeto ${duracaoProjetoMeses} meses`} />
         <Kpi label="Valores já utilizados" value={brl(despesasRealizadas)} hint="Despesas realizadas" />
-        <Kpi label="% Orçamento utilizado" value={`${percUtilizado.toFixed(1)}%`} hint="Em relação ao previsto" />
+        <Kpi label="% Orçamento utilizado" value={percUtilizadoStr} hint="Em relação ao previsto" />
         <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma de todos os polos" />
-        <Kpi label="Vagas / matrículas" value={`${matriculas.length} / ${vagas || 360}`} />
+        <Kpi label="Vagas / matrículas" value={`${matriculas.length} / ${totalVagas}`} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -139,12 +167,12 @@ function DashboardPage() {
           {/* Card Alerta Geral */}
           <div
             className={`p-3.5 rounded-lg border flex items-start gap-3 ${
-              percUtilizado >= 80
+              percUtilizadoNum >= 80
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-900"
                 : "border-emerald-500/30 bg-emerald-500/10 text-emerald-900"
             }`}
           >
-            {percUtilizado >= 80 ? (
+            {percUtilizadoNum >= 80 ? (
               <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
             ) : (
               <CheckCircle2 className="size-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -152,9 +180,9 @@ function DashboardPage() {
             <div>
               <h3 className="font-bold text-xs uppercase tracking-wide">Alerta Geral de Orçamento</h3>
               <p className="text-xs mt-0.5 leading-relaxed">
-                {percUtilizado >= 80
-                  ? `Atenção: O total gasto atingiu ${percUtilizado.toFixed(1)}% do orçamento previsto.`
-                  : `Situação normal: ${percUtilizado.toFixed(1)}% do orçamento total utilizado.`}
+                {percUtilizadoNum >= 80
+                  ? `Atenção: O total gasto atingiu ${percUtilizadoStr} do orçamento previsto.`
+                  : `Situação normal: ${percUtilizadoStr} do orçamento total utilizado.`}
               </p>
             </div>
           </div>

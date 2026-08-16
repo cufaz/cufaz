@@ -95,7 +95,6 @@ function FinanceiroPage() {
         descricao: String(v['descricao'] || ""),
         valor: Number(v['valor'] || 0),
         competencia: competenciaVal,
-        data: competenciaVal,
         polo_id: v['polo_id'] || null,
         categoria_id: v['categoria_id'] || null,
       };
@@ -128,8 +127,8 @@ function FinanceiroPage() {
   // Filter lancamentos by polo & data
   const lancamentosFiltrados = lancamentos.filter((l) => {
     const pMatch = !poloId || String(l['polo_id']) === poloId;
-    const dMatch = (!dataInicio || String(l['data'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
-                   (!dataFim || String(l['data'] || l['created_at'] || "").slice(0, 10) <= dataFim);
+    const dMatch = (!dataInicio || String(l['competencia'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
+                   (!dataFim || String(l['competencia'] || l['created_at'] || "").slice(0, 10) <= dataFim);
     return pMatch && dMatch;
   });
 
@@ -138,7 +137,7 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // Calculate Despesas Previstas (Orçamento Mensal) from official dataset with flexible polo matching
+  // Calculate Despesas Previstas (Orçamento Mensal) with support for custom polos (Anexo 5)
   const poloObjPrev = polosList.find((p) => String(p['id']) === poloId);
   const poloNomePrev = poloObjPrev ? String(poloObjPrev['nome']).toLowerCase() : "";
 
@@ -151,7 +150,18 @@ function FinanceiroPage() {
     return false;
   });
 
-  const previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
+  let previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
+
+  // Fallback for custom polos (like Polo de Teste) without official preset items (Anexo 5)
+  if (previstoTotal === 0 && poloId) {
+    const dbItensPolo = itens.filter((i) => String(i['polo_id']) === poloId);
+    const sumDbItens = dbItensPolo.reduce((s, i) => s + Number(i['custo_mensal'] || 0), 0);
+    if (sumDbItens > 0) {
+      previstoTotal = sumDbItens;
+    } else if (poloObjPrev && Number(poloObjPrev['orcamento_mensal']) > 0) {
+      previstoTotal = Number(poloObjPrev['orcamento_mensal']);
+    }
+  }
 
   const previstoPorCategoria = categorias
     .filter((c) => c['tipo'] === "despesa")
