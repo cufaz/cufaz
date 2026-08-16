@@ -137,10 +137,13 @@ export const saveAtividade = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertGestor(supabase, userId);
     const { id, ...values } = data as { id?: string } & Record<string, unknown>;
-    if (id)
-      return unwrap(
-        await db(supabase).from("atividades").update(values).eq("id", id).select().single(),
+    if (id) {
+      const updated = unwrap(
+        await db(supabase).from("atividades").update(values).eq("id", id).select().maybeSingle(),
       );
+      if (updated) return updated;
+      // Registro não existe no banco (ex.: dados de demonstração) — cria.
+    }
     return unwrap(await db(supabase).from("atividades").insert(values).select().single());
   });
 
