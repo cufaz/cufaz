@@ -180,9 +180,12 @@ function FinanceiroPage() {
     });
   });
 
-  const officialAtivNames = new Set(itensOrcamentoOFICIAIS.map((i) => i.atividade.toLowerCase()));
+  const isOfficialAtiv = (name: string) => {
+    const n = name.toLowerCase();
+    return ["jiu", "basq", "futs", "karat", "ingl", "nata", "corte", "vôl", "vol"].some((k) => n.includes(k));
+  };
 
-  // 2. Custom Database Budget Items (Only for custom activities not in official preset, like Vôlei / Polo de Teste)
+  // 2. Custom Database Budget Items (Only for brand new custom activities not in official preset)
   const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
   const atividadesList: Row[] = data?.atividades ?? [];
 
@@ -191,8 +194,7 @@ function FinanceiroPage() {
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
     const ativNome = String(i['atividades']?.['nome'] || "Atividade");
 
-    const isOfficialAtiv = Array.from(officialAtivNames).some((o) => ativNome.toLowerCase().includes(o) || o.includes(ativNome.toLowerCase()));
-    if (isOfficialAtiv) return; // Prevent duplicating official preset activities
+    if (isOfficialAtiv(ativNome)) return; // Prevent duplicating official preset activities
 
     const matchPolo =
       isAllSelected ||
@@ -221,14 +223,13 @@ function FinanceiroPage() {
     }
   });
 
-  // Fallback: Custom activities with custo_mensal (e.g. Vôlei in Polo de Teste R$ 500,00)
+  // Fallback: Custom activities with custo_mensal
   atividadesList.forEach((a) => {
     const ativNome = String(a['nome']);
     const aPoloId = String(a['polo_id'] || "");
     const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
 
-    const isOfficialAtiv = Array.from(officialAtivNames).some((o) => ativNome.toLowerCase().includes(o) || o.includes(ativNome.toLowerCase()));
-    if (isOfficialAtiv) return;
+    if (isOfficialAtiv(ativNome)) return;
 
     const matchPolo =
       isAllSelected ||

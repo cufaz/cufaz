@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthLoadingOverlay } from "./AuthLoadingOverlay";
 
 export function LoginDialog({
   open,
@@ -24,6 +25,21 @@ export function LoginDialog({
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [targetUrl, setTargetUrl] = useState<string | null>(null);
+  const [overlayMsg, setOverlayMsg] = useState("Autenticando e preparando o seu painel CUFA...");
+
+  function triggerAuthRedirect(url: string, message: string) {
+    setTargetUrl(url);
+    setOverlayMsg(message);
+    setOverlayOpen(true);
+  }
+
+  function handleOverlayComplete() {
+    if (targetUrl) {
+      window.location.href = targetUrl;
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +51,6 @@ export function LoginDialog({
       return;
     }
 
-    // O painel gestor exige uma sessão real; dados locais não concedem acesso.
     if (cleanEmail === "gestor@cufa.com.br") {
       setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
@@ -49,9 +64,9 @@ export function LoginDialog({
         return;
       }
       localStorage.setItem("cufa_logged_user", cleanEmail);
-      toast.success("Login realizado com sucesso! Bem-vindo, Gestor Geral.");
+      toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
       onOpenChange(false);
-      window.location.href = "/gestor";
+      triggerAuthRedirect("/gestor", "Acessando Painel do Gestor Geral...");
       return;
     }
 
@@ -77,7 +92,6 @@ export function LoginDialog({
     const matched = list.find((g: any) => String(g.email).toLowerCase() === cleanEmail);
 
     if (matched) {
-      // STRICT PASSWORD CHECK
       if (matched.senha && matched.senha !== cleanSenha) {
         toast.error("Senha incorreta!", {
           description: "A senha digitada não confere com a cadastrada para este usuário.",
@@ -87,14 +101,14 @@ export function LoginDialog({
 
       localStorage.setItem("cufa_logged_user", cleanEmail);
       if (matched.tipo === "geral") {
-        toast.success("Login realizado com sucesso! Bem-vindo, Gestor Geral.");
+        toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
         onOpenChange(false);
-        window.location.href = "/gestor";
+        triggerAuthRedirect("/gestor", "Acessando Painel do Gestor Geral...");
       } else {
         localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
         toast.success(`Login autorizado! Unidade ${matched.poloNome}`);
         onOpenChange(false);
-        window.location.href = "/polo";
+        triggerAuthRedirect("/polo", `Acessando painel da unidade ${matched.poloNome}...`);
       }
       return;
     }
@@ -163,6 +177,7 @@ export function LoginDialog({
           </Button>
         </form>
       </DialogContent>
+      <AuthLoadingOverlay open={overlayOpen} message={overlayMsg} onComplete={handleOverlayComplete} />
     </Dialog>
   );
 }
