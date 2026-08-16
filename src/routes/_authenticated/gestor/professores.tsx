@@ -19,6 +19,7 @@ import {
   Phone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -204,70 +205,7 @@ function ProfessoresDashboardPage() {
     setDownloadingZipId(prof.id);
     setTimeout(() => {
       try {
-        const infoTxt = `PACOTE OFICIAL DE HOMOLOGAÇÃO CUFA DE PROFESSOR
-===================================================
-Nome Completo: ${prof.nome}
-E-mail de Login: ${prof.email}
-Telefone / WhatsApp: ${prof.telefone}
-Unidade / Polo: ${prof.polo}
-Modalidade / Atividade: ${prof.modalidade}
-Turma Atribuída: ${prof.turma}
-Alunos na Turma: ${prof.alunosCount} alunos
-Frequência Média dos Alunos: ${prof.frequencia}%
-Status na Plataforma: ${prof.status.toUpperCase()}
-Data de Cadastro: ${prof.dataCriacao || "2026-08-01"}
-
-DOCUMENTOS ANEXADOS NESTE COMPACTADO:
-1. Ficha_Cadastral_Professor.txt (Ficha cadastral completa)
-2. Documento_Identificacao_RG_CPF.pdf (RG / CPF)
-3. Comprovante_Residencia.pdf (Comprovante de residência)
-`;
-
-        const rgPdfDummy = `%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
-4 0 obj << /Length 65 >> stream
-BT /F1 12 Tf 100 700 TD (DOCUMENTO RG / CPF - ${prof.nome}) Tj ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000205 00000 n 
-trailer << /Size 5 /Root 1 0 R >>
-startxref
-315
-%%EOF`;
-
-        const compResPdfDummy = `%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
-4 0 obj << /Length 75 >> stream
-BT /F1 12 Tf 100 700 TD (COMPROVANTE DE RESIDENCIA - ${prof.nome}) Tj ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000205 00000 n 
-trailer << /Size 5 /Root 1 0 R >>
-startxref
-325
-%%EOF`;
-
-        const zipData = zipSync({
-          "Ficha_Cadastral_Professor.txt": strToU8(infoTxt),
-          "Documento_Identificacao_RG_CPF.pdf": strToU8(rgPdfDummy),
-          "Comprovante_Residencia.pdf": strToU8(compResPdfDummy),
-        });
-
-        const blob = new Blob([zipData], { type: "application/zip" });
+        const blob = buildProfessorZipBlob(prof);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;

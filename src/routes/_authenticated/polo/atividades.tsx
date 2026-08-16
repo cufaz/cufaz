@@ -16,6 +16,7 @@ import {
   FileCheck2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,15 +33,19 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 export interface ProfessorSolicitacao {
   id: string;
   professorNome: string;
-  email?: string;
+  email?: string | null;
+  telefone?: string | null;
   atividadeNome: string;
-  turmaNome?: string;
+  turmaNome?: string | null;
   poloNome: string;
   status: "pendente" | "aprovado" | "recusado";
-  dataSolicitacao?: string;
+  dataSolicitacao?: string | null;
   docIdName?: string | null;
+  docIdData?: string | null;
   docResName?: string | null;
+  docResData?: string | null;
   docFuncName?: string | null;
+  docFuncData?: string | null;
   cert1Name?: string | null;
   cert2Name?: string | null;
   cert3Name?: string | null;
@@ -51,8 +56,8 @@ export const Route = createFileRoute("/_authenticated/polo/atividades")({
   component: PoloAtividadesPage,
 });
 
-function cleanStr(str: string = "") {
-  return str
+function cleanStr(str: string | null | undefined = "") {
+  return (str || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -170,67 +175,21 @@ export function PoloAtividadesPage() {
     setIsDownloadingZip(true);
     setTimeout(() => {
       try {
-        const infoTxt = `PACOTE DE HOMOLOGAÇÃO CUFA DE PROFESSOR
-===========================================
-Nome Completo: ${solic.professorNome}
-E-mail de Login: ${solic.email || "santana@cufa.com.br"}
-Modalidade / Atividade: ${solic.atividadeNome}
-Turma Atribuida: ${solic.turmaNome || "Turma 1"}
-Unidade / Polo: ${solic.poloNome}
-Data da Solicitação: ${solic.dataSolicitacao || "Hoje"}
-Status no Sistema: ${solic.status.toUpperCase()}
-
-DOCUMENTOS ANEXADOS NESTE ARQUIVO COMPACTADO:
-1. Ficha_Homologacao_Professor.txt (Ficha cadastral completa)
-2. Documento_Identificacao_RG_CPF.pdf (Cópia do documento de identidade)
-3. Comprovante_Residencia.pdf (Comprovante de residência atualizado)
-`;
-
-        const rgPdfDummy = `%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
-4 0 obj << /Length 60 >> stream
-BT /F1 12 Tf 100 700 TD (DOCUMENTO RG / CPF - ${solic.professorNome}) Tj ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000205 00000 n 
-trailer << /Size 5 /Root 1 0 R >>
-startxref
-310
-%%EOF`;
-
-        const compResPdfDummy = `%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /Resources <<>> /Contents 4 0 R >> endobj
-4 0 obj << /Length 70 >> stream
-BT /F1 12 Tf 100 700 TD (COMPROVANTE DE RESIDENCIA - ${solic.professorNome}) Tj ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000205 00000 n 
-trailer << /Size 5 /Root 1 0 R >>
-startxref
-320
-%%EOF`;
-
-        const zipData = zipSync({
-          "Ficha_Homologacao_Professor.txt": strToU8(infoTxt),
-          "Documento_Identificacao_RG_CPF.pdf": strToU8(rgPdfDummy),
-          "Comprovante_Residencia.pdf": strToU8(compResPdfDummy),
+        const blob = buildProfessorZipBlob({
+          nome: solic.professorNome,
+          email: solic.email || "santana@cufa.com.br",
+          telefone: solic.telefone,
+          polo: solic.poloNome,
+          modalidade: solic.atividadeNome,
+          turma: solic.turmaNome,
+          docIdName: solic.docIdName,
+          docIdData: solic.docIdData,
+          docResName: solic.docResName,
+          docResData: solic.docResData,
+          docFuncName: solic.docFuncName,
+          docFuncData: solic.docFuncData,
         });
 
-        const blob = new Blob([zipData], { type: "application/zip" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;

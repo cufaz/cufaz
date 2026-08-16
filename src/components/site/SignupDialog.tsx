@@ -106,7 +106,7 @@ function FileUploadBtn({
   id: string;
   label: string;
   fileName: string | null;
-  onSelect: (name: string | null) => void;
+  onSelect: (name: string | null, base64: string | null) => void;
 }) {
   return (
     <div className="space-y-1">
@@ -121,11 +121,20 @@ function FileUploadBtn({
           <input
             id={id}
             type="file"
-            accept=".pdf,image/*"
+            accept="*/*"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              onSelect(file ? file.name : null);
+              if (!file) {
+                onSelect(null, null);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                const b64 = evt.target?.result as string;
+                onSelect(file.name, b64);
+              };
+              reader.readAsDataURL(file);
             }}
           />
         </label>
@@ -154,10 +163,13 @@ export function SignupDialog({
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
-  // Uploaded File Name States (Anexo 3)
+  // Uploaded File Name & Data States (Anexo 3)
   const [docIdName, setDocIdName] = useState<string | null>(null);
+  const [docIdData, setDocIdData] = useState<string | null>(null);
   const [docResName, setDocResName] = useState<string | null>(null);
+  const [docResData, setDocResData] = useState<string | null>(null);
   const [docFuncName, setDocFuncName] = useState<string | null>(null);
+  const [docFuncData, setDocFuncData] = useState<string | null>(null);
   const [cert1Name, setCert1Name] = useState<string | null>(null);
   const [cert2Name, setCert2Name] = useState<string | null>(null);
   const [cert3Name, setCert3Name] = useState<string | null>(null);
@@ -263,8 +275,11 @@ export function SignupDialog({
         telefone: telefone.trim(),
         status: "ativo",
         docIdName: docIdName || null,
+        docIdData: docIdData || null,
         docResName: docResName || null,
+        docResData: docResData || null,
         docFuncName: docFuncName || null,
+        docFuncData: docFuncData || null,
         cert1Name: cert1Name || null,
         cert2Name: cert2Name || null,
         cert3Name: cert3Name || null,
@@ -454,13 +469,19 @@ export function SignupDialog({
                       id="doc-id"
                       label="Documento de Identificação (RG / CPF)"
                       fileName={docIdName}
-                      onSelect={(n) => setDocIdName(n)}
+                      onSelect={(n, d) => {
+                        setDocIdName(n);
+                        setDocIdData(d);
+                      }}
                     />
                     <FileUploadBtn
                       id="doc-res"
                       label="Comprovante de Residência"
                       fileName={docResName}
-                      onSelect={(n) => setDocResName(n)}
+                      onSelect={(n, d) => {
+                        setDocResName(n);
+                        setDocResData(d);
+                      }}
                     />
                   </div>
 
@@ -468,7 +489,10 @@ export function SignupDialog({
                     id="doc-func"
                     label="Comprovante Funcional / Carteira Profissional (Opcional)"
                     fileName={docFuncName}
-                    onSelect={(n) => setDocFuncName(n)}
+                    onSelect={(n, d) => {
+                      setDocFuncName(n);
+                      setDocFuncData(d);
+                    }}
                   />
 
                   {/* Até 4 Certificados / Graduação */}
