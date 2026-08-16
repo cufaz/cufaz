@@ -17,6 +17,8 @@ import logo from "@/assets/cufa-z-logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
 interface PoloResponsavelShellProps {
   children: React.ReactNode;
@@ -33,6 +35,21 @@ export function PoloResponsavelShell({
 }: PoloResponsavelShellProps) {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleSair() {
+    setIsLoggingOut(true);
+    await new Promise((r) => setTimeout(r, 800));
+    try {
+      localStorage.removeItem("cufa_logged_user");
+      localStorage.removeItem("cufa_logged_role");
+      localStorage.removeItem("cufa_logged_email");
+      localStorage.removeItem("cufa_polo_atribuido");
+      localStorage.removeItem("cufa_master_authenticated");
+      await supabase.auth.signOut();
+    } catch {}
+    window.location.href = "/";
+  }
 
   // Active Polo assigned to this Responsável
   const [poloNome] = useState(() => {
@@ -149,6 +166,7 @@ export function PoloResponsavelShell({
 
   return (
     <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 flex flex-col font-sans">
+      <AuthLoadingOverlay open={isLoggingOut} message="Encerrando sessão com segurança..." />
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-md">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
@@ -258,10 +276,7 @@ export function PoloResponsavelShell({
               variant="ghost"
               size="sm"
               className="text-xs font-bold text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                localStorage.removeItem("cufa_polo_atribuido");
-                window.location.href = "/";
-              }}
+              onClick={handleSair}
             >
               <LogOut className="size-4 mr-1" /> Sair
             </Button>
