@@ -182,19 +182,23 @@ function FinanceiroPage() {
 
   const isOfficialAtiv = (name: string) => {
     const n = name.toLowerCase();
-    return ["jiu", "basq", "futs", "karat", "ingl", "nata", "corte", "vôl", "vol"].some((k) => n.includes(k));
+    return ["jiu", "basq", "futs", "karat", "ingl", "nata", "corte", "vôl", "vol", "tatame", "kimono", "lanche", "professor", "monitor"].some((k) => n.includes(k));
   };
 
-  // 2. Custom Database Budget Items (Only for brand new custom activities not in official preset)
+  // 2. Custom Database Budget Items (Only for brand new custom activities created by user)
   const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
   const atividadesList: Row[] = data?.atividades ?? [];
 
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
-    const ativNome = String(i['atividades']?.['nome'] || "Atividade");
+    const ativNome = String(i['atividades']?.['nome'] || i['atividade_nome'] || i['item'] || "");
 
     if (isOfficialAtiv(ativNome)) return; // Prevent duplicating official preset activities
+    if (i['is_preset'] || String(i['id']).startsWith("preset-")) return;
+
+    const itemClean = String(i['item'] || "").toLowerCase();
+    if (presetItems.some((p) => p.item.toLowerCase().includes(itemClean) || itemClean.includes(p.item.toLowerCase()))) return;
 
     const matchPolo =
       isAllSelected ||
@@ -212,7 +216,7 @@ function FinanceiroPage() {
       dbCustomItems.push({
         id: String(i['id'] || `db-${Math.random()}`),
         poloId: itemPoloId || selectedPoloIds[0] || "",
-        atividade: ativNome,
+        atividade: ativNome || "Oficina",
         categoria: catNome,
         item: itemNome,
         descricao: descStr,

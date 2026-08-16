@@ -13,6 +13,7 @@ import {
   Loader2,
   Menu,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -20,6 +21,7 @@ import logo from "@/assets/cufa-z-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 
@@ -90,10 +92,26 @@ export function GestorShell({
     window.location.href = "/";
   }
 
+  function handleLimparCache() {
+    try {
+      localStorage.removeItem("cufa_deleted_lancamentos");
+      localStorage.removeItem("cufa_lancamentos_custom");
+      localStorage.removeItem("cufa_deleted_categorias");
+      localStorage.removeItem("cufa_categorias_pedidos");
+      localStorage.removeItem("cufa_compras_polo");
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+      window.dispatchEvent(new Event("cufa_categorias_updated"));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+    toast.success("Cache limpo! Dados oficiais do sistema restaurados.");
+    setTimeout(() => {
+      window.location.reload();
+    }, 400);
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans">
       <AuthLoadingOverlay open={isLoggingOut} message="Encerrando sessão com segurança..." />
-      {/* Centered Circle Loading Spinner Overlay for Page Transitions (Anexo 5) */}
       {carregando ? (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">
           <Loader2 className="size-12 animate-spin text-primary" />
@@ -117,7 +135,7 @@ export function GestorShell({
         </button>
       </div>
 
-      {/* Left Vertical Sidebar (Anexo 2) */}
+      {/* Left Vertical Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card flex flex-col justify-between transition-transform duration-300 lg:static lg:translate-x-0 shrink-0",
@@ -125,8 +143,8 @@ export function GestorShell({
         )}
       >
         <div>
-          {/* Header & Logo */}
-          <div className="p-6 border-b border-border/60">
+          {/* Header & Logo + User Info Directly Below (Anexo 1 & 2) */}
+          <div className="p-5 border-b border-border/60 space-y-3">
             <Link to="/gestor" className="flex items-center gap-3">
               <img src={logo} alt="CUFA" className="h-10 w-auto object-contain" />
               <div>
@@ -138,6 +156,24 @@ export function GestorShell({
                 </span>
               </div>
             </Link>
+
+            {/* Profile Card & Sair button directly below logo */}
+            <div className="pt-2 border-t border-border/40 space-y-2">
+              <div className="rounded-xl bg-muted/50 p-2.5 flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">Gestor Conectado</p>
+                  <p className="text-[10px] text-muted-foreground truncate font-medium">gestor@cufa.com.br</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10 border-destructive/20 h-8"
+                onClick={sair}
+              >
+                <LogOut className="mr-1.5 size-3.5" /> Sair do Painel
+              </Button>
+            </div>
           </div>
 
           {/* Navigation Links */}
@@ -152,7 +188,7 @@ export function GestorShell({
                   preload="intent"
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all",
+                    "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all",
                     active || indo
                       ? "bg-primary text-white shadow-brand"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -175,21 +211,11 @@ export function GestorShell({
           </nav>
         </div>
 
-        {/* Footer Sidebar Profile & Logout */}
-        <div className="p-4 border-t border-border/60 space-y-3">
-          <div className="rounded-xl bg-muted/40 p-3 flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">Gestor Conectado</p>
-              <p className="text-[10px] text-muted-foreground truncate">gestor@cufa.com.br</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10 border-destructive/20"
-            onClick={sair}
-          >
-            <LogOut className="mr-2 size-4" /> Sair do Painel
-          </Button>
+        {/* Footer Sidebar status info */}
+        <div className="p-4 border-t border-border/60">
+          <p className="text-[10px] font-bold text-center text-muted-foreground">
+            CUFA Sistema de Gestão v2.0
+          </p>
         </div>
       </aside>
 
@@ -202,7 +228,20 @@ export function GestorShell({
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground font-medium">{description}</p>
             ) : null}
           </div>
-          {actions}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Top Limpar Cache Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLimparCache}
+              title="Restaurar dados originais do sistema e limpar cache"
+              className="border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500 hover:text-white font-bold text-xs"
+            >
+              <RotateCcw className="mr-1.5 size-3.5" /> Limpar Cache
+            </Button>
+            {actions}
+          </div>
         </div>
         {children}
       </main>
