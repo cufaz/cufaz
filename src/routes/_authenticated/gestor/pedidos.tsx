@@ -788,14 +788,23 @@ function PedidosPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Valor Total (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={Number(editModalPedido['valor_total'] || editModalPedido['valor'] || 0)}
-                    onChange={(e) => setEditModalPedido({ ...editModalPedido, valor_total: Number(e.target.value), valor: Number(e.target.value) })}
-                    className="font-bold text-primary"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-sm font-bold text-muted-foreground">R$</span>
+                    <Input
+                      type="text"
+                      required
+                      value={(Number(editModalPedido['valor_total'] || editModalPedido['valor'] || 0)).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        const val = raw ? parseFloat(raw) / 100 : 0;
+                        setEditModalPedido({ ...editModalPedido, valor_total: val, valor: val });
+                      }}
+                      className="pl-9 font-bold text-base text-primary"
+                    />
+                  </div>
                 </div>
               </div>
 

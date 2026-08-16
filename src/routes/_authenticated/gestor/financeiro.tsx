@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -143,15 +143,129 @@ function FinanceiroPage() {
 
   const polosList: Row[] = data?.polos ?? [];
   const categorias: Row[] = data?.categorias ?? [];
-  const lancamentos: Row[] = data?.lancamentos ?? [];
+  const serverLancamentos: Row[] = data?.lancamentos ?? [];
   const itens: Row[] = data?.itens ?? [];
+
+  // Read local custom lancamentos + approved purchase orders from local storage (Anexo 2 & 3)
+  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<Row[]>(() => {
+    try {
+      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+      const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
+
+      const storedPedidos = localStorage.getItem("cufa_compras_polo");
+      const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
+      const approvedLanc = listPedidos
+        .filter((p: any) => p.status === "aprovado")
+        .map((p: any) => {
+          const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
+          const pIdCode = pNome.toLowerCase().includes("penha")
+            ? "penha"
+            : pNome.toLowerCase().includes("madureira")
+            ? "madureira"
+            : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
+            ? "paraisopolis"
+            : "polo-teste";
+          const valNum = Number(p.valor_total || p.valor || 0);
+
+          return {
+            id: `ped-aprov-${p.id}`,
+            polo_id: pIdCode,
+            polo_nome: pNome,
+            descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
+            valor: valNum,
+            tipo: "despesa",
+            natureza: "realizado",
+            categoria_id: p.categoria || "Materiais / consumo",
+            categoria_nome: p.categoria || "Materiais / consumo",
+            competencia: "2026-08-01",
+            created_at: p.dataSolicitacao || new Date().toISOString(),
+          };
+        });
+
+      return [...listLanc, ...approvedLanc];
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    function syncLocalLancamentos() {
+      try {
+        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
+        const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
+
+        const storedPedidos = localStorage.getItem("cufa_compras_polo");
+        const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
+        const approvedLanc = listPedidos
+          .filter((p: any) => p.status === "aprovado")
+          .map((p: any) => {
+            const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
+            const pIdCode = pNome.toLowerCase().includes("penha")
+              ? "penha"
+              : pNome.toLowerCase().includes("madureira")
+              ? "madureira"
+              : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
+              ? "paraisopolis"
+              : "polo-teste";
+            const valNum = Number(p.valor_total || p.valor || 0);
+
+            return {
+              id: `ped-aprov-${p.id}`,
+              polo_id: pIdCode,
+              polo_nome: pNome,
+              descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
+              valor: valNum,
+              tipo: "despesa",
+              natureza: "realizado",
+              categoria_id: p.categoria || "Materiais / consumo",
+              categoria_nome: p.categoria || "Materiais / consumo",
+              competencia: "2026-08-01",
+              created_at: p.dataSolicitacao || new Date().toISOString(),
+            };
+          });
+
+        setLocalCustomLancamentos([...listLanc, ...approvedLanc]);
+      } catch {}
+    }
+
+    window.addEventListener("cufa_pedidos_updated", syncLocalLancamentos);
+    window.addEventListener("storage", syncLocalLancamentos);
+    return () => {
+      window.removeEventListener("cufa_pedidos_updated", syncLocalLancamentos);
+      window.removeEventListener("storage", syncLocalLancamentos);
+    };
+  }, []);
+
+  const lancamentos: Row[] = [
+    ...localCustomLancamentos,
+    ...serverLancamentos.filter((s) => !localCustomLancamentos.some((l) => String(l['id']) === String(s['id']))),
+  ];
 
   const isAllSelected = selectedPoloIds.length === 0 || selectedPoloIds.length === polosList.length;
 
-  // Filter lancamentos by polo & data
+  const selectedPoloNames = polosList
+    .filter((p) => selectedPoloIds.includes(String(p['id'])))
+    .map((p) => String(p['nome']).toLowerCase());
+
+  // Filter lancamentos by polo & date with flexible matching
   const lancamentosFiltrados = lancamentos.filter((l) => {
     if (deletedIds.includes(String(l['id']))) return false;
-    const pMatch = isAllSelected || selectedPoloIds.includes(String(l['polo_id']));
+    const lPoloId = String(l['polo_id'] || "").toLowerCase();
+    const lPoloNome = String(l['polo_nome'] || "").toLowerCase();
+
+    const pMatch =
+      isAllSelected ||
+      selectedPoloIds.includes(String(l['polo_id'])) ||
+      (selectedPoloNames.length > 0 &&
+        selectedPoloNames.some(
+          (pName) =>
+            (lPoloId !== "" && (lPoloId.includes(pName) || pName.includes(lPoloId))) ||
+            (lPoloNome !== "" && (lPoloNome.includes(pName) || pName.includes(lPoloNome))) ||
+            (pName.includes("penha") && lPoloId.includes("penha")) ||
+            (pName.includes("madureira") && lPoloId.includes("madureira")) ||
+            ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && lPoloId.includes("paraisopolis")) ||
+            (pName.includes("teste") && lPoloId.includes("teste"))
+        ));
+
     const dMatch = (!dataInicio || String(l['competencia'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
                    (!dataFim || String(l['competencia'] || l['created_at'] || "").slice(0, 10) <= dataFim);
     return pMatch && dMatch;
@@ -163,10 +277,6 @@ function FinanceiroPage() {
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
   // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items
-  const selectedPoloNames = polosList
-    .filter((p) => selectedPoloIds.includes(String(p['id'])))
-    .map((p) => String(p['nome']).toLowerCase());
-
   // 1. Official Preset Items for Penha, Madureira, Paraisópolis, Polo de Teste
   const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
     if (isAllSelected) return true;
