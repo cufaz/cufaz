@@ -290,6 +290,9 @@ export function SignupDialog({
       localStorage.setItem("cufa_logged_user", pEmail);
       localStorage.setItem("cufa_logged_role", "professor");
       localStorage.setItem("cufa_professor_nome", pNome);
+      if (telefone.trim()) {
+        localStorage.setItem("cufa_professor_telefone", telefone.trim());
+      }
 
       toast.success("Conta de Professor criada com sucesso!", {
         description: "Acesso liberado! Você já pode se candidatar às vagas e turmas disponíveis.",

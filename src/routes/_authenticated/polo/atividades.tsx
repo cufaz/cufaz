@@ -445,11 +445,18 @@ export function PoloAtividadesPage() {
 
                     if (pMatch && pMatch.status === "aprovado") {
                       return (
-                        <div className="mt-2 flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground font-medium">
-                            Instrutor: <span className="font-extrabold text-foreground">{pMatch.professorNome}</span>
-                          </p>
-                          <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-[10px]">
+                        <div className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                          <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 truncate">
+                            <span>Instrutor:</span>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-black text-xs text-primary underline hover:text-primary/80 truncate"
+                              onClick={() => setSelectedSolicitacao(pMatch)}
+                            >
+                              {pMatch.professorNome}
+                            </Button>
+                          </div>
+                          <Badge className="bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 shadow-xs shrink-0">
                             ✓ Vinculado
                           </Badge>
                         </div>
@@ -638,28 +645,63 @@ export function PoloAtividadesPage() {
                 </div>
               </div>
 
-              {/* Seção 3: Botões de Decisão */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border">
-                <Button
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 shadow-md"
-                  onClick={() => {
-                    handleAprovarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome, selectedSolicitacao.atividadeNome);
-                    setSelectedSolicitacao(null);
-                  }}
-                >
-                  <UserCheck className="size-4 mr-1.5" /> Aprovar e Vincular Professor
-                </Button>
+              {/* Seção 3: Status / Botões de Decisão */}
+              <div className="pt-2 border-t border-border">
+                {selectedSolicitacao.status === "aprovado" ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                    <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                      <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="font-extrabold text-xs">Professor Aprovado e Vinculado</p>
+                        <p className="text-[11px] text-muted-foreground">Esta turma está sob a responsabilidade de {selectedSolicitacao.professorNome}.</p>
+                      </div>
+                    </div>
 
-                <Button
-                  variant="destructive"
-                  className="flex-1 font-extrabold text-xs h-10 shadow-md"
-                  onClick={() => {
-                    handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
-                    setSelectedSolicitacao(null);
-                  }}
-                >
-                  <UserX className="size-4 mr-1.5" /> Recusar Solicitação
-                </Button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs font-bold text-destructive hover:bg-destructive/10 border-destructive/30"
+                        onClick={() => {
+                          handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
+                          setSelectedSolicitacao(null);
+                        }}
+                      >
+                        <UserX className="size-3.5 mr-1" /> Desvincular / Reabrir Vaga
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs font-bold"
+                        onClick={() => setSelectedSolicitacao(null)}
+                      >
+                        Fechar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 shadow-md"
+                      onClick={() => {
+                        handleAprovarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome, selectedSolicitacao.atividadeNome);
+                        setSelectedSolicitacao(null);
+                      }}
+                    >
+                      <UserCheck className="size-4 mr-1.5" /> Aprovar e Vincular Professor
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="flex-1 font-extrabold text-xs h-10 shadow-md"
+                      onClick={() => {
+                        handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
+                        setSelectedSolicitacao(null);
+                      }}
+                    >
+                      <UserX className="size-4 mr-1.5" /> Recusar Solicitação
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -19,7 +19,20 @@ function ProfessorPerfilPage() {
   const [email] = useState(() => localStorage.getItem("cufa_logged_user") || "professor@cufa.com.br");
   const [polo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalidade] = useState(() => localStorage.getItem("cufa_professor_modalidade") || "Jiu Jitsu");
-  const [telefone, setTelefone] = useState(() => localStorage.getItem("cufa_professor_telefone") || "(21) 99887-6655");
+  const [telefone, setTelefone] = useState(() => {
+    const saved = localStorage.getItem("cufa_professor_telefone");
+    if (saved) return saved;
+    try {
+      const stored = localStorage.getItem("cufa_professores_cadastrados");
+      if (stored) {
+        const list = JSON.parse(stored);
+        const logged = (localStorage.getItem("cufa_logged_user") || "").toLowerCase();
+        const found = list.find((p: any) => p.email && String(p.email).toLowerCase() === logged);
+        if (found && found.telefone) return found.telefone;
+      }
+    } catch {}
+    return "";
+  });
   const [biografia, setBiografia] = useState(() => localStorage.getItem("cufa_professor_biografia") || "Instrutor capacitado focado no desenvolvimento social e esportivo dos alunos.");
 
   // Social networks
