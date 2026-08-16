@@ -69,8 +69,37 @@ export function MasterAdminDialog({
       } catch {}
     }
 
+    function syncMasterProfessores() {
+      try {
+        const stored = localStorage.getItem("cufa_professores_solicitacoes");
+        if (stored) {
+          const list = JSON.parse(stored).filter(
+            (p: any) => !p.id?.startsWith("demo-") && !p.id?.startsWith("g-demo")
+          );
+          setProfessoresData(
+            list.map((p: any) => ({
+              id: p.id,
+              nome: p.professorNome || p.nome,
+              email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
+              senha: p.senha || "prof2026",
+              disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+              polo: p.poloNome || p.polo || "Complexo da Penha",
+            }))
+          );
+        } else {
+          setProfessoresData([]);
+        }
+      } catch {}
+    }
+
     window.addEventListener("cufa_gestores_updated", syncMasterGestores);
-    return () => window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
+    window.addEventListener("cufa_professores_updated", syncMasterProfessores);
+    window.addEventListener("storage", syncMasterProfessores);
+    return () => {
+      window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
+      window.removeEventListener("cufa_professores_updated", syncMasterProfessores);
+      window.removeEventListener("storage", syncMasterProfessores);
+    };
   }, []);
 
   const [alunosData, setAlunosData] = useState<any[]>(() => {
@@ -85,14 +114,16 @@ export function MasterAdminDialog({
     try {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
       if (stored) {
-        const list = JSON.parse(stored);
+        const list = JSON.parse(stored).filter(
+          (p: any) => !p.id?.startsWith("demo-") && !p.id?.startsWith("g-demo")
+        );
         return list.map((p: any) => ({
           id: p.id,
-          nome: p.professorNome,
-          email: p.email || `${p.professorNome.toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
+          nome: p.professorNome || p.nome,
+          email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
           senha: p.senha || "prof2026",
-          disciplina: p.atividadeNome,
-          polo: p.poloNome,
+          disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+          polo: p.poloNome || p.polo || "Complexo da Penha",
         }));
       }
     } catch {}

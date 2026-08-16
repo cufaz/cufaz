@@ -39,30 +39,7 @@ function PoloAtividadesPage() {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
       if (stored) return JSON.parse(stored);
     } catch {}
-
-    const defaultDemo: ProfessorSolicitacao[] = [
-      {
-        id: "demo-solic-1",
-        professorNome: "Prof. Marcos Faixa Preta",
-        atividadeNome: "Jiu Jitsu",
-        poloNome: "Complexo da Penha",
-        status: "pendente",
-        dataSolicitacao: "2026-08-16",
-      },
-      {
-        id: "demo-solic-2",
-        professorNome: "Prof.ª Patricia Santos",
-        atividadeNome: "Aula de Inglês",
-        poloNome: "Complexo da Penha",
-        status: "pendente",
-        dataSolicitacao: "2026-08-16",
-      },
-    ];
-
-    try {
-      localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(defaultDemo));
-    } catch {}
-    return defaultDemo;
+    return [];
   });
 
   useEffect(() => {
