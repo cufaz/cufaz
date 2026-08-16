@@ -485,6 +485,15 @@ function PedidosPage() {
                       >
                         <Pencil className="size-3.5" />
                       </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Excluir pedido"
+                        onClick={() => setPedidoExcluir(p)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </div>
                     <p className="text-[11px] text-muted-foreground font-medium">
                       Qtd: {String(p['quantidade'] || 1)}
