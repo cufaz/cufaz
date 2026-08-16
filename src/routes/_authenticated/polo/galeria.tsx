@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Image as ImageIcon, Plus, Trash2, BookOpen, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Image as ImageIcon, Plus, Trash2, BookOpen, Upload, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Button } from "@/components/ui/button";
@@ -32,73 +32,104 @@ export function PoloGaleriaPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [fotos, setFotos] = useState<FotoItem[]>([
-    {
-      id: "f1",
-      atividade: "Jiu Jitsu",
-      titulo: "Treino de Graduação e Gradiente",
-      url: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600",
-      dataUpload: "12/08/2026",
-    },
-    {
-      id: "f2",
-      atividade: "Natação",
-      titulo: "Aula Prática de Adaptação Aquática",
-      url: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600",
-      dataUpload: "10/08/2026",
-    },
-    {
-      id: "f3",
-      atividade: "Corte e Costura",
-      titulo: "Oficina de Modelagem e Peças Piloto",
-      url: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600",
-      dataUpload: "08/08/2026",
-    },
-  ]);
+  // Persistent Fotos in localStorage (Anexo 5)
+  const [fotos, setFotos] = useState<FotoItem[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_galeria_fotos");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [
+      {
+        id: "f1",
+        atividade: "Jiu Jitsu",
+        titulo: "Treino de Graduação e Gradiente",
+        url: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600",
+        dataUpload: "12/08/2026",
+      },
+      {
+        id: "f2",
+        atividade: "Natação",
+        titulo: "Aula Prática de Adaptação Aquática",
+        url: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600",
+        dataUpload: "10/08/2026",
+      },
+      {
+        id: "f3",
+        atividade: "Corte e Costura",
+        titulo: "Oficina de Modelagem e Peças Piloto",
+        url: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600",
+        dataUpload: "08/08/2026",
+      },
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cufa_galeria_fotos", JSON.stringify(fotos));
+    } catch {}
+  }, [fotos]);
 
   const [atividade, setAtividade] = useState("Jiu Jitsu");
   const [titulo, setTitulo] = useState("");
-  const [url, setUrl] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  function handleAdicionarFoto(e: React.FormEvent) {
+  // Upload Multiple Files directly (Anexo 4)
+  function handleAdicionarFotos(e: React.FormEvent) {
     e.preventDefault();
-    if (!titulo || !url) {
-      toast.error("Preencha o título e a URL da foto.");
+    if (!selectedFiles || selectedFiles.length === 0) {
+      toast.error("Selecione pelo menos uma imagem para fazer upload.");
       return;
     }
 
-    const nova: FotoItem = {
-      id: `f-${Date.now()}`,
-      atividade,
-      titulo,
-      url,
-      dataUpload: new Date().toLocaleDateString("pt-BR"),
-    };
+    setIsUploading(true);
+    const newItems: FotoItem[] = [];
+    let processed = 0;
 
-    setFotos([nova, ...fotos]);
-    toast.success("Foto adicionada à galeria do curso!", {
-      description: `Exibida publicamente para os alunos em ${atividade}.`,
+    Array.from(selectedFiles).forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64Url = event.target?.result as string;
+        newItems.push({
+          id: `f-${Date.now()}-${index}`,
+          atividade,
+          titulo: titulo ? `${titulo} (${index + 1})` : file.name.replace(/\.[^/.]+$/, ""),
+          url: base64Url,
+          dataUpload: new Date().toLocaleDateString("pt-BR"),
+        });
+
+        processed++;
+        if (processed === selectedFiles.length) {
+          setFotos((prev) => [...newItems, ...prev]);
+          setIsUploading(false);
+          setModalOpen(false);
+          setTitulo("");
+          setSelectedFiles(null);
+          toast.success(`${processed} foto(s) adicionada(s) à galeria!`, {
+            description: `Exibidas e salvas permanentemente para os alunos de ${atividade}.`,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
     });
-    setModalOpen(false);
-    setTitulo("");
-    setUrl("");
   }
 
   function handleRemoverFoto(id: string) {
-    setFotos(fotos.filter((f) => f.id !== id));
+    const updated = fotos.filter((f) => f.id !== id);
+    setFotos(updated);
     toast.success("Foto removida da galeria.");
   }
 
   return (
     <PoloResponsavelShell
       title="Galeria de Fotos dos Cursos"
-      description={`Imagens das oficinas e atividades práticas exibidas para os alunos — ${poloNome}.`}
+      description={`Upload e galeria fixa de fotos das oficinas exibidas para os alunos — ${poloNome}.`}
       actions={
         <Button
           onClick={() => setModalOpen(true)}
           className="bg-brand-gradient text-white font-bold shadow-brand"
         >
-          <Plus className="mr-1.5 size-4" /> Adicionar Foto
+          <Upload className="mr-1.5 size-4" /> Upload de Fotos
         </Button>
       }
     >
@@ -128,7 +159,7 @@ export function PoloGaleriaPage() {
 
                 <div className="flex items-center justify-between pt-1">
                   <Badge variant="secondary" className="text-[10px] font-bold">
-                    Visível aos Alunos
+                    Fixa na Plataforma
                   </Badge>
                   <Button
                     size="sm"
@@ -145,14 +176,16 @@ export function PoloGaleriaPage() {
         </div>
       </div>
 
-      {/* Modal Adicionar Foto */}
+      {/* Modal Upload de Fotos (Sem campo de URL, suporte a seleção múltipla - Anexo 4 & 5) */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Adicionar Foto ao Curso</DialogTitle>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Upload className="size-5 text-primary" /> Upload de Fotos do Curso
+            </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleAdicionarFoto} className="space-y-4 mt-2">
+          <form onSubmit={handleAdicionarFotos} className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Oficina / Atividade</Label>
               <select
@@ -171,30 +204,36 @@ export function PoloGaleriaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Título / Legenda da Foto</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Título / Legenda da Foto (Opcional)</Label>
               <Input
-                required
-                placeholder="ex.: Aula prática de graduação, Apresentação final..."
+                placeholder="ex.: Treino de Graduação, Apresentação..."
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 className="font-medium"
               />
             </div>
 
+            {/* Input de Upload de Múltiplos Arquivos (Anexo 4) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">URL da Imagem</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">
+                Selecionar Imagens do Computador (Permite Múltiplas)
+              </Label>
               <Input
+                type="file"
+                accept="image/*"
+                multiple
                 required
-                placeholder="https://images.unsplash.com/..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="font-medium"
+                onChange={(e) => setSelectedFiles(e.target.files)}
+                className="cursor-pointer font-medium file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-primary/90"
               />
+              <span className="text-[11px] text-muted-foreground block">
+                Pressione Ctrl (ou Cmd) para selecionar mais de uma imagem simultaneamente.
+              </span>
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="submit" className="w-full bg-brand-gradient text-white font-bold shadow-brand">
-                Publicar Foto na Galeria
+              <Button type="submit" disabled={isUploading} className="w-full bg-brand-gradient text-white font-bold shadow-brand">
+                {isUploading ? "Processando Upload..." : "Publicar Fotos na Galeria"}
               </Button>
             </DialogFooter>
           </form>

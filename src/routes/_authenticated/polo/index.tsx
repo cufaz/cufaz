@@ -12,16 +12,32 @@ export const Route = createFileRoute("/_authenticated/polo/")({
 function PoloDashboardPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
 
-  // Operational metrics for the Polo (NO R$ VALUES AS REQUESTED)
+  // Dynamic counts starting at 0 for clean testing (Anexo 1)
+  const [alunosLista] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_alunos_polo");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+  const [comprasLista] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_compras_polo");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
   const isPenha = poloNome.toLowerCase().includes("penha");
   const isMadureira = poloNome.toLowerCase().includes("madureira");
 
-  const totalAlunos = isPenha ? 150 : isMadureira ? 81 : 30;
+  const totalAlunos = alunosLista.length;
   const vagasTotais = isPenha ? 150 : isMadureira ? 81 : 30;
   const totalAtividades = isPenha ? 3 : isMadureira ? 3 : 1;
   const totalTurmas = isPenha ? 4 : isMadureira ? 4 : 2;
-  const taxaFrequencia = "94.2%";
-  const comprasPendentes = 1;
+  const taxaFrequencia = totalAlunos > 0 ? "100%" : "0%";
+  const comprasPendentes = comprasLista.filter((c: any) => c.status === "pendente").length;
 
   const atividadesLista = isPenha
     ? [

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { ClipboardCheck, Check, X, Calendar, BookOpen, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ClipboardCheck, Check, X, Calendar, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Button } from "@/components/ui/button";
@@ -21,46 +21,44 @@ export function PoloChamadaPage() {
   const [atividade, setAtividade] = useState("Jiu Jitsu");
   const [dataChamada, setDataChamada] = useState("2026-08-16");
 
-  const [alunos, setAlunos] = useState<AlunoChamada[]>([
-    { id: "1", nome: "Carlos Eduardo Silva", presente: true },
-    { id: "2", nome: "Ana Clara Souza", presente: true },
-    { id: "3", nome: "Gabriel Santos", presente: true },
-    { id: "4", nome: "Beatriz Oliveira", presente: false },
-    { id: "5", nome: "Lucas Rodrigues", presente: true },
-    { id: "6", nome: "Mariana Costa", presente: true },
-    { id: "7", nome: "Pedro Henrique Lima", presente: true },
-    { id: "8", nome: "Sophia Alves", presente: false },
-  ]);
+  const [alunos, setAlunos] = useState<AlunoChamada[]>(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_chamada_${atividade}_${dataChamada}`);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [
+      { id: "1", nome: "Carlos Eduardo Silva", presente: true },
+      { id: "2", nome: "Ana Clara Souza", presente: true },
+      { id: "3", nome: "Gabriel Santos", presente: true },
+      { id: "4", nome: "Beatriz Oliveira", presente: false },
+      { id: "5", nome: "Lucas Rodrigues", presente: true },
+      { id: "6", nome: "Mariana Costa", presente: true },
+      { id: "7", nome: "Pedro Henrique Lima", presente: true },
+      { id: "8", nome: "Sophia Alves", presente: false },
+    ];
+  });
 
-  function togglePresenca(id: string) {
-    setAlunos(
-      alunos.map((a) => (a.id === id ? { ...a, presente: !a.presente } : a))
-    );
-  }
-
-  function handleSalvarChamada() {
-    const presentesCount = alunos.filter((a) => a.presente).length;
-    toast.success("Chamada salva com sucesso!", {
-      description: `Oficina: ${atividade} | Data: ${dataChamada} | Presentes: ${presentesCount}/${alunos.length}`,
+  // Auto-Save presence to localStorage on every toggle (Anexo 3)
+  function togglePresenca(id: string, novoStatus: boolean) {
+    const atualizados = alunos.map((a) => (a.id === id ? { ...a, presente: novoStatus } : a));
+    setAlunos(atualizados);
+    try {
+      localStorage.setItem(`cufa_chamada_${atividade}_${dataChamada}`, JSON.stringify(atualizados));
+    } catch {}
+    const aluno = alunos.find((a) => a.id === id);
+    toast.success(`Frequência salva: ${aluno?.nome || "Aluno"}`, {
+      description: novoStatus ? "Status: Presente" : "Status: Falta",
     });
   }
 
   const presentesTotal = alunos.filter((a) => a.presente).length;
   const faltasTotal = alunos.length - presentesTotal;
-  const taxaPresenca = ((presentesTotal / alunos.length) * 100).toFixed(1);
+  const taxaPresenca = alunos.length > 0 ? ((presentesTotal / alunos.length) * 100).toFixed(1) : "0.0";
 
   return (
     <PoloResponsavelShell
       title="Chamada / Registro de Frequência"
-      description={`Marcação de presença diária dos alunos por oficina — ${poloNome}.`}
-      actions={
-        <Button
-          onClick={handleSalvarChamada}
-          className="bg-brand-gradient text-white font-bold shadow-brand"
-        >
-          <Save className="mr-1.5 size-4" /> Salvar Chamada
-        </Button>
-      }
+      description={`Marcação de presença diária dos alunos por oficina — ${poloNome}. As alterações são salvas automaticamente ao clicar.`}
     >
       <div className="space-y-6">
         {/* Controles da Chamada */}
@@ -150,7 +148,7 @@ export function PoloChamadaPage() {
                         ? "bg-emerald-600 text-white hover:bg-emerald-700"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
-                    onClick={() => togglePresenca(a.id)}
+                    onClick={() => togglePresenca(a.id, true)}
                   >
                     <Check className="size-3.5 mr-1" /> Presente
                   </Button>
@@ -162,7 +160,7 @@ export function PoloChamadaPage() {
                         ? "bg-destructive text-white"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
-                    onClick={() => togglePresenca(a.id)}
+                    onClick={() => togglePresenca(a.id, false)}
                   >
                     <X className="size-3.5 mr-1" /> Falta
                   </Button>

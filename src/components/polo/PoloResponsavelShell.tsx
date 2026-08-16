@@ -11,7 +11,7 @@ import {
   LogOut,
   Building2,
   Bell,
-  ChevronDown,
+  CheckCircle2,
 } from "lucide-react";
 import logo from "@/assets/cufa-z-logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,6 +38,42 @@ export function PoloResponsavelShell({
   const [poloNome] = useState(() => {
     return localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
   });
+
+  // Notification Bell Popover State
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notificacoes, setNotificacoes] = useState([
+    {
+      id: "n1",
+      titulo: "Nova Matrícula no Polo",
+      desc: "Nova inscrição registrada para a turma do turno da tarde.",
+      tempo: "Há 15 minutos",
+      lida: false,
+    },
+    {
+      id: "n2",
+      titulo: "Lembrete de Chamada Diária",
+      desc: "Registre a frequência das turmas de hoje para manter os indicadores atualizados.",
+      tempo: "Há 1 hora",
+      lida: false,
+    },
+    {
+      id: "n3",
+      titulo: "Atualização de Solicitação",
+      desc: "Pedido de materiais e compras encaminhado para validação.",
+      tempo: "Há 3 horas",
+      lida: true,
+    },
+  ]);
+
+  const unreadCount = notificacoes.filter((n) => !n.lida).length;
+
+  function marcarTodasLidas() {
+    setNotificacoes(notificacoes.map((n) => ({ ...n, lida: true })));
+  }
+
+  function marcarLida(id: string) {
+    setNotificacoes(notificacoes.map((n) => (n.id === id ? { ...n, lida: true } : n)));
+  }
 
   const menuItems = [
     {
@@ -104,11 +140,67 @@ export function PoloResponsavelShell({
             </Badge>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="relative rounded-full text-muted-foreground">
-              <Bell className="size-5" />
-              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-            </Button>
+          <div className="flex items-center gap-3 relative">
+            {/* Interactive Bell Icon & Notification Menu */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => setNotifOpen(!notifOpen)}
+              >
+                <Bell className="size-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-extrabold text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </Button>
+
+              {/* Notification Popover Card */}
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in-50 zoom-in-95">
+                  <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Bell className="size-4 text-primary" />
+                      <h4 className="font-extrabold text-sm text-foreground">Notificações do Polo</h4>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={marcarTodasLidas}
+                        className="text-[11px] font-bold text-primary hover:underline"
+                      >
+                        Marcar todas como lidas
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                    {notificacoes.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">Nenhuma notificação por enquanto.</p>
+                    ) : (
+                      notificacoes.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => marcarLida(n.id)}
+                          className={`p-3 rounded-xl border text-xs transition-colors cursor-pointer ${
+                            !n.lida
+                              ? "bg-primary/5 border-primary/20 text-foreground font-semibold"
+                              : "bg-muted/20 border-border text-muted-foreground font-normal"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-extrabold text-foreground">{n.titulo}</span>
+                            <span className="text-[10px] opacity-75">{n.tempo}</span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed opacity-90">{n.desc}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="h-6 w-px bg-border hidden sm:block" />
 

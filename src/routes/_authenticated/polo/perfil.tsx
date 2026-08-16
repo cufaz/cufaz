@@ -21,15 +21,36 @@ export function PoloPerfilPage() {
   const [email, setEmail] = useState("alessandra.penha@cufa.com.br");
   const [telefone, setTelefone] = useState("(21) 98888-9999");
   const [dataNascimento, setDataNascimento] = useState("1988-05-14");
-  const [fotoUrl, setFotoUrl] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300");
+  const [fotoUrl, setFotoUrl] = useState(() => {
+    return localStorage.getItem("cufa_perfil_foto") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300";
+  });
   const [biografia, setBiografia] = useState(
     "Coordenadora operacional da CUFA com mais de 8 anos de atuação em projetos sociais de esporte, cultura e educação para jovens periféricos."
   );
 
+  function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setFotoUrl(base64);
+        try {
+          localStorage.setItem("cufa_perfil_foto", base64);
+        } catch {}
+        toast.success("Foto de perfil atualizada!");
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
+    try {
+      localStorage.setItem("cufa_perfil_foto", fotoUrl);
+    } catch {}
     toast.success("Perfil do Responsável atualizado com sucesso!", {
-      description: "Suas informações de cadastro foram salvas.",
+      description: "Suas informações pessoais e foto foram salvas na plataforma.",
     });
   }
 
@@ -67,13 +88,17 @@ export function PoloPerfilPage() {
               </span>
             </div>
 
-            <div className="space-y-1 text-left pt-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">URL da Foto</Label>
+            <div className="space-y-1.5 text-left pt-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Upload de Foto de Perfil</Label>
               <Input
-                value={fotoUrl}
-                onChange={(e) => setFotoUrl(e.target.value)}
-                className="text-xs font-mono"
+                type="file"
+                accept="image/*"
+                onChange={handleFotoUpload}
+                className="cursor-pointer font-medium text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-primary/90"
               />
+              <span className="text-[11px] text-muted-foreground block">
+                Selecione uma foto do seu computador para salvar fixamente no perfil.
+              </span>
             </div>
           </CardContent>
         </Card>
