@@ -157,8 +157,21 @@ function PoloDashboardPage() {
             <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900">
               <CheckCircle2 className="size-4 shrink-0 text-emerald-600 mt-0.5" />
               <div>
-                <span className="font-bold block">100% de Vagas Preenchidas</span>
-                <span>Todas as oficinas do seu polo atingiram a meta de inscrições da comunidade.</span>
+                {totalAlunos >= vagasTotais && vagasTotais > 0 ? (
+                  <>
+                    <span className="font-bold block">100% de Vagas Preenchidas</span>
+                    <span>Todas as oficinas do seu polo atingiram a meta de inscrições da comunidade.</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold block">
+                      Vagas Disponíveis ({vagasTotais > 0 ? Math.round((totalAlunos / vagasTotais) * 100) : 0}% Preenchidas)
+                    </span>
+                    <span>
+                      Existem {Math.max(vagasTotais - totalAlunos, 0)} vagas abertas para matrículas de novos alunos no {poloNome}.
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>

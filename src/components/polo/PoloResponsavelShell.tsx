@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   BookOpen,
@@ -35,6 +35,7 @@ export function PoloResponsavelShell({
   description,
   actions,
 }: PoloResponsavelShellProps) {
+  const navigate = useNavigate();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -42,7 +43,7 @@ export function PoloResponsavelShell({
 
   async function handleSair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
     try {
       localStorage.removeItem("cufa_logged_user");
       localStorage.removeItem("cufa_logged_role");
@@ -51,7 +52,7 @@ export function PoloResponsavelShell({
       localStorage.removeItem("cufa_master_authenticated");
       await supabase.auth.signOut();
     } catch {}
-    window.location.href = "/";
+    navigate({ to: "/" });
   }
 
   // Active Polo assigned to this Responsável

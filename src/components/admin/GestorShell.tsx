@@ -84,12 +84,18 @@ export function GestorShell({
 
   async function sair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
-    localStorage.removeItem("cufa_logged_user");
-    window.location.href = "/";
+    try {
+      localStorage.removeItem("cufa_logged_user");
+      localStorage.removeItem("cufa_logged_role");
+      localStorage.removeItem("cufa_logged_email");
+      localStorage.removeItem("cufa_polo_atribuido");
+      localStorage.removeItem("cufa_master_authenticated");
+      await supabase.auth.signOut();
+    } catch {}
+    navigate({ to: "/" });
   }
 
   function handleLimparCache() {
