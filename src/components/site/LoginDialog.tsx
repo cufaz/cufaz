@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -157,7 +157,8 @@ export function LoginDialog({
               onChange={(e) => setSenha(e.target.value)}
             />
           </div>
-          <Button type="submit" className="bg-brand-gradient font-semibold shadow-brand">
+          <Button type="submit" disabled={loading} className="bg-brand-gradient font-semibold shadow-brand">
+            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             Entrar
           </Button>
         </form>
