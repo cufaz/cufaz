@@ -119,11 +119,12 @@
 
 /* Números que sempre cabem no card, mesmo no mobile */
 @utility num-fit {
-  font-size: clamp(0.95rem, 4.6vw, 1.5rem);
+  font-size: clamp(0.75rem, 2.5vw, 1.15rem);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 
