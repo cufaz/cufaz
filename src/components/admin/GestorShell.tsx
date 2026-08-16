@@ -54,7 +54,7 @@ export function GestorShell({
     select: (s) => (s.status === "pending" ? s.location.pathname : null),
   });
   const fetching = useIsFetching();
-  const carregando = fetching > 0 || pendingTo !== null;
+  void fetching;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pendingPedidosCount, setPendingPedidosCount] = useState<number>(0);
