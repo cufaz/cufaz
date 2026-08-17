@@ -202,6 +202,22 @@ function VitrineAtividadesAlunoPage() {
       faixaEtaria: "07 a 17 anos",
       requisitos: "Roupas esportivas confortáveis",
     },
+    {
+      id: "v-teste-oficina-1",
+      nome: "Oficina Experimental",
+      polo: "Polo de Teste",
+      turmaNome: "Turma 1 - Tarde (14h - 16h)",
+      horario: "Seg e Quat - 14:00 às 16:00",
+      professorNome: "Prof.ª Santana Silva",
+      professorEmail: "santana@cufa.com.br",
+      professorTelefone: "(11) 94830-0321",
+      professorBio: "Instrutor credenciado para testes e projetos experimentais da CUFA.",
+      vagasTotais: 30,
+      alunosMatriculados: 0,
+      descricao: "Oficina prática de testes integrados e formação esportiva/cultural no Polo de Teste.",
+      faixaEtaria: "06 a 17 anos",
+      requisitos: "Roupas confortáveis e atestado médico",
+    },
   ];
 
   function loadVitrineMergedList() {
