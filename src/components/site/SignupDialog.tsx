@@ -151,6 +151,8 @@ export function SignupDialog({
   const [cert3Name, setCert3Name] = useState<string | null>(null);
   const [cert4Name, setCert4Name] = useState<string | null>(null);
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
+  const { polos: polosCadastrados } = usePolosCadastrados();
+
 
   // Student specific state
   const [dataNasc, setDataNasc] = useState("");
