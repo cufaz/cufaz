@@ -156,6 +156,36 @@ export function AtividadesPage() {
         custo_mensal: Number(v['custo_mensal'] || 0),
         ativo: Boolean(v['ativo'] ?? true),
       };
+      try {
+        const stored = localStorage.getItem("cufa_atividades_gestor");
+        let list = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(list)) list = [];
+        const poloFound = polosCriacao.find((p) => String(p['id']) === String(v['polo_id']));
+        const poloNome = poloFound ? String(poloFound['nome']) : "Polo de Teste";
+
+        const newAct = {
+          id: v['id'] || `act-${Date.now()}`,
+          nome: v['nome'],
+          polo_id: v['polo_id'],
+          polo_nome: poloNome,
+          polo: poloNome,
+          vagas: Number(v['vagas'] || 10),
+          descricao: v['descricao'] || "",
+          dias: v['dias'] || "Seg e Quat - 14:00 às 16:00",
+          ativo: true,
+          turmaNome: "Turma 1 - Tarde (14h - 16h)",
+        };
+
+        const existingIdx = list.findIndex((a: any) => String(a.id) === String(newAct.id) || String(a.nome).toLowerCase() === String(newAct.nome).toLowerCase());
+        if (existingIdx >= 0) {
+          list[existingIdx] = { ...list[existingIdx], ...newAct };
+        } else {
+          list.push(newAct);
+        }
+        localStorage.setItem("cufa_atividades_gestor", JSON.stringify(list));
+        window.dispatchEvent(new Event("cufa_atividades_updated"));
+      } catch {}
+
       if (v['id']) {
         payload['id'] = v['id'];
       }
@@ -168,7 +198,20 @@ export function AtividadesPage() {
     onError: fail,
   });
   const mDelAtividade = useMutation({
-    mutationFn: (id: string) => apagar({ data: { id } }),
+    mutationFn: (id: string) => {
+      try {
+        const stored = localStorage.getItem("cufa_atividades_gestor");
+        if (stored) {
+          const list = JSON.parse(stored);
+          if (Array.isArray(list)) {
+            const filtered = list.filter((a: any) => String(a.id) !== String(id));
+            localStorage.setItem("cufa_atividades_gestor", JSON.stringify(filtered));
+            window.dispatchEvent(new Event("cufa_atividades_updated"));
+          }
+        }
+      } catch {}
+      return apagar({ data: { id } });
+    },
     onSuccess: () => ok("Atividade removida"),
     onError: fail,
   });

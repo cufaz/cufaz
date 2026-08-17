@@ -222,72 +222,91 @@ function VitrineAtividadesAlunoPage() {
 
   function loadVitrineMergedList() {
     const listMap = new Map<string, VitrineCardItem>();
+    const polosWithCustomActivities = new Set<string>();
 
-    // 1. Add default vitrine cards
-    defaultVitrine.forEach((item) => {
-      listMap.set(item.id, item);
-    });
-
-    // 2. Read activities created by Gestor in cufa_atividades_gestor
+    let gestorActivities: any[] = [];
     try {
       const storedGestor = localStorage.getItem("cufa_atividades_gestor");
       if (storedGestor) {
         const parsed = JSON.parse(storedGestor);
         if (Array.isArray(parsed)) {
-          parsed.forEach((g: any, idx: number) => {
-            const id = g.id || `v-gestor-${idx}`;
-            const poloName = g.polo_nome || g.polo || "Polo de Teste";
-            listMap.set(id, {
-              id,
-              nome: g.nome || "Oficina Interativa",
-              polo: poloName,
-              turmaNome: g.turmaNome || "Turma 1 - Tarde (14h - 16h)",
-              horario: g.dias || "Seg e Quat - 14:00 às 16:00",
-              professorNome: g.professorNome || "Aguardando Instrutor",
-              professorEmail: g.professorEmail || "contato@cufa.com.br",
-              professorTelefone: "(11) 98877-6655",
-              professorBio: "Instrutor credenciado da Central Única das Favelas.",
-              vagasTotais: Number(g.vagas || 40),
-              alunosMatriculados: 0,
-              descricao: g.descricao || "Oficina prática focada no desenvolvimento socioeducativo e cultural.",
-              faixaEtaria: g.faixa_etaria || g.faixaEtaria || "06 a 17 anos",
-              requisitos: g.requisitos || "Roupas confortáveis e vontade de aprender",
-            });
+          gestorActivities = parsed;
+          parsed.forEach((g: any) => {
+            const pName = g.polo_nome || g.polo;
+            if (pName) polosWithCustomActivities.add(String(pName).toLowerCase().trim());
           });
         }
       }
     } catch {}
 
-    // 3. Read activities created by Polo in cufa_atividades_polo
+    let poloActivities: any[] = [];
     try {
       const storedPolo = localStorage.getItem("cufa_atividades_polo");
       if (storedPolo) {
         const parsed = JSON.parse(storedPolo);
         if (Array.isArray(parsed)) {
-          parsed.forEach((p: any, idx: number) => {
-            const id = p.id || `v-polo-${idx}`;
-            if (!listMap.has(id)) {
-              listMap.set(id, {
-                id,
-                nome: p.nome || "Oficina Comunitária",
-                polo: p.polo_nome || p.polo || "Polo de Teste",
-                turmaNome: p.turmaNome || "Turma 1 - Tarde (14h - 16h)",
-                horario: p.horario || p.dias || "Ter e Qui - 14:00 às 16:00",
-                professorNome: p.professorNome || "Aguardando Instrutor",
-                professorEmail: "contato@cufa.com.br",
-                professorTelefone: "(11) 98877-6655",
-                professorBio: "Instrutor credenciado da Central Única das Favelas.",
-                vagasTotais: Number(p.vagas || 30),
-                alunosMatriculados: 0,
-                descricao: p.descricao || "Oficina formativa da unidade.",
-                faixaEtaria: p.faixa_etaria || p.faixaEtaria || "06 a 17 anos",
-                requisitos: p.requisitos || "Atestado de saúde ou autorização do responsável",
-              });
-            }
+          poloActivities = parsed;
+          parsed.forEach((p: any) => {
+            const pName = p.polo_nome || p.polo;
+            if (pName) polosWithCustomActivities.add(String(pName).toLowerCase().trim());
           });
         }
       }
     } catch {}
+
+    // Add default vitrine cards ONLY for polos that do NOT have custom activities
+    defaultVitrine.forEach((item) => {
+      const cleanPolo = item.polo.toLowerCase().trim();
+      if (!polosWithCustomActivities.has(cleanPolo)) {
+        listMap.set(item.id, item);
+      }
+    });
+
+    // Add Gestor created activities
+    gestorActivities.forEach((g: any, idx: number) => {
+      const id = g.id || `v-gestor-${idx}`;
+      const poloName = g.polo_nome || g.polo || "Polo de Teste";
+      listMap.set(id, {
+        id,
+        nome: g.nome || "Oficina Interativa",
+        polo: poloName,
+        turmaNome: g.turmaNome || "Turma 1 - Tarde (14h - 16h)",
+        horario: g.dias || g.horario || "Seg e Quat - 14:00 às 16:00",
+        professorNome: g.professorNome || g.instrutor || "Aguardando Instrutor",
+        professorEmail: g.professorEmail || "contato@cufa.com.br",
+        professorTelefone: g.professorTelefone || "(11) 98877-6655",
+        professorBio: g.professorBio || "Instrutor credenciado da Central Única das Favelas.",
+        vagasTotais: Number(g.vagas ?? 10),
+        alunosMatriculados: 0,
+        descricao: g.descricao || "Oficina prática focada no desenvolvimento socioeducativo e cultural.",
+        faixaEtaria: g.faixa_etaria || g.faixaEtaria || "06 a 17 anos",
+        requisitos: g.requisitos || "Roupas confortáveis e vontade de aprender",
+      });
+    });
+
+    // Add Polo created activities
+    poloActivities.forEach((p: any, idx: number) => {
+      const id = p.id || `v-polo-${idx}`;
+      if (!listMap.has(id)) {
+        const poloName = p.polo_nome || p.polo || "Polo de Teste";
+        listMap.set(id, {
+          id,
+          nome: p.nome || "Oficina Comunitária",
+          polo: poloName,
+          turmaNome: p.turmaNome || "Turma 1 - Tarde (14h - 16h)",
+          horario: p.horario || p.dias || "Ter e Qui - 14:00 às 16:00",
+          professorNome: p.professorNome || p.instrutor || "Aguardando Instrutor",
+          professorEmail: "contato@cufa.com.br",
+          professorTelefone: "(11) 98877-6655",
+          professorBio: "Instrutor credenciado da Central Única das Favelas.",
+          vagasTotais: Number(p.vagas ?? 10),
+          alunosMatriculados: 0,
+          descricao: p.descricao || "Oficina formativa da unidade.",
+          faixaEtaria: p.faixa_etaria || p.faixaEtaria || "06 a 17 anos",
+          requisitos: p.requisitos || "Atestado de saúde ou autorização do responsável",
+        });
+      }
+    });
 
     return Array.from(listMap.values());
   }
