@@ -371,13 +371,26 @@ export function SignupDialog({
         list.push(novoAluno);
         localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
 
-        if (fotoPerfil) {
-          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
-          localStorage.setItem(`cufa_perfil_foto_${aEmail}`, fotoPerfil);
-          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
-        }
+        if (fotoPerfil) setAvatarLocal(aEmail, fotoPerfil);
         window.dispatchEvent(new Event("cufa_alunos_updated"));
       } catch {}
+
+      void upsertAlunoCadastro({
+        nome: aNome,
+        email: aEmail,
+        telefone: telefone.trim() || null,
+        data_nasc: dataNasc || null,
+        nome_escola: nomeEscola || null,
+        ano_escolar: anoEscolar || null,
+        turno_escolar: turnoEscolar || null,
+        qtd_pessoas_residencia: Number(qtdPessoasResidencia) || 0,
+        nome_responsavel: nomeResponsavel || null,
+        cpf_responsavel: cpfResponsavel || null,
+        tel_responsavel: telResponsavel || null,
+        polo_nome: unidade || null,
+        avatar_url: fotoPerfil,
+      }).catch(() => {});
+
 
       localStorage.setItem("cufa_logged_user", aEmail);
       localStorage.setItem("cufa_logged_role", "aluno");
