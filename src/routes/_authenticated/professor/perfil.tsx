@@ -81,6 +81,50 @@ function ProfessorPerfilPage() {
       reader.readAsDataURL(file);
     }
   }
+  // Bank & PIX details
+  const [banco, setBanco] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).banco || "Itaú (341)";
+    } catch {}
+    return "Itaú (341)";
+  });
+  const [tipoConta, setTipoConta] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).tipoConta || "Corrente";
+    } catch {}
+    return "Corrente";
+  });
+  const [agencia, setAgencia] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).agencia || "0001";
+    } catch {}
+    return "0001";
+  });
+  const [conta, setConta] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).conta || "12345-6";
+    } catch {}
+    return "12345-6";
+  });
+  const [pixTipo, setPixTipo] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).pixTipo || "CPF";
+    } catch {}
+    return "CPF";
+  });
+  const [pixChave, setPixChave] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`cufa_professor_banco_${pEmail}`);
+      if (stored) return JSON.parse(stored).pixChave || pEmail;
+    } catch {}
+    return pEmail || "123.456.789-00";
+  });
+
   function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault();
     if (pEmail) {
@@ -90,9 +134,12 @@ function ProfessorPerfilPage() {
       localStorage.setItem(`cufa_professor_instagram_${pEmail}`, instagram);
       localStorage.setItem(`cufa_professor_facebook_${pEmail}`, facebook);
       localStorage.setItem(`cufa_professor_linkedin_${pEmail}`, linkedin);
+
+      const bankData = { banco, tipoConta, agencia, conta, pixTipo, pixChave };
+      localStorage.setItem(`cufa_professor_banco_${pEmail}`, JSON.stringify(bankData));
       window.dispatchEvent(new Event("cufa_perfil_updated"));
     }
-    toast.success("Perfil do professor atualizado com sucesso!");
+    toast.success("Perfil e dados bancários atualizados com sucesso!");
   }
 
   return (
@@ -209,6 +256,81 @@ function ProfessorPerfilPage() {
                   value={linkedin}
                   onChange={(e) => setLinkedin(e.target.value)}
                   className="text-xs"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dados Bancários para Pagamentos e PIX (Anexo 5) */}
+        <Card className="border-border shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/60">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <FileText className="size-4 text-emerald-600" />
+              <span>Dados Bancários para Pagamento / Repasse (PIX)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Banco</Label>
+                <Input
+                  placeholder="Ex: Itaú, Nubank, Banco do Brasil..."
+                  value={banco}
+                  onChange={(e) => setBanco(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tipo de Conta</Label>
+                <select
+                  value={tipoConta}
+                  onChange={(e) => setTipoConta(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
+                >
+                  <option value="Corrente">Conta Corrente</option>
+                  <option value="Poupança">Conta Poupança</option>
+                  <option value="Pagamento">Conta Pagamento</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Agência</Label>
+                <Input
+                  placeholder="Ex: 0001"
+                  value={agencia}
+                  onChange={(e) => setAgencia(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Conta com Dígito</Label>
+                <Input
+                  placeholder="Ex: 12345-6"
+                  value={conta}
+                  onChange={(e) => setConta(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tipo de Chave PIX</Label>
+                <select
+                  value={pixTipo}
+                  onChange={(e) => setPixTipo(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
+                >
+                  <option value="CPF">CPF / CNPJ</option>
+                  <option value="E-mail">E-mail</option>
+                  <option value="Telefone">Telefone</option>
+                  <option value="Chave Aleatória">Chave Aleatória</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Chave PIX</Label>
+                <Input
+                  placeholder="Ex: 123.456.789-00 ou email@cufa.com.br"
+                  value={pixChave}
+                  onChange={(e) => setPixChave(e.target.value)}
+                  className="text-xs font-bold text-primary"
                 />
               </div>
             </div>

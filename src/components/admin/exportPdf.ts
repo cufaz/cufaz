@@ -127,7 +127,7 @@ export function generateProfessionalPdf({
     ["Despesas Realizadas (Gastos)", formatBRL(totalDespesasRealizadas), totalDespesasRealizadas > 0 ? "Despesas ativas" : "Total pago no período"],
     ["Despesas Previstas (Orçamento)", formatBRL(totalDespesasPrevistas), "Orçamento mensal aprovado"],
     ["Saldo do Mês (Realizado)", formatBRL(saldoRealizado), saldoRealizado >= 0 ? "Saldo Positivo" : "Déficit"],
-    ["Diferença Previsto × Realizado", formatBRL(difPrevistoRealizado), difPrevistoRealizado >= 0 ? "Dentro do limite" : "Excedido"],
+    ["Variação Previsto × Realizado", formatBRL(difPrevistoRealizado), difPrevistoRealizado >= 0 ? "Dentro do limite" : "Excedido"],
     ["% Orçamento Utilizado", `${percUtilizado.toFixed(1)}%`, percUtilizado > 90 ? "⚠️ CRÍTICO" : percUtilizado > 75 ? "⚡ ATENÇÃO" : "✅ NORMAL"],
   ];
 
@@ -169,7 +169,7 @@ export function generateProfessionalPdf({
 
   autoTable(doc, {
     startY: nextY1 + 3,
-    head: [["CATEGORIA", "PREVISTO (R$)", "REALIZADO (R$)", "DIFERENÇA (R$)", "% UTILIZADO"]],
+    head: [["CATEGORIA", "PREVISTO (R$)", "REALIZADO (R$)", "VARIAÇÃO (R$)", "% UTILIZADO"]],
     body: catRows.length === 0 ? [["-", "R$ 0,00", "R$ 0,00", "R$ 0,00", "0%"]] : catRows,
     theme: "grid",
     headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255], fontStyle: "bold" },

@@ -569,12 +569,48 @@ function ProfessoresDashboardPage() {
                       <Phone className="size-3 text-primary" /> {selectedProf.telefone}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">Data de Cadastro</span>
-                    <span className="font-bold text-foreground">{selectedProf.dataCriacao || "2026-08-01"}</span>
-                  </div>
                 </div>
               </div>
+
+              {/* Seção Dados Bancários para Pagamento / PIX (Anexo 5) */}
+              {(() => {
+                let bank: any = null;
+                try {
+                  const stored = localStorage.getItem(`cufa_professor_banco_${selectedProf.email.toLowerCase()}`);
+                  if (stored) bank = JSON.parse(stored);
+                } catch {}
+
+                const bBanco = bank?.banco || "Itaú (341)";
+                const bTipo = bank?.tipoConta || "Corrente";
+                const bAg = bank?.agencia || "0001";
+                const bConta = bank?.conta || "12345-6";
+                const bPixTipo = bank?.pixTipo || "CPF";
+                const bPixChave = bank?.pixChave || selectedProf.email;
+
+                return (
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                    <h4 className="font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1.5 text-xs">
+                      <FileText className="size-4 text-emerald-600" /> Dados Bancários para Pagamento / Repasse (PIX)
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Banco</span>
+                        <span className="font-extrabold text-foreground">{bBanco}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Tipo / Agência / Conta</span>
+                        <span className="font-extrabold text-foreground">{bTipo} • Ag: {bAg} • C/C: {bConta}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Chave PIX ({bPixTipo})</span>
+                        <span className="font-black text-primary bg-background px-2 py-1 rounded border border-border inline-block mt-0.5">
+                          {bPixChave}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Seção 2: Documentos e Botão ZIP */}
               <div className="p-4 rounded-2xl bg-card border border-border space-y-4">

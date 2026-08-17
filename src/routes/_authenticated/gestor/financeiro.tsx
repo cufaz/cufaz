@@ -611,7 +611,7 @@ function FinanceiroPage() {
             <Linha label="Despesas realizadas" valor={totalDespesas} />
             <Linha label="Despesas previstas (orçamento)" valor={previstoTotal} forte />
             <Linha label="Saldo do mês (realizado)" valor={totalReceitas - totalDespesas} forte />
-            <Linha label="Diferença previsto x realizado" valor={previstoTotal - totalDespesas} />
+            <Linha label="Variação previsto x realizado" valor={previstoTotal - totalDespesas} />
           </section>
 
           {/* 2. DESPESAS POR CATEGORIA (DETALHADO POR ITEM, DESCRIÇÃO, QUANTIDADE E VARIAÇÃO) */}
@@ -627,7 +627,29 @@ function FinanceiroPage() {
 
             <div className="p-4 space-y-6">
               {(() => {
-                const poloItens = poloItensPrevisto;
+                // Dynamically compute realizado for each item by matching despesas launches
+                const poloItens = poloItensPrevisto.map((item) => {
+                  const cleanItemName = item.item.toLowerCase().trim();
+                  const cleanAtivName = item.atividade.toLowerCase().trim();
+                  const cleanCatName = item.categoria.toLowerCase().trim();
+
+                  const itemRealizado = despesas
+                    .filter((d) => {
+                      const desc = String(d['descricao'] || d['item'] || "").toLowerCase().trim();
+                      const cat = String(d['categoria'] || d['categoria_nome'] || "").toLowerCase().trim();
+
+                      if (desc.includes(cleanItemName) || cleanItemName.includes(desc)) return true;
+                      if (cleanAtivName !== "" && desc.includes(cleanAtivName)) return true;
+                      if (cat === cleanCatName) return true;
+                      return false;
+                    })
+                    .reduce((sum, d) => sum + Number(d['valor'] || 0), 0);
+
+                  return {
+                    ...item,
+                    realizado: itemRealizado,
+                  };
+                });
 
                 // Group by category
                 const categoriasMap: Record<string, typeof poloItens> = {};
@@ -676,7 +698,7 @@ function FinanceiroPage() {
                               <th className="py-2.5 px-3">Quantidade</th>
                               <th className="py-2.5 px-3 text-right">Previsto (R$)</th>
                               <th className="py-2.5 px-3 text-right">Realizado (R$)</th>
-                              <th className="py-2.5 px-3 text-right">Variação / Diferença (R$)</th>
+                              <th className="py-2.5 px-3 text-right">Variação (R$)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/60">

@@ -177,21 +177,36 @@ export function MasterAdminDialog({
 
   function loadMasterProfessores() {
     const listMap = new Map<string, any>();
+    const isFakeProf = (emailStr: string, nameStr: string) => {
+      const e = (emailStr || "").toLowerCase();
+      const n = (nameStr || "").toLowerCase();
+      return (
+        e.includes("marcos") ||
+        e.includes("patricia") ||
+        n.includes("marcos") ||
+        n.includes("patricia")
+      );
+    };
+
     try {
       const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
       if (storedSol) {
         const list = JSON.parse(storedSol);
         if (Array.isArray(list)) {
           list.forEach((p: any) => {
-            const id = p.id || `prof-${Math.random()}`;
-            listMap.set(id, {
-              id,
-              nome: p.professorNome || p.nome,
-              email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
-              senha: p.senha || "prof2026",
-              disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-              polo: p.poloNome || p.polo || "Complexo da Penha",
-            });
+            const email = p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`;
+            const name = p.professorNome || p.nome || "Professor";
+            if (!isFakeProf(email, name)) {
+              const id = p.id || `prof-${email}`;
+              listMap.set(id, {
+                id,
+                nome: name,
+                email,
+                senha: p.senha || "prof2026",
+                disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+                polo: p.poloNome || p.polo || "Complexo da Penha",
+              });
+            }
           });
         }
       }
@@ -201,16 +216,20 @@ export function MasterAdminDialog({
         const list = JSON.parse(storedCad);
         if (Array.isArray(list)) {
           list.forEach((p: any) => {
-            const id = p.id || `prof-cad-${Math.random()}`;
-            if (!listMap.has(id)) {
-              listMap.set(id, {
-                id,
-                nome: p.professorNome || p.nome,
-                email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
-                senha: p.senha || "prof2026",
-                disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-                polo: p.poloNome || p.polo || "Complexo da Penha",
-              });
+            const email = p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`;
+            const name = p.professorNome || p.nome || "Professor";
+            if (!isFakeProf(email, name)) {
+              const id = p.id || `prof-cad-${email}`;
+              if (!listMap.has(id)) {
+                listMap.set(id, {
+                  id,
+                  nome: name,
+                  email,
+                  senha: p.senha || "prof2026",
+                  disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+                  polo: p.poloNome || p.polo || "Complexo da Penha",
+                });
+              }
             }
           });
         }
