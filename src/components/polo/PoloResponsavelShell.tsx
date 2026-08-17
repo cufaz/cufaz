@@ -281,6 +281,11 @@ export function PoloResponsavelShell({
       icon: Users,
     },
     {
+      to: "/polo/diario-classe",
+      label: "Diário de Classe",
+      icon: ClipboardCheck,
+    },
+    {
       to: "/polo/compras",
       label: "Solicitação de Compras",
       icon: ShoppingCart,

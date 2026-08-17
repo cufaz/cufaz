@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { generateTermoAutorizacaoPdf } from "@/lib/pdfAutorizacao";
+
 export const Route = createFileRoute("/_authenticated/aluno/perfil")({
   component: PerfilAlunoPage,
 });
@@ -39,9 +41,22 @@ function PerfilAlunoPage() {
   const [telResponsavel, setTelResponsavel] = useState("");
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
+  // New fields (Anexo 3)
+  const [hospitalEmergencia, setHospitalEmergencia] = useState("");
+  const [cep, setCep] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [numero, setNumero] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("Rio de Janeiro");
+  const [uf, setUf] = useState("RJ");
+  const [telefonePai, setTelefonePai] = useState("");
+  const [telefoneVizinho, setTelefoneVizinho] = useState("");
+  const [telefoneAvo, setTelefoneAvo] = useState("");
+
   // Document names
   const [docIdName, setDocIdName] = useState<string | null>(null);
   const [docResName, setDocResName] = useState<string | null>(null);
+  const [termoAutorizacaoName, setTermoAutorizacaoName] = useState<string | null>(null);
 
   useEffect(() => {
     const userEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
@@ -68,10 +83,39 @@ function PerfilAlunoPage() {
           if (found.telResponsavel) setTelResponsavel(found.telResponsavel);
           if (found.docIdName) setDocIdName(found.docIdName);
           if (found.docResName) setDocResName(found.docResName);
+          if (found.termoAutorizacaoName) setTermoAutorizacaoName(found.termoAutorizacaoName);
+          if (found.hospitalEmergencia) setHospitalEmergencia(found.hospitalEmergencia);
+          if (found.cep) setCep(found.cep);
+          if (found.endereco) setEndereco(found.endereco);
+          if (found.numero) setNumero(found.numero);
+          if (found.bairro) setBairro(found.bairro);
+          if (found.cidade) setCidade(found.cidade);
+          if (found.uf) setUf(found.uf);
+          if (found.telefonePai) setTelefonePai(found.telefonePai);
+          if (found.telefoneVizinho) setTelefoneVizinho(found.telefoneVizinho);
+          if (found.telefoneAvo) setTelefoneAvo(found.telefoneAvo);
         }
       }
     } catch {}
   }, []);
+
+  async function handleCepLookup(rawCep: string) {
+    setCep(rawCep);
+    const clean = rawCep.replace(/\D/g, "");
+    if (clean.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+          setEndereco(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "Rio de Janeiro");
+          setUf(data.uf || "RJ");
+          toast.success("Endereço preenchido automaticamente pelo CEP!");
+        }
+      } catch {}
+    }
+  }
 
   function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -101,8 +145,19 @@ function PerfilAlunoPage() {
           nomeResponsavel,
           cpfResponsavel,
           telResponsavel,
+          hospitalEmergencia,
+          cep,
+          endereco,
+          numero,
+          bairro,
+          cidade,
+          uf,
+          telefonePai,
+          telefoneVizinho,
+          telefoneAvo,
           docIdName: docIdName || list[idx].docIdName,
           docResName: docResName || list[idx].docResName,
+          termoAutorizacaoName: termoAutorizacaoName || list[idx].termoAutorizacaoName,
         };
       } else {
         list.push({
@@ -118,8 +173,19 @@ function PerfilAlunoPage() {
           nomeResponsavel,
           cpfResponsavel,
           telResponsavel,
+          hospitalEmergencia,
+          cep,
+          endereco,
+          numero,
+          bairro,
+          cidade,
+          uf,
+          telefonePai,
+          telefoneVizinho,
+          telefoneAvo,
           docIdName,
           docResName,
+          termoAutorizacaoName,
         });
       }
       localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
@@ -131,21 +197,45 @@ function PerfilAlunoPage() {
     }
   }
 
-  function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>, type: "id" | "res") {
+  function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>, type: "id" | "res" | "termo") {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const b64 = evt.target?.result as string;
+    reader.onload = () => {
       if (type === "id") {
         setDocIdName(file.name);
-      } else {
+      } else if (type === "res") {
         setDocResName(file.name);
+      } else {
+        setTermoAutorizacaoName(file.name);
       }
       toast.success(`Documento (${file.name}) carregado com sucesso.`);
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleGerarTermoPdf() {
+    generateTermoAutorizacaoPdf({
+      nomeAluno: nome,
+      dataNasc,
+      polo: "Complexo da Penha",
+      modalidade: "Jiu Jitsu",
+      nomeResponsavel,
+      cpfResponsavel,
+      telefoneResponsavel: telResponsavel || telefone,
+      hospitalEmergencia,
+      cep,
+      endereco,
+      numero,
+      bairro,
+      cidade,
+      uf,
+      telefonePai,
+      telefoneVizinho,
+      telefoneAvo,
+    });
+    toast.success("Termo de Autorização gerado em PDF!");
   }
 
   return (
@@ -307,16 +397,35 @@ function PerfilAlunoPage() {
           </CardContent>
         </Card>
 
-        {/* Card Documentos Anexados */}
+        {/* Card Documentos Anexados & Termo de Autorização (Anexo 3) */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <FileText className="size-4 text-emerald-600" />
-              <span>Documentação Anexada</span>
+              <span>Documentação Anexada & Termo de Autorização</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <CardContent className="pt-4 space-y-4">
+            {/* Bloco de Gerar Termo PDF */}
+            <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">
+                  <FileText className="size-4 text-orange-600" /> Termo de Autorização Preenchido Automaticamente
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Gere o PDF com os dados do aluno e do responsável. Imprima, assine e anexe a foto/PDF assinado abaixo.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={handleGerarTermoPdf}
+                className="bg-brand-gradient text-white font-black text-xs h-9 px-4 shadow-brand shrink-0 w-full sm:w-auto"
+              >
+                📄 Gerar Termo (PDF)
+              </Button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <FileText className="size-4 text-primary shrink-0" />
@@ -339,7 +448,7 @@ function PerfilAlunoPage() {
                 <div className="flex items-center gap-2.5">
                   <FileText className="size-4 text-primary shrink-0" />
                   <div>
-                    <span className="font-bold text-xs text-foreground block">Comprovante de Residência</span>
+                    <span className="font-bold text-xs text-foreground block">Comprovante Residência</span>
                     <span className="text-[10px] text-muted-foreground font-medium">
                       {docResName ? docResName : "Nenhum arquivo anexado"}
                     </span>
@@ -350,6 +459,24 @@ function PerfilAlunoPage() {
                     Substituir
                   </Button>
                   <input type="file" accept="*/*" className="hidden" onChange={(e) => handleDocUpload(e, "res")} />
+                </label>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-xs text-foreground block">Termo de Autorização Assinado</span>
+                    <span className="text-[10px] text-emerald-700 font-extrabold">
+                      {termoAutorizacaoName ? termoAutorizacaoName : "Pendente envio"}
+                    </span>
+                  </div>
+                </div>
+                <label className="cursor-pointer">
+                  <Button variant="outline" size="sm" type="button" className="text-xs h-8 font-bold pointer-events-none border-emerald-500/40 text-emerald-700">
+                    Anexar
+                  </Button>
+                  <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleDocUpload(e, "termo")} />
                 </label>
               </div>
             </div>

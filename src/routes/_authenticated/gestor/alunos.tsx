@@ -68,6 +68,17 @@ export interface AlunoRecord {
   dataCriacao?: string;
   frequenciaGeral?: string;
   qtdAtividades?: number;
+  hospitalEmergencia?: string;
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  telefonePai?: string;
+  telefoneVizinho?: string;
+  telefoneAvo?: string;
+  termoAutorizacaoName?: string | null;
 }
 
 function cleanStr(str: string = "") {
@@ -240,6 +251,17 @@ function GestorAlunosDashboardPage() {
         dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
         frequenciaGeral: existente?.frequenciaGeral ?? "100%",
         qtdAtividades: existente?.qtdAtividades ?? 1,
+        hospitalEmergencia: existente?.hospitalEmergencia || (r as any).hospital_emergencia || "",
+        cep: existente?.cep || (r as any).cep || "",
+        endereco: existente?.endereco || (r as any).endereco || "",
+        numero: existente?.numero || (r as any).numero || "",
+        bairro: existente?.bairro || (r as any).bairro || "",
+        cidade: existente?.cidade || (r as any).cidade || "Rio de Janeiro",
+        uf: existente?.uf || (r as any).uf || "RJ",
+        telefonePai: existente?.telefonePai || (r as any).telefone_pai || "",
+        telefoneVizinho: existente?.telefoneVizinho || (r as any).telefone_vizinho || "",
+        telefoneAvo: existente?.telefoneAvo || (r as any).telefone_avo || "",
+        termoAutorizacaoName: existente?.termoAutorizacaoName ?? null,
       };
       porEmail.set(email, registro);
     });
@@ -680,13 +702,19 @@ DOCUMENTOS ANEXADOS:
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-border bg-card space-y-1.5">
-                  <span className="font-extrabold text-foreground block">Responsável Legal & Família:</span>
+                <div className="p-3 rounded-xl border border-border bg-card space-y-2">
+                  <span className="font-extrabold text-foreground block">Responsável Legal & Contatos de Emergência:</span>
                   <div className="grid gap-2 sm:grid-cols-2 text-muted-foreground">
-                    <p>Nome: <strong className="text-foreground">{selectedAluno.nomeResponsavel}</strong></p>
-                    <p>CPF: <strong className="text-foreground">{selectedAluno.cpfResponsavel}</strong></p>
-                    <p>Contato: <strong className="text-foreground">{selectedAluno.telResponsavel}</strong></p>
-                    <p>Residentes no Lar: <strong className="text-emerald-600">{selectedAluno.qtdPessoasResidencia} pessoas</strong></p>
+                    <p>Nome Resp.: <strong className="text-foreground">{selectedAluno.nomeResponsavel || "—"}</strong></p>
+                    <p>CPF Resp.: <strong className="text-foreground">{selectedAluno.cpfResponsavel || "—"}</strong></p>
+                    <p>Contato Resp.: <strong className="text-foreground">{selectedAluno.telResponsavel || selectedAluno.telefone || "—"}</strong></p>
+                    <p>Residentes no Lar: <strong className="text-emerald-600">{selectedAluno.qtdPessoasResidencia || 1} pessoas</strong></p>
+                  </div>
+                  <div className="border-t border-border/60 pt-2 grid gap-1.5 text-muted-foreground text-[11px]">
+                    <p>🏥 Hospital/UPA Emergência: <strong className="text-destructive font-bold">{selectedAluno.hospitalEmergencia || "Hospital / UPA mais próximo"}</strong></p>
+                    <p>📍 Endereço: <strong className="text-foreground">{selectedAluno.endereco ? `${selectedAluno.endereco}, Nº ${selectedAluno.numero || 'S/N'} - Bairro ${selectedAluno.bairro || '—'} (CEP ${selectedAluno.cep || '—'})` : "Não informado"}</strong></p>
+                    <p>📞 Tel. Pai: <strong className="text-foreground">{selectedAluno.telefonePai || "—"}</strong> | Tel. Vizinho: <strong className="text-foreground">{selectedAluno.telefoneVizinho || "—"}</strong> | Tel. Avó/Avô: <strong className="text-foreground">{selectedAluno.telefoneAvo || "—"}</strong></p>
+                    <p>📄 Termo de Autorização Assinado: <strong className={selectedAluno.termoAutorizacaoName ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>{selectedAluno.termoAutorizacaoName || "Pendente de Anexo"}</strong></p>
                   </div>
                 </div>
 

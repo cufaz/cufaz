@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Users,
   GraduationCap,
+  BookOpen,
   UserCheck,
   LogOut,
   Loader2,
@@ -34,6 +35,7 @@ const nav = [
   { to: "/gestor/pedidos", label: "Pedidos", icon: ShoppingCart },
   { to: "/gestor/alunos", label: "Alunos", icon: Users },
   { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
+  { to: "/gestor/diario-classe", label: "Diário de Classe", icon: BookOpen },
 ] as { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[];
 
 export function GestorShell({

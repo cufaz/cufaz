@@ -38,6 +38,7 @@ function ProfessorNfServicoPage() {
 
   // Form State
   const [periodo, setPeriodo] = useState("08/2026");
+  const [dataVencimento, setDataVencimento] = useState("2026-08-30");
   const [valorStr, setValorStr] = useState("R$ 2.500,00");
   const [valorNum, setValorNum] = useState(2500);
   const [detalhes, setDetalhes] = useState("Prestação de serviços referente às aulas presenciais do mês no Complexo da Penha.");
@@ -279,15 +280,28 @@ function ProfessorNfServicoPage() {
           </DialogHeader>
 
           <form onSubmit={handleSaveNf} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">Mês / Ano de Competência</Label>
-              <Input
-                required
-                placeholder="Ex: 08/2026"
-                value={periodo}
-                onChange={(e) => setPeriodo(e.target.value)}
-                className="font-medium"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Mês / Ano Competência</Label>
+                <Input
+                  required
+                  placeholder="Ex: 08/2026"
+                  value={periodo}
+                  onChange={(e) => setPeriodo(e.target.value)}
+                  className="font-medium text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Data Vencimento / Pagamento</Label>
+                <Input
+                  type="date"
+                  required
+                  value={dataVencimento}
+                  onChange={(e) => setDataVencimento(e.target.value)}
+                  className="font-medium text-xs"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -302,7 +316,7 @@ function ProfessorNfServicoPage() {
                   setValorNum(num);
                   setValorStr(brl(num));
                 }}
-                className="font-bold text-emerald-600"
+                className="font-bold text-emerald-600 text-sm"
               />
             </div>
 
@@ -317,18 +331,28 @@ function ProfessorNfServicoPage() {
               />
             </div>
 
-            <div className="space-y-1.5 border-t border-border pt-3">
+            <div className="space-y-2 border-t border-border pt-3">
               <Label className="text-xs font-bold block">Anexar Arquivo da Nota Fiscal (PDF, PNG, JPG, ZIP)</Label>
-              <Input
-                required
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.zip"
-                onChange={handleFileChange}
-                className="text-xs font-medium cursor-pointer"
-              />
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.zip"
+                    onChange={handleFileChange}
+                    className="sr-only"
+                  />
+                  <div className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <Upload className="size-4" />
+                    <span>Escolher Arquivo NF</span>
+                  </div>
+                </label>
+                <span className="text-xs font-semibold text-muted-foreground truncate max-w-[200px]">
+                  {selectedFile ? selectedFile.name : "Nenhum arquivo escolhido"}
+                </span>
+              </div>
               {selectedFile && (
-                <p className="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="size-3.5" /> Arquivo pronto: {selectedFile.name}
+                <p className="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="size-3.5" /> Arquivo selecionado: {selectedFile.name}
                 </p>
               )}
             </div>

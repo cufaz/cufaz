@@ -785,53 +785,6 @@ function FinanceiroPage() {
               })()}
             </div>
           </section>
-
-          {/* 4. OUTRAS CONTAS — DESPESAS LANÇADAS NO MÊS (com Descrição / Detalhe - Anexo 3) */}
-          <section className="rounded-xl border border-border bg-card shadow-xs lg:col-span-2">
-            <h2 className="border-b border-border bg-muted/40 px-4 py-3 text-sm font-bold uppercase tracking-wide">
-              4. Outras contas — despesas lançadas no mês
-            </h2>
-            {despesas.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-muted-foreground">Nenhuma despesa realizada lançada no período.</p>
-            ) : (
-              despesas.map((l) => (
-                <div key={String(l['id'])} className="flex items-center justify-between border-b border-border/60 px-4 py-3 text-sm hover:bg-muted/30">
-                  <div>
-                    <span className="font-semibold text-foreground block">{String(l['descricao'])}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {String(l['categoria_nome'] || "Despesa")} • {String(l['data'] || "").slice(0, 10)}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-2">
-                    <span className="whitespace-nowrap font-bold text-destructive tabular-nums">{brl(l['valor'])}</span>
-                    <button
-                      type="button"
-                      className="text-primary hover:opacity-80 p-1"
-                      title="Editar lançamento"
-                      onClick={() => {
-                        setValorDisplay(brl(Number(l['valor'])).replace("R$", "").trim());
-                        setForm({
-                          id: l['id'],
-                          tipo: l['tipo'] || "despesa",
-                          natureza: "realizado",
-                          descricao: String(l['descricao'] || ""),
-                          valor: Number(l['valor'] || 0),
-                          competencia: String(l['competencia'] || dataInicio || "").slice(0, 10),
-                          polo_id: l['polo_id'] || null,
-                          categoria_id: l['categoria_id'] || null,
-                        });
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button type="button" className="text-destructive hover:opacity-80 p-1" title="Excluir lançamento" onClick={() => mApagar.mutate(String(l['id']))}>
-                      <Trash2 className="size-4" />
-                    </button>
-                  </span>
-                </div>
-              ))
-            )}
-          </section>
         </div>
       )}
 

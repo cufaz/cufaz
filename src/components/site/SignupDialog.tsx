@@ -175,6 +175,36 @@ export function SignupDialog({
   const [docResAlunoName, setDocResAlunoName] = useState<string | null>(null);
   const [docResAlunoData, setDocResAlunoData] = useState<string | null>(null);
 
+  // New Student Fields (Anexo 3)
+  const [hospitalEmergencia, setHospitalEmergencia] = useState("");
+  const [cep, setCep] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [numero, setNumero] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("Rio de Janeiro");
+  const [uf, setUf] = useState("RJ");
+  const [telefonePai, setTelefonePai] = useState("");
+  const [telefoneVizinho, setTelefoneVizinho] = useState("");
+  const [telefoneAvo, setTelefoneAvo] = useState("");
+
+  async function handleCepLookup(rawCep: string) {
+    setCep(rawCep);
+    const clean = rawCep.replace(/\D/g, "");
+    if (clean.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+          setEndereco(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "Rio de Janeiro");
+          setUf(data.uf || "RJ");
+          toast.success("Endereço preenchido automaticamente pelo CEP!");
+        }
+      } catch {}
+    }
+  }
+
   const atual = perfis.find((p) => p.id === perfil);
 
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -362,6 +392,16 @@ export function SignupDialog({
         docIdData: docIdAlunoData,
         docResName: docResAlunoName,
         docResData: docResAlunoData,
+        hospitalEmergencia: hospitalEmergencia.trim(),
+        cep: cep.trim(),
+        endereco: endereco.trim(),
+        numero: numero.trim(),
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        uf: uf.trim(),
+        telefonePai: telefonePai.trim(),
+        telefoneVizinho: telefoneVizinho.trim(),
+        telefoneAvo: telefoneAvo.trim(),
         dataCriacao: new Date().toISOString().slice(0, 10),
       };
 
@@ -697,6 +737,90 @@ export function SignupDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Campo id="resp-nome" label="Nome do Responsável Legal" placeholder="ex.: Maria da Silva" value={nomeResponsavel} onChange={(e) => setNomeResponsavel(capitalizeWords(e.target.value))} />
                   <Campo id="resp-tel" label="Telefone do Responsável" placeholder="(00) 00000-0000" value={telResponsavel} onChange={(e) => setTelResponsavel(formatPhone(e.target.value))} />
+                </div>
+
+                {/* Seção Endereço Completo & ViaCEP (Anexo 3) */}
+                <div className="border-t border-border/80 pt-3 space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-primary block">
+                    Endereço Completo (Busca Automática por CEP)
+                  </Label>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Campo
+                      id="aluno-cep"
+                      label="CEP"
+                      placeholder="00000-000"
+                      value={cep}
+                      onChange={(e) => handleCepLookup(e.target.value)}
+                    />
+                    <div className="sm:col-span-2">
+                      <Campo
+                        id="aluno-endereco"
+                        label="Logradouro / Endereço"
+                        placeholder="Rua, Avenida, Alameda..."
+                        value={endereco}
+                        onChange={(e) => setEndereco(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Campo
+                      id="aluno-numero"
+                      label="Número"
+                      placeholder="ex.: 123"
+                      value={numero}
+                      onChange={(e) => setNumero(e.target.value)}
+                    />
+                    <div className="sm:col-span-2">
+                      <Campo
+                        id="aluno-bairro"
+                        label="Bairro"
+                        placeholder="ex.: Penha"
+                        value={bairro}
+                        onChange={(e) => setBairro(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção Emergência e Contatos Adicionais (Anexo 3) */}
+                <div className="border-t border-border/80 pt-3 space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-primary block">
+                    Atendimento de Emergência & Telefones Adicionais
+                  </Label>
+
+                  <Campo
+                    id="hosp-emergencia"
+                    label="Em caso de Emergência, qual hospital / UPA levar?"
+                    placeholder="ex.: UPA Penha / Hospital Getúlio Vargas"
+                    value={hospitalEmergencia}
+                    onChange={(e) => setHospitalEmergencia(e.target.value)}
+                  />
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Campo
+                      id="tel-pai"
+                      label="Telefone do Pai"
+                      placeholder="(00) 00000-0000"
+                      value={telefonePai}
+                      onChange={(e) => setTelefonePai(formatPhone(e.target.value))}
+                    />
+                    <Campo
+                      id="tel-vizinho"
+                      label="Telefone do Vizinho"
+                      placeholder="(00) 00000-0000"
+                      value={telefoneVizinho}
+                      onChange={(e) => setTelefoneVizinho(formatPhone(e.target.value))}
+                    />
+                    <Campo
+                      id="tel-avo"
+                      label="Telefone da Avó / Avô"
+                      placeholder="(00) 00000-0000"
+                      value={telefoneAvo}
+                      onChange={(e) => setTelefoneAvo(formatPhone(e.target.value))}
+                    />
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4 mt-2 space-y-3">

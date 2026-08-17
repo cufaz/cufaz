@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
   BookOpen,
+  GraduationCap,
   Menu,
   X,
 } from "lucide-react";
@@ -17,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface AlunoShellProps {
   children: ReactNode;
-  title: string;
+  title?: string;
   description?: string;
 }
 
@@ -74,6 +75,7 @@ export function AlunoShell({ children, title, description }: AlunoShellProps) {
     { label: "Minhas Atividades", href: "/aluno/minhas-atividades", icon: BookOpen },
     { label: "Atividades", href: "/aluno/atividades", icon: Compass },
     { label: "Minha Frequência", href: "/aluno/frequencia", icon: CalendarCheck },
+    { label: "Diário de Classe", href: "/aluno/diario-classe", icon: GraduationCap },
     { label: "Meu Perfil", href: "/aluno/perfil", icon: User },
   ];
 

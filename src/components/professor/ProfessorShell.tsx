@@ -103,6 +103,11 @@ export function ProfessorShell({
       icon: ClipboardCheck,
     },
     {
+      to: "/professor/diario-classe",
+      label: "Diário de Classe",
+      icon: GraduationCap,
+    },
+    {
       to: "/professor/nf-servico",
       label: "NF de Serviço",
       icon: FileText,
