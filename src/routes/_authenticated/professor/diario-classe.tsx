@@ -57,6 +57,7 @@ export function ProfessorDiarioClassePage() {
 
   const [alunosList, setAlunosList] = useState<any[]>([]);
   const [diarioLogs, setDiarioLogs] = useState<Record<string, DiarioClasseLog>>({});
+  const [minhasOficinas, setMinhasOficinas] = useState<string[]>([]);
 
   // Editing state per student
   const [editingLevels, setEditingLevels] = useState<Record<string, string>>({});
@@ -65,6 +66,28 @@ export function ProfessorDiarioClassePage() {
 
   function loadAlunosAndLogs() {
     try {
+      // 1. Determine professor's approved modalidades
+      let oficinas: string[] = [];
+      const storedCand = localStorage.getItem(`cufa_professor_candidaturas_${profEmail}`);
+      if (storedCand) {
+        const cList: any[] = JSON.parse(storedCand);
+        cList.forEach((c) => {
+          if (c.atividadeNome && (c.status === "aprovado" || c.status === "ativo")) {
+            if (!oficinas.includes(c.atividadeNome)) oficinas.push(c.atividadeNome);
+          }
+        });
+      }
+
+      if (oficinas.length === 0) {
+        if (profEmail.includes("santana")) oficinas = ["Jiu Jitsu"];
+        else if (profEmail.includes("anapaula")) oficinas = ["Corte e Costura"];
+        else if (profEmail.includes("carlos")) oficinas = ["Karatê"];
+        else oficinas = ["Jiu Jitsu"];
+      }
+
+      setMinhasOficinas(oficinas);
+
+      // 2. Load registered students
       const storedAlunos = localStorage.getItem("cufa_alunos_cadastrados");
       let list: any[] = storedAlunos ? JSON.parse(storedAlunos) : [];
 
@@ -187,7 +210,7 @@ export function ProfessorDiarioClassePage() {
           <Card className="border-border shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Unidade / Polo Vinculado</p>
+                <p className="text-xs font-bold uppercase text-muted-foreground">Polo Frequente</p>
                 <p className="text-lg font-extrabold text-foreground mt-1">{profPolo}</p>
               </div>
               <ShieldCheck className="size-8 text-amber-500 opacity-80" />
@@ -215,12 +238,14 @@ export function ProfessorDiarioClassePage() {
                   onChange={(e) => setFiltroOficina(e.target.value)}
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
                 >
-                  <option value="todas">Todas as Oficinas / Modalidades</option>
-                  <option value="Jiu Jitsu">Jiu Jitsu</option>
-                  <option value="Karatê">Karatê</option>
-                  <option value="Corte e Costura">Corte e Costura</option>
-                  <option value="Aula de Inglês">Aula de Inglês</option>
-                  <option value="Futsal">Futsal</option>
+                  <option value="todas">
+                    {minhasOficinas.length > 1 ? "Todas as Minhas Oficinas" : `Oficina: ${minhasOficinas[0] || "Jiu Jitsu"}`}
+                  </option>
+                  {minhasOficinas.map((oficina) => (
+                    <option key={oficina} value={oficina}>
+                      {oficina}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
