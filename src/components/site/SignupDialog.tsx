@@ -469,11 +469,12 @@ export function SignupDialog({
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {getRegisteredPolosList().map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
+                      {polosCadastrados.map((p) => (
+                        <SelectItem key={p.id} value={p.nome}>
+                          {p.nome}
                         </SelectItem>
                       ))}
+
                     </SelectContent>
                   </Select>
                 </div>
