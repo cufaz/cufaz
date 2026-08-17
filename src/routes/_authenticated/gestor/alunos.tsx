@@ -32,6 +32,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { base64ToUint8Array } from "@/lib/zipHelper";
+import {
+  fetchAlunosCadastro,
+  usePolosCadastrados,
+  getAvatarLocal,
+  type AlunoCadastro,
+} from "@/lib/cadastros";
+
 
 export const Route = createFileRoute("/_authenticated/gestor/alunos")({
   component: GestorAlunosDashboardPage,
