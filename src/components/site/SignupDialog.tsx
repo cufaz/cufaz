@@ -72,25 +72,6 @@ function Campo({
   );
 }
 
-function SeletorComunidade() {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade</Label>
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder="Selecione a unidade" />
-        </SelectTrigger>
-        <SelectContent>
-          {comunidades.map((c) => (
-            <SelectItem key={c} value={c}>
-              {c}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
 
 function FileUploadBtn({
   id,
