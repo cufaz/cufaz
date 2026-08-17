@@ -16,21 +16,58 @@ function ProfessorDashboardPage() {
 
   // Real activities for this professor
   const minhasAtividades = (() => {
-    if (!profEmail) return [];
     try {
       const storedCand = localStorage.getItem(`cufa_professor_candidaturas_${profEmail}`);
       if (storedCand) {
         const list = JSON.parse(storedCand);
-        if (Array.isArray(list) && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
       if (stored) {
         const list = JSON.parse(stored);
-        return list.filter(
+        const userList = list.filter(
           (s: any) => s.email && String(s.email).toLowerCase() === profEmail
         );
+        if (userList.length > 0) return userList;
       }
     } catch {}
+
+    if (profEmail === "anapaula@cufa.com.br") {
+      return [
+        {
+          id: "cand-ap-costura",
+          atividadeNome: "Corte e Costura",
+          poloNome: "Viaduto de Madureira",
+          status: "aprovado",
+          turmaNome: "Turma 1 - Tarde (14h - 17h)",
+          horario: "Seg a Sex - 14:00 às 17:00",
+        },
+      ];
+    }
+    if (profEmail === "santana@cufa.com.br") {
+      return [
+        {
+          id: "cand-santana-jiu",
+          atividadeNome: "Jiu Jitsu",
+          poloNome: "Complexo da Penha",
+          status: "aprovado",
+          turmaNome: "Turma 1 - Tarde (14h - 16h)",
+          horario: "Seg, Quat e Sex - 14:00 às 16:00",
+        },
+      ];
+    }
+    if (profEmail === "carlos@cufa.com.br") {
+      return [
+        {
+          id: "cand-carlos-karate",
+          atividadeNome: "Karatê",
+          poloNome: "Paraisópolis",
+          status: "aprovado",
+          turmaNome: "Turma 1 - Noite (18h - 20h)",
+          horario: "Ter e Qui - 18:00 às 20:00",
+        },
+      ];
+    }
     return [];
   })();
 

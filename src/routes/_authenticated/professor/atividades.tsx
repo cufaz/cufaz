@@ -16,31 +16,22 @@ function ProfessorAtividadesPage() {
   const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "").toLowerCase());
   const [profNome] = useState(() => localStorage.getItem("cufa_professor_nome") || "");
 
-  // Read solicitudes matching ONLY this logged-in professor
   const [solicitacoes, setSolicitacoes] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) {
+      if (stored !== null) {
         const list = JSON.parse(stored);
-        const minhas = list.filter(
-          (item: any) =>
-            (profEmail && item.email && String(item.email).toLowerCase() === profEmail) ||
-            (profNome && item.professorNome && String(item.professorNome).toLowerCase() === profNome.toLowerCase())
-        );
-        return minhas;
+        if (Array.isArray(list)) {
+          return list.filter(
+            (item: any) =>
+              (profEmail && item.email && String(item.email).toLowerCase() === profEmail) ||
+              (profNome && item.professorNome && String(item.professorNome).toLowerCase() === profNome.toLowerCase())
+          );
+        }
       }
     } catch {}
 
-    return profNome ? [
-      {
-        id: "solic-atual",
-        professorNome: profNome,
-        atividadeNome: "Jiu Jitsu",
-        poloNome: profPolo,
-        status: "pendente",
-        dataSolicitacao: new Date().toISOString().slice(0, 10),
-      },
-    ] : [];
+    return [];
   });
 
   function handleCancelarCandidatura(id: string, ativNome: string) {
@@ -48,10 +39,9 @@ function ProfessorAtividadesPage() {
       setSolicitacoes((prev) => prev.filter((item) => item.id !== id));
       try {
         const stored = localStorage.getItem("cufa_professores_solicitacoes");
-        if (stored) {
-          const list = JSON.parse(stored).filter((item: any) => item.id !== id);
-          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(list));
-        }
+        const list = stored ? JSON.parse(stored) : [];
+        const filtered = list.filter((item: any) => item.id !== id && item.atividadeNome !== ativNome);
+        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(filtered));
         window.dispatchEvent(new Event("cufa_professores_updated"));
       } catch {}
 
