@@ -208,20 +208,65 @@ function GestorAlunosDashboardPage() {
     return list;
   }
 
+  const { polos: polosCadastrados } = usePolosCadastrados();
+
+  function mergeBanco(base: AlunoRecord[], remotos: AlunoCadastro[]): AlunoRecord[] {
+    const porEmail = new Map(base.map((a) => [a.email.toLowerCase(), a]));
+    remotos.forEach((r) => {
+      const email = String(r.email || "").toLowerCase();
+      if (!email) return;
+      const existente = porEmail.get(email);
+      const registro: AlunoRecord = {
+        id: existente?.id || r.id || email,
+        nome: r.nome || existente?.nome || "Aluno",
+        email,
+        telefone: r.telefone || existente?.telefone || "",
+        polo: r.polo_nome || existente?.polo || "—",
+        modalidade: existente?.modalidade || "—",
+        turma: existente?.turma || "—",
+        dataNasc: r.data_nasc || existente?.dataNasc,
+        nomeEscola: r.nome_escola || existente?.nomeEscola || "Não informada",
+        anoEscolar: r.ano_escolar || existente?.anoEscolar || "—",
+        turnoEscolar: r.turno_escolar || existente?.turnoEscolar || "—",
+        qtdPessoasResidencia: String(r.qtd_pessoas_residencia ?? existente?.qtdPessoasResidencia ?? "1"),
+        nomeResponsavel: r.nome_responsavel || existente?.nomeResponsavel || "—",
+        cpfResponsavel: r.cpf_responsavel || existente?.cpfResponsavel || "",
+        telResponsavel: r.tel_responsavel || existente?.telResponsavel || "",
+        docIdName: existente?.docIdName,
+        docIdData: existente?.docIdData,
+        docResName: existente?.docResName,
+        docResData: existente?.docResData,
+        foto: getAvatarLocal(email) || r.avatar_url || existente?.foto || null,
+        dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao,
+        frequenciaGeral: existente?.frequenciaGeral,
+        qtdAtividades: existente?.qtdAtividades,
+      };
+      porEmail.set(email, registro);
+    });
+    return Array.from(porEmail.values());
+  }
+
   useEffect(() => {
-    function syncAlunos() {
-      setAlunosList(loadMergedAlunos());
+    let ativo = true;
+
+    async function syncAlunos() {
+      const locais = loadMergedAlunos();
+      const remotos = await fetchAlunosCadastro();
+      if (ativo) setAlunosList(mergeBanco(locais, remotos));
     }
 
+    void syncAlunos();
     window.addEventListener("cufa_alunos_updated", syncAlunos);
     window.addEventListener("cufa_perfil_foto_updated", syncAlunos);
     window.addEventListener("storage", syncAlunos);
     return () => {
+      ativo = false;
       window.removeEventListener("cufa_alunos_updated", syncAlunos);
       window.removeEventListener("cufa_perfil_foto_updated", syncAlunos);
       window.removeEventListener("storage", syncAlunos);
     };
   }, []);
+
 
   function handleDownloadZip(aluno: AlunoRecord) {
     setDownloadingZipId(aluno.id);
