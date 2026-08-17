@@ -135,6 +135,102 @@ export type Database = {
           },
         ]
       }
+      cadastros_alunos: {
+        Row: {
+          ano_escolar: string | null
+          avatar_url: string | null
+          cpf_responsavel: string | null
+          created_at: string
+          data_nasc: string | null
+          email: string
+          id: string
+          nome: string
+          nome_escola: string | null
+          nome_responsavel: string | null
+          polo_nome: string | null
+          qtd_pessoas_residencia: number
+          tel_responsavel: string | null
+          telefone: string | null
+          turno_escolar: string | null
+          updated_at: string
+        }
+        Insert: {
+          ano_escolar?: string | null
+          avatar_url?: string | null
+          cpf_responsavel?: string | null
+          created_at?: string
+          data_nasc?: string | null
+          email: string
+          id?: string
+          nome?: string
+          nome_escola?: string | null
+          nome_responsavel?: string | null
+          polo_nome?: string | null
+          qtd_pessoas_residencia?: number
+          tel_responsavel?: string | null
+          telefone?: string | null
+          turno_escolar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ano_escolar?: string | null
+          avatar_url?: string | null
+          cpf_responsavel?: string | null
+          created_at?: string
+          data_nasc?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          nome_escola?: string | null
+          nome_responsavel?: string | null
+          polo_nome?: string | null
+          qtd_pessoas_residencia?: number
+          tel_responsavel?: string | null
+          telefone?: string | null
+          turno_escolar?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cadastros_professores: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          modalidade: string | null
+          nome: string
+          polo_nome: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          modalidade?: string | null
+          nome?: string
+          polo_nome?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          modalidade?: string | null
+          nome?: string
+          polo_nome?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categorias_custo: {
         Row: {
           created_at: string

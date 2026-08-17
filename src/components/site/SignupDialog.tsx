@@ -4,6 +4,13 @@ import { toast } from "sonner";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
+import {
+  usePolosCadastrados,
+  upsertAlunoCadastro,
+  upsertProfessorCadastro,
+  setAvatarLocal,
+} from "@/lib/cadastros";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,39 +54,6 @@ const perfis: { id: Perfil; titulo: string; desc: string; Icon: typeof UserRound
   },
 ];
 
-function getRegisteredPolosList(): string[] {
-  const listMap = new Set<string>();
-
-  try {
-    const stored = localStorage.getItem("cufa_polos_cadastrados");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((p: any) => {
-          if (p.nome) listMap.add(p.nome);
-        });
-      }
-    }
-  } catch {}
-
-  if (listMap.size === 0) {
-    listMap.add("Complexo da Penha");
-    listMap.add("Paraisópolis");
-    listMap.add("Polo de Teste");
-    listMap.add("Viaduto de Madureira");
-  }
-
-  return Array.from(listMap);
-}
-
-const comunidades = [
-  "Madureira",
-  "Complexo da Penha",
-  "Paraisópolis",
-  "Heliópolis",
-  "Polo de Teste",
-];
-
 const modalidades = [
   "Karatê",
   "Jiu Jitsu",
@@ -89,6 +63,7 @@ const modalidades = [
   "Corte e Costura",
   "Aula de Inglês",
 ];
+
 
 function Campo({
   label,
@@ -104,25 +79,6 @@ function Campo({
   );
 }
 
-function SeletorComunidade() {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Unidade</Label>
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder="Selecione a unidade" />
-        </SelectTrigger>
-        <SelectContent>
-          {comunidades.map((c) => (
-            <SelectItem key={c} value={c}>
-              {c}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
 
 function FileUploadBtn({
   id,
@@ -202,6 +158,8 @@ export function SignupDialog({
   const [cert3Name, setCert3Name] = useState<string | null>(null);
   const [cert4Name, setCert4Name] = useState<string | null>(null);
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
+  const { polos: polosCadastrados } = usePolosCadastrados();
+
 
   // Student specific state
   const [dataNasc, setDataNasc] = useState("");
@@ -351,14 +309,21 @@ export function SignupDialog({
         listCad.push(novoProf);
         localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listCad));
 
-        if (fotoPerfil) {
-          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
-          localStorage.setItem(`cufa_perfil_foto_${pEmail}`, fotoPerfil);
-          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
-        }
+        if (fotoPerfil) setAvatarLocal(pEmail, fotoPerfil);
 
         window.dispatchEvent(new Event("cufa_professores_updated"));
       } catch {}
+
+      void upsertProfessorCadastro({
+        nome: pNome,
+        email: pEmail,
+        telefone: telefone.trim() || null,
+        polo_nome: unidade || null,
+        modalidade: modalidade || null,
+        status: "ativo",
+        avatar_url: fotoPerfil,
+      }).catch(() => {});
+
 
       localStorage.setItem("cufa_logged_user", pEmail);
       localStorage.setItem("cufa_logged_role", "professor");
@@ -406,13 +371,26 @@ export function SignupDialog({
         list.push(novoAluno);
         localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
 
-        if (fotoPerfil) {
-          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
-          localStorage.setItem(`cufa_perfil_foto_${aEmail}`, fotoPerfil);
-          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
-        }
+        if (fotoPerfil) setAvatarLocal(aEmail, fotoPerfil);
         window.dispatchEvent(new Event("cufa_alunos_updated"));
       } catch {}
+
+      void upsertAlunoCadastro({
+        nome: aNome,
+        email: aEmail,
+        telefone: telefone.trim() || null,
+        data_nasc: dataNasc || null,
+        nome_escola: nomeEscola || null,
+        ano_escolar: anoEscolar || null,
+        turno_escolar: turnoEscolar || null,
+        qtd_pessoas_residencia: Number(qtdPessoasResidencia) || 0,
+        nome_responsavel: nomeResponsavel || null,
+        cpf_responsavel: cpfResponsavel || null,
+        tel_responsavel: telResponsavel || null,
+        polo_nome: unidade || null,
+        avatar_url: fotoPerfil,
+      }).catch(() => {});
+
 
       localStorage.setItem("cufa_logged_user", aEmail);
       localStorage.setItem("cufa_logged_role", "aluno");
@@ -520,11 +498,12 @@ export function SignupDialog({
                       <SelectValue placeholder="Selecione a unidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {getRegisteredPolosList().map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
+                      {polosCadastrados.map((p) => (
+                        <SelectItem key={p.id} value={p.nome}>
+                          {p.nome}
                         </SelectItem>
                       ))}
+
                     </SelectContent>
                   </Select>
                 </div>
