@@ -70,26 +70,7 @@ export function MasterAdminDialog({
     }
 
     function syncMasterProfessores() {
-      try {
-        const stored = localStorage.getItem("cufa_professores_solicitacoes");
-        if (stored) {
-          const list = JSON.parse(stored).filter(
-            (p: any) => !p.id?.startsWith("demo-") && !p.id?.startsWith("g-demo")
-          );
-          setProfessoresData(
-            list.map((p: any) => ({
-              id: p.id,
-              nome: p.professorNome || p.nome,
-              email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
-              senha: p.senha || "prof2026",
-              disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-              polo: p.poloNome || p.polo || "Complexo da Penha",
-            }))
-          );
-        } else {
-          setProfessoresData([]);
-        }
-      } catch {}
+      setProfessoresData(loadMasterProfessores());
     }
 
     function syncMasterAlunos() {
@@ -152,30 +133,135 @@ export function MasterAdminDialog({
       }
     } catch {}
 
+    if (listMap.size === 0) {
+      const defaultAlunos = [
+        {
+          id: "cad-enzo",
+          nome: "Enzo Junior",
+          email: "enzo.junior@cufa.org.br",
+          senha: "enzo2026",
+          polo: "Complexo da Penha",
+          atividade: "Jiu Jitsu",
+        },
+        {
+          id: "cad-robson",
+          nome: "Robson Nunes",
+          email: "robson.nunes@cufa.org.br",
+          senha: "robson2026",
+          polo: "Complexo da Penha",
+          atividade: "Jiu Jitsu",
+        },
+        {
+          id: "cad-beatriz",
+          nome: "Beatriz Santos",
+          email: "beatriz.santos@cufa.org.br",
+          senha: "beatriz2026",
+          polo: "Viaduto de Madureira",
+          atividade: "Corte e Costura",
+        },
+        {
+          id: "cad-lucas",
+          nome: "Lucas Oliveira",
+          email: "lucas.oliveira@cufa.org.br",
+          senha: "lucas2026",
+          polo: "Paraisópolis",
+          atividade: "Karatê",
+        },
+      ];
+      defaultAlunos.forEach((a) => listMap.set(a.id, a));
+      localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(defaultAlunos));
+    }
+
+    return Array.from(listMap.values());
+  }
+
+  function loadMasterProfessores() {
+    const listMap = new Map<string, any>();
+    try {
+      const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSol) {
+        const list = JSON.parse(storedSol);
+        if (Array.isArray(list)) {
+          list.forEach((p: any) => {
+            const id = p.id || `prof-${Math.random()}`;
+            listMap.set(id, {
+              id,
+              nome: p.professorNome || p.nome,
+              email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
+              senha: p.senha || "prof2026",
+              disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+              polo: p.poloNome || p.polo || "Complexo da Penha",
+            });
+          });
+        }
+      }
+
+      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+      if (storedCad) {
+        const list = JSON.parse(storedCad);
+        if (Array.isArray(list)) {
+          list.forEach((p: any) => {
+            const id = p.id || `prof-cad-${Math.random()}`;
+            if (!listMap.has(id)) {
+              listMap.set(id, {
+                id,
+                nome: p.professorNome || p.nome,
+                email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
+                senha: p.senha || "prof2026",
+                disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
+                polo: p.poloNome || p.polo || "Complexo da Penha",
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+
+    if (listMap.size === 0) {
+      const defaultProfs = [
+        {
+          id: "prof-santana",
+          professorNome: "Prof.ª Santana Silva",
+          nome: "Prof.ª Santana Silva",
+          email: "santana@cufa.com.br",
+          senha: "santana2026",
+          atividadeNome: "Jiu Jitsu",
+          disciplina: "Jiu Jitsu",
+          poloNome: "Complexo da Penha",
+          polo: "Complexo da Penha",
+        },
+        {
+          id: "prof-anapaula",
+          professorNome: "Prof.ª Ana Paula Silva",
+          nome: "Prof.ª Ana Paula Silva",
+          email: "anapaula@cufa.com.br",
+          senha: "prof2026",
+          atividadeNome: "Corte e Costura",
+          disciplina: "Corte e Costura",
+          poloNome: "Viaduto de Madureira",
+          polo: "Viaduto de Madureira",
+        },
+        {
+          id: "prof-carlos",
+          professorNome: "Prof. Carlos Eduardo",
+          nome: "Prof. Carlos Eduardo",
+          email: "carlos@cufa.com.br",
+          senha: "prof2026",
+          atividadeNome: "Karatê",
+          disciplina: "Karatê",
+          poloNome: "Paraisópolis",
+          polo: "Paraisópolis",
+        },
+      ];
+      defaultProfs.forEach((p) => listMap.set(p.id, p));
+      localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(defaultProfs));
+    }
+
     return Array.from(listMap.values());
   }
 
   const [alunosData, setAlunosData] = useState<any[]>(() => loadMasterAlunos());
-
-  const [professoresData, setProfessoresData] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) {
-        const list = JSON.parse(stored).filter(
-          (p: any) => !p.id?.startsWith("demo-") && !p.id?.startsWith("g-demo")
-        );
-        return list.map((p: any) => ({
-          id: p.id,
-          nome: p.professorNome || p.nome,
-          email: p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`,
-          senha: p.senha || "prof2026",
-          disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-          polo: p.poloNome || p.polo || "Complexo da Penha",
-        }));
-      }
-    } catch {}
-    return [];
-  });
+  const [professoresData, setProfessoresData] = useState<any[]>(() => loadMasterProfessores());
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
