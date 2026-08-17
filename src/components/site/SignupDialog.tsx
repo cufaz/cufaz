@@ -309,14 +309,21 @@ export function SignupDialog({
         listCad.push(novoProf);
         localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listCad));
 
-        if (fotoPerfil) {
-          localStorage.setItem("cufa_perfil_foto", fotoPerfil);
-          localStorage.setItem(`cufa_perfil_foto_${pEmail}`, fotoPerfil);
-          window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
-        }
+        if (fotoPerfil) setAvatarLocal(pEmail, fotoPerfil);
 
         window.dispatchEvent(new Event("cufa_professores_updated"));
       } catch {}
+
+      void upsertProfessorCadastro({
+        nome: pNome,
+        email: pEmail,
+        telefone: telefone.trim() || null,
+        polo_nome: unidade || null,
+        modalidade: modalidade || null,
+        status: "ativo",
+        avatar_url: fotoPerfil,
+      }).catch(() => {});
+
 
       localStorage.setItem("cufa_logged_user", pEmail);
       localStorage.setItem("cufa_logged_role", "professor");
