@@ -47,39 +47,6 @@ const perfis: { id: Perfil; titulo: string; desc: string; Icon: typeof UserRound
   },
 ];
 
-function getRegisteredPolosList(): string[] {
-  const listMap = new Set<string>();
-
-  try {
-    const stored = localStorage.getItem("cufa_polos_cadastrados");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((p: any) => {
-          if (p.nome) listMap.add(p.nome);
-        });
-      }
-    }
-  } catch {}
-
-  if (listMap.size === 0) {
-    listMap.add("Complexo da Penha");
-    listMap.add("Paraisópolis");
-    listMap.add("Polo de Teste");
-    listMap.add("Viaduto de Madureira");
-  }
-
-  return Array.from(listMap);
-}
-
-const comunidades = [
-  "Madureira",
-  "Complexo da Penha",
-  "Paraisópolis",
-  "Heliópolis",
-  "Polo de Teste",
-];
-
 const modalidades = [
   "Karatê",
   "Jiu Jitsu",
@@ -89,6 +56,7 @@ const modalidades = [
   "Corte e Costura",
   "Aula de Inglês",
 ];
+
 
 function Campo({
   label,
