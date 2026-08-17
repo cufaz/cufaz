@@ -627,29 +627,86 @@ function FinanceiroPage() {
 
             <div className="p-4 space-y-6">
               {(() => {
-                // Dynamically compute realizado for each item by matching despesas launches
-                const poloItens = poloItensPrevisto.map((item) => {
-                  const cleanItemName = item.item.toLowerCase().trim();
-                  const cleanAtivName = item.atividade.toLowerCase().trim();
-                  const cleanCatName = item.categoria.toLowerCase().trim();
+                // Helper token matcher for strict launch-to-item allocation
+                const getTokens = (str: string) =>
+                  str
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9]/g, " ")
+                    .split(/\s+/)
+                    .filter((t) => t.length > 2 && !["dos", "das", "para", "com", "por", "que", "uma"].includes(t));
 
-                  const itemRealizado = despesas
-                    .filter((d) => {
-                      const desc = String(d['descricao'] || d['item'] || "").toLowerCase().trim();
-                      const cat = String(d['categoria'] || d['categoria_nome'] || "").toLowerCase().trim();
+                // Allocate each expense launch exclusively to its best matching budget item
+                const itemRealizadoMap: Record<string, number> = {};
 
-                      if (desc.includes(cleanItemName) || cleanItemName.includes(desc)) return true;
-                      if (cleanAtivName !== "" && desc.includes(cleanAtivName)) return true;
-                      if (cat === cleanCatName) return true;
-                      return false;
-                    })
-                    .reduce((sum, d) => sum + Number(d['valor'] || 0), 0);
+                despesas.forEach((d) => {
+                  const dDesc = String(d['descricao'] || d['item'] || "").toLowerCase();
+                  const dTokens = getTokens(dDesc);
+                  const dVal = Number(d['valor'] || 0);
 
-                  return {
-                    ...item,
-                    realizado: itemRealizado,
-                  };
+                  const isProfLaunch = dTokens.some((t) => t.includes("prof"));
+                  const isMonitLaunch = dTokens.some((t) => t.includes("monit") || t.includes("apoio"));
+                  const isTatameLaunch = dTokens.some((t) => t.includes("tatam") || t.includes("eva"));
+                  const isKimonoLaunch = dTokens.some((t) => t.includes("kimon"));
+                  const isFaixaLaunch = dTokens.some((t) => t.includes("faix") || t.includes("gradua"));
+                  const isHigienLaunch = dTokens.some((t) => t.includes("higien") || t.includes("limpez"));
+                  const isGraficaLaunch = dTokens.some((t) => t.includes("grafic") || t.includes("certif"));
+                  const isComunLaunch = dTokens.some((t) => t.includes("comunic") || t.includes("divulg") || t.includes("banner"));
+                  const isEventoLaunch = dTokens.some((t) => t.includes("event") || t.includes("exam") || t.includes("culmin"));
+
+                  let bestMatchId: string | null = null;
+                  let maxScore = 0;
+
+                  poloItensPrevisto.forEach((item) => {
+                    const itemTokens = getTokens(item.item);
+
+                    const isProfItem = itemTokens.some((t) => t.includes("prof"));
+                    const isMonitItem = itemTokens.some((t) => t.includes("monit"));
+                    const isTatameItem = itemTokens.some((t) => t.includes("tatam"));
+                    const isKimonoItem = itemTokens.some((t) => t.includes("kimon"));
+                    const isFaixaItem = itemTokens.some((t) => t.includes("faix"));
+                    const isHigienItem = itemTokens.some((t) => t.includes("higien"));
+                    const isGraficaItem = itemTokens.some((t) => t.includes("grafic") || t.includes("certif"));
+                    const isComunItem = itemTokens.some((t) => t.includes("comunic") || t.includes("divulg"));
+                    const isEventoItem = itemTokens.some((t) => t.includes("event") || t.includes("exam"));
+
+                    // Enforce category role guards to prevent cross-matching
+                    if (isProfLaunch && !isProfItem) return;
+                    if (isMonitLaunch && !isMonitItem) return;
+                    if (isTatameLaunch && !isTatameItem) return;
+                    if (isKimonoLaunch && !isKimonoItem) return;
+                    if (isFaixaLaunch && !isFaixaItem) return;
+                    if (isHigienLaunch && !isHigienItem) return;
+                    if (isGraficaLaunch && !isGraficaItem) return;
+                    if (isComunLaunch && !isComunItem) return;
+                    if (isEventoLaunch && !isEventoItem) return;
+
+                    let score = 0;
+                    itemTokens.forEach((t) => {
+                      if (dTokens.includes(t)) score += 3;
+                    });
+
+                    const ativTokens = getTokens(item.atividade);
+                    ativTokens.forEach((t) => {
+                      if (dTokens.includes(t)) score += 2;
+                    });
+
+                    if (score > maxScore && score >= 3) {
+                      maxScore = score;
+                      bestMatchId = item.id;
+                    }
+                  });
+
+                  if (bestMatchId) {
+                    itemRealizadoMap[bestMatchId] = (itemRealizadoMap[bestMatchId] || 0) + dVal;
+                  }
                 });
+
+                const poloItens = poloItensPrevisto.map((item) => ({
+                  ...item,
+                  realizado: itemRealizadoMap[item.id] || 0,
+                }));
 
                 // Group by category
                 const categoriasMap: Record<string, typeof poloItens> = {};
