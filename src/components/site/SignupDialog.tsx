@@ -4,6 +4,13 @@ import { toast } from "sonner";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
+import {
+  usePolosCadastrados,
+  upsertAlunoCadastro,
+  upsertProfessorCadastro,
+  setAvatarLocal,
+} from "@/lib/cadastros";
+
 
 import { Button } from "@/components/ui/button";
 import {
