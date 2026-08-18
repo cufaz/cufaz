@@ -3,18 +3,19 @@ import { useState, useEffect } from "react";
 import {
   BookOpen,
   Building2,
-  Calendar,
   Clock,
   User,
   Trash2,
   Compass,
-  ArrowRight,
+  Award,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AlunoShell } from "@/components/aluno/AlunoShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { fetchDiarioEntriesDB, DiarioEntryDB } from "@/lib/diarioService";
 
 export const Route = createFileRoute("/_authenticated/aluno/minhas-atividades")({
   component: MinhasAtividadesAlunoPage,
@@ -35,9 +36,10 @@ export interface InscricaoAluno {
 function MinhasAtividadesAlunoPage() {
   const [alunoEmail, setAlunoEmail] = useState("");
   const [inscricoes, setInscricoes] = useState<InscricaoAluno[]>([]);
+  const [diarioEntries, setDiarioEntries] = useState<DiarioEntryDB[]>([]);
 
-  function loadInscricoes() {
-    const userEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
+  async function loadInscricoes() {
+    const userEmail = (localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br").toLowerCase();
     setAlunoEmail(userEmail);
 
     try {
@@ -46,20 +48,28 @@ function MinhasAtividadesAlunoPage() {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           setInscricoes(parsed.filter((i) => i.status === "ativa"));
-          return;
+        } else {
+          setInscricoes([]);
         }
+      } else {
+        setInscricoes([]);
       }
-      setInscricoes([]);
     } catch {
       setInscricoes([]);
     }
+
+    // Load diary entries from DB for this student
+    const logs = await fetchDiarioEntriesDB({ aluno_email: userEmail });
+    setDiarioEntries(logs);
   }
 
   useEffect(() => {
     loadInscricoes();
     window.addEventListener("cufa_aluno_inscricoes_updated", loadInscricoes);
+    window.addEventListener("cufa_diario_updated", loadInscricoes);
     return () => {
       window.removeEventListener("cufa_aluno_inscricoes_updated", loadInscricoes);
+      window.removeEventListener("cufa_diario_updated", loadInscricoes);
     };
   }, []);
 
@@ -80,17 +90,22 @@ function MinhasAtividadesAlunoPage() {
     }
   }
 
+  function getLatestLogForAtividade(atividadeNome: string) {
+    const cleanOficina = atividadeNome.toLowerCase().trim();
+    return diarioEntries.find((d) => d.atividade_nome.toLowerCase().includes(cleanOficina) || cleanOficina.includes(d.atividade_nome.toLowerCase()));
+  }
+
   return (
     <AlunoShell
       title="Minhas Atividades & Turmas"
-      description="Gerencie todas as oficinas esportivas, culturais e educacionais nas quais você está matriculado."
+      description="Gerencie todas as oficinas nas quais você está matriculado e acompanhe os relatos pedagógicos."
     >
       <div className="space-y-6">
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60 flex items-center justify-between">
             <CardTitle className="text-base font-extrabold flex items-center gap-2">
               <BookOpen className="size-4 text-primary" />
-              <span>Lista de Matriculas Ativas</span>
+              <span>Lista de Matrículas Ativas</span>
             </CardTitle>
             <Button variant="outline" size="sm" asChild className="text-xs font-bold h-8">
               <Link to="/aluno/atividades">
@@ -114,51 +129,80 @@ function MinhasAtividadesAlunoPage() {
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {inscricoes.map((item) => (
-                  <Card key={item.id} className="border-border bg-card shadow-xs">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <Badge className="bg-primary/10 text-primary font-bold border-primary/20 text-xs">
-                          {item.atividadeNome}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold">
-                          Ativa
-                        </Badge>
-                      </div>
+                {inscricoes.map((item) => {
+                  const latestLog = getLatestLogForAtividade(item.atividadeNome);
 
-                      <div className="space-y-1.5 pt-1">
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <Building2 className="size-3.5 text-muted-foreground shrink-0" />
-                          <span>{item.poloNome}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                          <Clock className="size-3.5 text-muted-foreground shrink-0" />
-                          <span>{item.turmaNome}</span>
-                        </p>
-                        {item.professorNome && (
-                          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                            <User className="size-3.5 text-muted-foreground shrink-0" />
-                            <span>{item.professorNome}</span>
+                  return (
+                    <Card key={item.id} className="border-border bg-card shadow-xs flex flex-col justify-between">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <Badge className="bg-primary/10 text-primary font-bold border-primary/20 text-xs">
+                            {item.atividadeNome}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold">
+                            Ativa
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Building2 className="size-3.5 text-muted-foreground shrink-0" />
+                            <span>{item.poloNome}</span>
                           </p>
-                        )}
-                        <p className="text-[10px] text-muted-foreground/80 pt-1">
-                          Matriculado em: {item.dataMatricula}
-                        </p>
-                      </div>
+                          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                            <Clock className="size-3.5 text-muted-foreground shrink-0" />
+                            <span>{item.turmaNome}</span>
+                          </p>
+                          {item.professorNome && (
+                            <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                              <User className="size-3.5 text-muted-foreground shrink-0" />
+                              <span>{item.professorNome}</span>
+                            </p>
+                          )}
+                          <p className="text-[10px] text-muted-foreground/80 pt-1">
+                            Matriculado em: {item.dataMatricula}
+                          </p>
+                        </div>
 
-                      <div className="pt-2 border-t border-border/60">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCancelarInscricao(item.id, item.atividadeNome)}
-                          className="w-full text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 h-8"
-                        >
-                          <Trash2 className="size-3.5 mr-1" /> Cancelar Inscrição
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        {/* Exibir último relato e nível atual abaixo de Matriculado em... */}
+                        {latestLog ? (
+                          <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                                <Award className="size-3 text-amber-500" /> Nível Atual:
+                              </span>
+                              <Badge className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5">
+                                {latestLog.nivel}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] font-medium text-foreground italic leading-relaxed line-clamp-3">
+                              <MessageSquare className="size-3 text-emerald-600 inline mr-1" />
+                              "{latestLog.relato}"
+                            </p>
+                            <span className="text-[9px] text-muted-foreground block text-right">
+                              Registrado em {latestLog.data}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="mt-3 p-2.5 rounded-xl bg-muted/40 border border-border text-[11px] text-muted-foreground italic">
+                            Aguardando primeiro relato diário do professor.
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-border/60">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelarInscricao(item.id, item.atividadeNome)}
+                            className="w-full text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 h-8"
+                          >
+                            <Trash2 className="size-3.5 mr-1" /> Cancelar Inscrição
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </CardContent>

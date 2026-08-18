@@ -114,15 +114,6 @@ export function ProfessorOportunidadesPage() {
       vagas: 30,
       descricao: "Artes marciais e disciplina de Karatê em Paraisópolis.",
     },
-    {
-      id: "op-teste-volei-t1",
-      nome: "Vôlei",
-      turma: "Turma 1 — Tarde",
-      horario: "Segundas e Quartas (14h - 16h)",
-      polo: "Polo de Teste",
-      vagas: 10,
-      descricao: "Oficina esportiva de Vôlei comunitário no Polo de Teste.",
-    },
   ];
 
   // Include dynamic test polos created in the system

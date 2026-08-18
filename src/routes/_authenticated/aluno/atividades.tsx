@@ -202,22 +202,6 @@ function VitrineAtividadesAlunoPage() {
       faixaEtaria: "07 a 17 anos",
       requisitos: "Roupas esportivas confortáveis",
     },
-    {
-      id: "v-teste-oficina-1",
-      nome: "Oficina Experimental",
-      polo: "Polo de Teste",
-      turmaNome: "Turma 1 - Tarde (14h - 16h)",
-      horario: "Seg e Quat - 14:00 às 16:00",
-      professorNome: "Prof.ª Santana Silva",
-      professorEmail: "santana@cufa.com.br",
-      professorTelefone: "(11) 94830-0321",
-      professorBio: "Instrutor credenciado para testes e projetos experimentais da CUFA.",
-      vagasTotais: 30,
-      alunosMatriculados: 0,
-      descricao: "Oficina prática de testes integrados e formação esportiva/cultural no Polo de Teste.",
-      faixaEtaria: "06 a 17 anos",
-      requisitos: "Roupas confortáveis e atestado médico",
-    },
   ];
 
   function loadVitrineMergedList() {
@@ -265,7 +249,7 @@ function VitrineAtividadesAlunoPage() {
     // Add Gestor created activities
     gestorActivities.forEach((g: any, idx: number) => {
       const id = g.id || `v-gestor-${idx}`;
-      const poloName = g.polo_nome || g.polo || "Polo de Teste";
+      const poloName = g.polo_nome || g.polo || "Complexo da Penha";
       listMap.set(id, {
         id,
         nome: g.nome || "Oficina Interativa",
@@ -288,7 +272,7 @@ function VitrineAtividadesAlunoPage() {
     poloActivities.forEach((p: any, idx: number) => {
       const id = p.id || `v-polo-${idx}`;
       if (!listMap.has(id)) {
-        const poloName = p.polo_nome || p.polo || "Polo de Teste";
+        const poloName = p.polo_nome || p.polo || "Complexo da Penha";
         listMap.set(id, {
           id,
           nome: p.nome || "Oficina Comunitária",
@@ -407,9 +391,8 @@ function VitrineAtividadesAlunoPage() {
 
     const defaultOfficialPolos = [
       "Complexo da Penha",
-      "Paraisópolis",
-      "Polo de Teste",
       "Viaduto de Madureira",
+      "Paraisópolis",
     ];
     defaultOfficialPolos.forEach((p) => polosSet.add(p));
 

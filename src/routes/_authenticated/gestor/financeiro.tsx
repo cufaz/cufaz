@@ -265,8 +265,7 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // Calculate Despesas Previstas (Orçamento Mensal) from unified preset + DB budget items
-  // 1. Official Preset Items for Penha, Madureira, Paraisópolis, Polo de Teste
+  // 1. Official Preset Items for Penha, Madureira, Paraisópolis
   const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
     if (isAllSelected) return true;
     if (selectedPoloIds.includes(item.poloId)) return true;
@@ -274,7 +273,6 @@ function FinanceiroPage() {
       if (pName.includes("penha") && item.poloId === "penha") return true;
       if (pName.includes("madureira") && item.poloId === "madureira") return true;
       if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-      if (pName.includes("teste") && (item.poloId === "polo-teste" || item.poloId === "teste")) return true;
       return false;
     });
   });

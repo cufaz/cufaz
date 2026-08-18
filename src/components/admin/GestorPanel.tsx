@@ -63,20 +63,6 @@ const initialPolos: Polo[] = [
     orcamentoMensal: 34620.40,
     ativo: true,
   },
-  {
-    id: "teste",
-    nome: "Polo de Teste",
-    slug: "teste",
-    cidade: "São Paulo",
-    uf: "SP",
-    endereco: "Rua de teste 123",
-    perfilTematico: "Educação",
-    pontoFocal: "Testando",
-    vagasTotais: 10,
-    beneficiariosProjetados: 10,
-    orcamentoMensal: 500.00,
-    ativo: true,
-  },
 ];
 
 const initialCategoriasDespesas: CategoriaDespesa[] = [

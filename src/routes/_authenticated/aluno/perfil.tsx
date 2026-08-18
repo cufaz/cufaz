@@ -2,15 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   User,
-  Mail,
-  Phone,
   Upload,
   Save,
   CheckCircle2,
   FileText,
   School,
   Users,
-  ShieldCheck,
+  MapPin,
+  HeartPulse,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
@@ -21,8 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 import { generateTermoAutorizacaoPdf } from "@/lib/pdfAutorizacao";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/aluno/perfil")({
   component: PerfilAlunoPage,
@@ -42,7 +41,7 @@ function PerfilAlunoPage() {
   const [telResponsavel, setTelResponsavel] = useState("");
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
-  // New fields (Anexo 3)
+  // Extended fields
   const [hospitalEmergencia, setHospitalEmergencia] = useState("");
   const [cep, setCep] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -60,45 +59,69 @@ function PerfilAlunoPage() {
   const [termoAutorizacaoName, setTermoAutorizacaoName] = useState<string | null>(null);
 
   useEffect(() => {
-    const userEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
+    const userEmail = (localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br").toLowerCase();
     setAlunoEmail(userEmail);
 
     const fUser = getAvatarLocal(userEmail);
     if (fUser) setFotoPerfil(fUser);
 
+    loadAlunoProfileDB(userEmail);
+  }, []);
+
+  async function loadAlunoProfileDB(emailClean: string) {
+    // 1. Try DB fetch first from cadastros_alunos
+    try {
+      const { data, error } = await supabase
+        .from("cadastros_alunos" as any)
+        .select("*")
+        .eq("email", emailClean)
+        .maybeSingle();
+
+      if (data && !error) {
+        populateFields(data);
+        return;
+      }
+    } catch {}
+
+    // 2. Fallback to localStorage
     try {
       const stored = localStorage.getItem("cufa_alunos_cadastrados");
       if (stored) {
         const parsed = JSON.parse(stored);
-        const found = parsed.find((a: any) => String(a.email || "").toLowerCase() === userEmail.toLowerCase());
+        const found = parsed.find((a: any) => String(a.email || "").toLowerCase() === emailClean);
         if (found) {
-          if (found.nome) setNome(found.nome);
-          if (found.telefone) setTelefone(found.telefone);
-          if (found.dataNasc) setDataNasc(found.dataNasc);
-          if (found.nomeEscola) setNomeEscola(found.nomeEscola);
-          if (found.anoEscolar) setAnoEscolar(found.anoEscolar);
-          if (found.turnoEscolar) setTurnoEscolar(found.turnoEscolar);
-          if (found.qtdPessoasResidencia) setQtdPessoasResidencia(found.qtdPessoasResidencia);
-          if (found.nomeResponsavel) setNomeResponsavel(found.nomeResponsavel);
-          if (found.cpfResponsavel) setCpfResponsavel(found.cpfResponsavel);
-          if (found.telResponsavel) setTelResponsavel(found.telResponsavel);
-          if (found.docIdName) setDocIdName(found.docIdName);
-          if (found.docResName) setDocResName(found.docResName);
-          if (found.termoAutorizacaoName) setTermoAutorizacaoName(found.termoAutorizacaoName);
-          if (found.hospitalEmergencia) setHospitalEmergencia(found.hospitalEmergencia);
-          if (found.cep) setCep(found.cep);
-          if (found.endereco) setEndereco(found.endereco);
-          if (found.numero) setNumero(found.numero);
-          if (found.bairro) setBairro(found.bairro);
-          if (found.cidade) setCidade(found.cidade);
-          if (found.uf) setUf(found.uf);
-          if (found.telefonePai) setTelefonePai(found.telefonePai);
-          if (found.telefoneVizinho) setTelefoneVizinho(found.telefoneVizinho);
-          if (found.telefoneAvo) setTelefoneAvo(found.telefoneAvo);
+          populateFields(found);
         }
       }
     } catch {}
-  }, []);
+  }
+
+  function populateFields(data: any) {
+    if (data.nome) setNome(data.nome);
+    if (data.telefone) setTelefone(data.telefone);
+    if (data.dataNasc || data.data_nasc) setDataNasc(data.dataNasc || data.data_nasc);
+    if (data.nomeEscola || data.nome_escola) setNomeEscola(data.nomeEscola || data.nome_escola);
+    if (data.anoEscolar || data.ano_escolar) setAnoEscolar(data.anoEscolar || data.ano_escolar);
+    if (data.turnoEscolar || data.turno_escolar) setTurnoEscolar(data.turnoEscolar || data.turno_escolar);
+    if (data.qtdPessoasResidencia || data.qtd_pessoas_residencia) setQtdPessoasResidencia(String(data.qtdPessoasResidencia || data.qtd_pessoas_residencia));
+    if (data.nomeResponsavel || data.nome_responsavel) setNomeResponsavel(data.nomeResponsavel || data.nome_responsavel);
+    if (data.cpfResponsavel || data.cpf_responsavel) setCpfResponsavel(data.cpfResponsavel || data.cpf_responsavel);
+    if (data.telResponsavel || data.tel_responsavel) setTelResponsavel(data.telResponsavel || data.tel_responsavel);
+    if (data.docIdName) setDocIdName(data.docIdName);
+    if (data.docResName) setDocResName(data.docResName);
+    if (data.termoAutorizacaoName) setTermoAutorizacaoName(data.termoAutorizacaoName);
+
+    if (data.hospitalEmergencia || data.hospital_emergencia) setHospitalEmergencia(data.hospitalEmergencia || data.hospital_emergencia);
+    if (data.cep) setCep(data.cep);
+    if (data.endereco) setEndereco(data.endereco);
+    if (data.numero) setNumero(data.numero);
+    if (data.bairro) setBairro(data.bairro);
+    if (data.cidade) setCidade(data.cidade);
+    if (data.uf) setUf(data.uf);
+    if (data.telefonePai || data.telefone_pai) setTelefonePai(data.telefonePai || data.telefone_pai);
+    if (data.telefoneVizinho || data.telefone_vizinho) setTelefoneVizinho(data.telefoneVizinho || data.telefone_vizinho);
+    if (data.telefoneAvo || data.telefone_avo) setTelefoneAvo(data.telefoneAvo || data.telefone_avo);
+  }
 
   async function handleCepLookup(rawCep: string) {
     setCep(rawCep);
@@ -112,13 +135,13 @@ function PerfilAlunoPage() {
           setBairro(data.bairro || "");
           setCidade(data.localidade || "Rio de Janeiro");
           setUf(data.uf || "RJ");
-          toast.success("Endereço preenchido automaticamente pelo CEP!");
+          toast.success("Endereço preenchido automaticamente via CEP!");
         }
       } catch {}
     }
   }
 
-  function handleSaveProfile(e: React.FormEvent) {
+  async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     try {
       localStorage.setItem("cufa_aluno_nome", nome);
@@ -127,65 +150,44 @@ function PerfilAlunoPage() {
         setAvatarLocal(alunoEmail, fotoPerfil);
       }
 
-      // Update in cufa_alunos_cadastrados
+      const payload = {
+        email: alunoEmail.toLowerCase(),
+        nome,
+        telefone,
+        data_nasc: dataNasc,
+        nome_escola: nomeEscola,
+        ano_escolar: anoEscolar,
+        turno_escolar: turnoEscolar,
+        qtd_pessoas_residencia: Number(qtdPessoasResidencia) || 1,
+        nome_responsavel: nomeResponsavel,
+        cpf_responsavel: cpfResponsavel,
+        tel_responsavel: telResponsavel,
+        hospitalEmergencia,
+        cep,
+        endereco,
+        numero,
+        bairro,
+        cidade,
+        uf,
+        telefonePai,
+        telefoneVizinho,
+        telefoneAvo,
+        docIdName,
+        docResName,
+        termoAutorizacaoName,
+      };
+
+      // 1. Save to Supabase DB table cadastros_alunos
+      await supabase.from("cadastros_alunos" as any).upsert(payload as any, { onConflict: "email" });
+
+      // 2. Save to localStorage cufa_alunos_cadastrados
       const stored = localStorage.getItem("cufa_alunos_cadastrados");
       let list = stored ? JSON.parse(stored) : [];
       const idx = list.findIndex((a: any) => String(a.email || "").toLowerCase() === alunoEmail.toLowerCase());
       if (idx !== -1 && list[idx]) {
-        list[idx] = {
-          ...list[idx],
-          nome,
-          telefone,
-          dataNasc,
-          nomeEscola,
-          anoEscolar,
-          turnoEscolar,
-          qtdPessoasResidencia,
-          nomeResponsavel,
-          cpfResponsavel,
-          telResponsavel,
-          hospitalEmergencia,
-          cep,
-          endereco,
-          numero,
-          bairro,
-          cidade,
-          uf,
-          telefonePai,
-          telefoneVizinho,
-          telefoneAvo,
-          docIdName: docIdName || list[idx].docIdName,
-          docResName: docResName || list[idx].docResName,
-          termoAutorizacaoName: termoAutorizacaoName || list[idx].termoAutorizacaoName,
-        };
+        list[idx] = { ...list[idx], ...payload };
       } else {
-        list.push({
-          id: `aluno-${Date.now()}`,
-          nome,
-          email: alunoEmail,
-          telefone,
-          dataNasc,
-          nomeEscola,
-          anoEscolar,
-          turnoEscolar,
-          qtdPessoasResidencia,
-          nomeResponsavel,
-          cpfResponsavel,
-          telResponsavel,
-          hospitalEmergencia,
-          cep,
-          endereco,
-          numero,
-          bairro,
-          cidade,
-          uf,
-          telefonePai,
-          telefoneVizinho,
-          telefoneAvo,
-          docIdName,
-          docResName,
-          termoAutorizacaoName,
-        });
+        list.push({ id: `aluno-${Date.now()}`, ...payload });
       }
       localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
       window.dispatchEvent(new Event("cufa_alunos_updated"));
@@ -202,14 +204,10 @@ function PerfilAlunoPage() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      if (type === "id") {
-        setDocIdName(file.name);
-      } else if (type === "res") {
-        setDocResName(file.name);
-      } else {
-        setTermoAutorizacaoName(file.name);
-      }
-      toast.success(`Documento (${file.name}) carregado com sucesso.`);
+      if (type === "id") setDocIdName(file.name);
+      else if (type === "res") setDocResName(file.name);
+      else setTermoAutorizacaoName(file.name);
+      toast.success(`Documento (${file.name}) anexado com sucesso.`);
     };
     reader.readAsDataURL(file);
   }
@@ -240,7 +238,7 @@ function PerfilAlunoPage() {
   return (
     <AlunoShell
       title="Meu Perfil de Aluno"
-      description="Gerencie seus dados pessoais, informações escolares, responsáveis e documentos anexados."
+      description="Gerencie seus dados pessoais, endereço, contatos de emergência e documentos anexados."
     >
       <form onSubmit={handleSaveProfile} className="space-y-6">
         {/* Card Foto e Identificação */}
@@ -308,6 +306,79 @@ function PerfilAlunoPage() {
           </CardContent>
         </Card>
 
+        {/* Card Endereço Completo & Hospital de Emergência */}
+        <Card className="border-border shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/60">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <MapPin className="size-4 text-primary" />
+              <span>Endereço Residencial & Emergência</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">CEP (Busca Automática)</Label>
+                <Input
+                  value={cep}
+                  onChange={(e) => handleCepLookup(e.target.value)}
+                  placeholder="00000-000"
+                  className="text-xs font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Endereço (Rua / Avenida / Alameda)</Label>
+                <Input
+                  value={endereco}
+                  onChange={(e) => setEndereco(e.target.value)}
+                  placeholder="ex.: Rua Principal, nº 100"
+                  className="text-xs font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Número / Complemento</Label>
+                <Input
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  placeholder="ex.: Bloco B, Ap 202"
+                  className="text-xs font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Bairro</Label>
+                <Input
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  placeholder="ex.: Penha"
+                  className="text-xs font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cidade / UF</Label>
+                <div className="flex gap-2">
+                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)} className="text-xs font-medium flex-1" />
+                  <Input value={uf} onChange={(e) => setUf(e.target.value.toUpperCase())} className="text-xs font-bold w-16 uppercase" />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 space-y-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <HeartPulse className="size-3.5 text-rose-500" /> Hospital Preferencial de Emergência
+              </Label>
+              <Input
+                value={hospitalEmergencia}
+                onChange={(e) => setHospitalEmergencia(e.target.value)}
+                placeholder="ex.: UPA Penha, Hospital Getúlio Vargas..."
+                className="text-xs font-medium"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Card Informações Escolares */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60">
@@ -363,12 +434,12 @@ function PerfilAlunoPage() {
           </CardContent>
         </Card>
 
-        {/* Card Responsável Legal & Composição Familiar */}
+        {/* Card Responsável Legal & Contatos Adicionais de Emergência */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Users className="size-4 text-primary" />
-              <span>Responsável Legal & Composição Familiar</span>
+              <span>Responsável Legal & Contatos Adicionais de Emergência</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
@@ -379,7 +450,7 @@ function PerfilAlunoPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome do Responsável</Label>
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome do Responsável Principal</Label>
                 <Input value={nomeResponsavel} onChange={(e) => setNomeResponsavel(capitalizeWords(e.target.value))} placeholder="ex.: Maria da Silva" className="text-xs font-medium" />
               </div>
 
@@ -393,10 +464,48 @@ function PerfilAlunoPage() {
                 <Input value={telResponsavel} onChange={(e) => setTelResponsavel(formatPhone(e.target.value))} placeholder="(00) 00000-0000" className="text-xs font-medium" />
               </div>
             </div>
+
+            {/* Contatos Adicionais (Telefone do Pai, Vizinho, Avó) */}
+            <div className="pt-2 border-t border-border/60">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
+                Contatos Secundários / Adicionais de Emergência
+              </Label>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-foreground">Telefone do Pai</Label>
+                  <Input
+                    value={telefonePai}
+                    onChange={(e) => setTelefonePai(formatPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    className="text-xs font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-foreground">Telefone do Vizinho / Conhecido</Label>
+                  <Input
+                    value={telefoneVizinho}
+                    onChange={(e) => setTelefoneVizinho(formatPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    className="text-xs font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-foreground">Telefone da Avó / Parente</Label>
+                  <Input
+                    value={telefoneAvo}
+                    onChange={(e) => setTelefoneAvo(formatPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    className="text-xs font-medium"
+                  />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Card Documentos Anexados & Termo de Autorização (Anexo 3) */}
+        {/* Card Documentos Anexados & Termo de Autorização */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3 border-b border-border/60">
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -405,7 +514,6 @@ function PerfilAlunoPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
-            {/* Bloco de Gerar Termo PDF */}
             <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
                 <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">

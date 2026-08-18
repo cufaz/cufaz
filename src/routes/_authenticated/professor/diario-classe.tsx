@@ -1,6 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { GraduationCap, Search, Award, Save, Calendar, Filter, Users, CheckCircle2, MessageSquare, ShieldCheck } from "lucide-react";
+import {
+  GraduationCap,
+  Search,
+  Award,
+  Save,
+  Calendar,
+  Users,
+  CheckCircle2,
+  MessageSquare,
+  ShieldCheck,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ProfessorShell } from "@/components/professor/ProfessorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,64 +23,44 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  fetchDiarioEntriesDB,
+  saveDiarioEntryDB,
+  autoMigrateLocalDiario,
+  DiarioEntryDB,
+} from "@/lib/diarioService";
 
 export const Route = createFileRoute("/_authenticated/professor/diario-classe")({
   component: ProfessorDiarioClassePage,
 });
 
-export interface DiarioClasseLog {
-  id: string;
-  alunoEmail: string;
-  alunoNome: string;
-  polo: string;
-  modalidade: string;
-  nivelGraduacao: string; // e.g. "Faixa Branca", "Faixa Cinza", "Iniciante"
-  relato: string;
-  dataAvaliacao: string;
-  professorEmail: string;
-  professorNome: string;
-}
-
-const FAIXAS_ARTES_MARCIAIS = [
-  "Faixa Branca",
-  "Faixa Cinza",
-  "Faixa Amarela",
-  "Faixa Laranja",
-  "Faixa Verde",
-  "Faixa Azul",
-  "Faixa Roxa",
-  "Faixa Marrom",
-  "Faixa Preta",
-];
-
-const NIVEIS_GERAIS = [
-  "Iniciante",
-  "Intermediário",
-  "Avançado",
-  "Destaque Técnico",
-];
-
 export function ProfessorDiarioClassePage() {
   const [profEmail] = useState(() => (localStorage.getItem("cufa_logged_user") || "santana@cufa.com.br").toLowerCase());
-  const [profNome] = useState(() => localStorage.getItem("cufa_logged_name_santana@cufa.com.br") || "Prof.ª Santana Silva");
+  const [profNome] = useState(() => localStorage.getItem(`cufa_logged_name_${profEmail}`) || "Prof.ª Santana Silva");
   const [profPolo] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
 
+  const [dataFiltro, setDataFiltro] = useState(() => new Date().toISOString().slice(0, 10));
   const [filtroOficina, setFiltroOficina] = useState("todas");
   const [searchAluno, setSearchAluno] = useState("");
 
   const [alunosList, setAlunosList] = useState<any[]>([]);
-  const [diarioLogs, setDiarioLogs] = useState<Record<string, DiarioClasseLog>>({});
+  const [diarioEntries, setDiarioEntries] = useState<DiarioEntryDB[]>([]);
   const [minhasOficinas, setMinhasOficinas] = useState<string[]>([]);
 
-  // Editing state per student
+  // Accordion open state per student
+  const [expandedAlunos, setExpandedAlunos] = useState<Record<string, boolean>>({});
+
+  // Editing input state per student key (email)
   const [editingLevels, setEditingLevels] = useState<Record<string, string>>({});
   const [editingRelatos, setEditingRelatos] = useState<Record<string, string>>({});
-  const [editingDatas, setEditingDatas] = useState<Record<string, string>>({});
+  const [isEditingNivelToggle, setIsEditingNivelToggle] = useState<Record<string, boolean>>({});
 
-  function loadAlunosAndLogs() {
+  async function loadData() {
+    await autoMigrateLocalDiario();
+
+    // 1. Determine professor's approved modalities (only active/approved candidaturas)
+    let oficinas: string[] = [];
     try {
-      // 1. Determine professor's approved modalidades
-      let oficinas: string[] = [];
       const storedCand = localStorage.getItem(`cufa_professor_candidaturas_${profEmail}`);
       if (storedCand) {
         const cList: any[] = JSON.parse(storedCand);
@@ -77,21 +70,22 @@ export function ProfessorDiarioClassePage() {
           }
         });
       }
+    } catch {}
 
-      if (oficinas.length === 0) {
-        if (profEmail.includes("santana")) oficinas = ["Jiu Jitsu"];
-        else if (profEmail.includes("anapaula")) oficinas = ["Corte e Costura"];
-        else if (profEmail.includes("carlos")) oficinas = ["Karatê"];
-        else oficinas = ["Jiu Jitsu"];
-      }
+    if (oficinas.length === 0) {
+      if (profEmail.includes("santana")) oficinas = ["Jiu Jitsu"];
+      else if (profEmail.includes("anapaula")) oficinas = ["Corte e Costura"];
+      else if (profEmail.includes("carlos")) oficinas = ["Karatê"];
+      else oficinas = ["Jiu Jitsu"];
+    }
 
-      setMinhasOficinas(oficinas);
+    setMinhasOficinas(oficinas);
 
-      // 2. Load registered students
+    // 2. Load registered students
+    try {
       const storedAlunos = localStorage.getItem("cufa_alunos_cadastrados");
       let list: any[] = storedAlunos ? JSON.parse(storedAlunos) : [];
 
-      // Default fallback students for Penha & Paraisópolis if empty
       if (list.length === 0) {
         list = [
           { id: "1", nome: "Enzo Junior", email: "enzojunior@gmail.com", polo: "Complexo da Penha", modalidade: "Jiu Jitsu", foto: null },
@@ -100,76 +94,76 @@ export function ProfessorDiarioClassePage() {
           { id: "4", nome: "Lucas Oliveira", email: "lucasoliveira@gmail.com", polo: "Paraisópolis", modalidade: "Karatê", foto: null },
         ];
       }
-
       setAlunosList(list);
-
-      // Load saved logs from cufa_diario_classe
-      const storedLogs = localStorage.getItem("cufa_diario_classe");
-      const logsMap: Record<string, DiarioClasseLog> = storedLogs ? JSON.parse(storedLogs) : {};
-      setDiarioLogs(logsMap);
-
-      // Pre-fill edit inputs
-      const initialLevels: Record<string, string> = {};
-      const initialRelatos: Record<string, string> = {};
-      const initialDatas: Record<string, string> = {};
-
-      list.forEach((aluno) => {
-        const key = aluno.email.toLowerCase();
-        const existing = logsMap[key];
-        const defaultLevel = aluno.modalidade?.toLowerCase().includes("jiu") || aluno.modalidade?.toLowerCase().includes("karat")
-          ? "Faixa Branca"
-          : "Iniciante";
-
-        initialLevels[key] = existing?.nivelGraduacao || defaultLevel;
-        initialRelatos[key] = existing?.relato || "";
-        initialDatas[key] = existing?.dataAvaliacao || new Date().toISOString().slice(0, 10);
-      });
-
-      setEditingLevels(initialLevels);
-      setEditingRelatos(initialRelatos);
-      setEditingDatas(initialDatas);
     } catch {}
+
+    // 3. Fetch diary entries for the selected date
+    const dbLogs = await fetchDiarioEntriesDB({ data: dataFiltro });
+    setDiarioEntries(dbLogs);
+
+    // Pre-fill level & relato inputs for each student
+    const initialLevels: Record<string, string> = {};
+    const initialRelatos: Record<string, string> = {};
+
+    alunosList.forEach((aluno) => {
+      const key = aluno.email.toLowerCase();
+      const existing = dbLogs.find((d) => d.aluno_email.toLowerCase() === key);
+      const defaultLevel = aluno.modalidade?.toLowerCase().includes("jiu") || aluno.modalidade?.toLowerCase().includes("karat")
+        ? "Faixa Branca"
+        : "Iniciante";
+
+      initialLevels[key] = existing?.nivel || defaultLevel;
+      initialRelatos[key] = existing?.relato || "";
+    });
+
+    setEditingLevels((prev) => ({ ...initialLevels, ...prev }));
+    setEditingRelatos((prev) => ({ ...initialRelatos, ...prev }));
   }
 
   useEffect(() => {
-    loadAlunosAndLogs();
-  }, []);
+    loadData();
+  }, [dataFiltro]);
 
-  function handleSaveDiario(aluno: any) {
+  function toggleAccordion(key: string) {
+    setExpandedAlunos((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function handleSaveDiario(aluno: any) {
     const key = aluno.email.toLowerCase();
-    const nivelGraduacao = editingLevels[key] || "Faixa Branca";
+    const nivel = editingLevels[key] || "Iniciante";
     const relato = editingRelatos[key] || "";
-    const dataAvaliacao = editingDatas[key] || new Date().toISOString().slice(0, 10);
 
     if (!relato.trim()) {
       toast.error("Preencha um breve relato sobre a evolução do aluno antes de salvar.");
       return;
     }
 
-    const updatedLog: DiarioClasseLog = {
-      id: `log-${key}-${Date.now()}`,
-      alunoEmail: key,
-      alunoNome: aluno.nome,
-      polo: aluno.polo || profPolo,
-      modalidade: aluno.modalidade || "Jiu Jitsu",
-      nivelGraduacao,
-      relato,
-      dataAvaliacao,
-      professorEmail: profEmail,
-      professorNome: profNome,
+    const newEntry: DiarioEntryDB = {
+      aluno_email: key,
+      aluno_nome: aluno.nome,
+      professor_nome: profNome,
+      atividade_nome: aluno.modalidade || oficinasFallback(aluno),
+      polo_nome: aluno.polo || profPolo,
+      nivel: nivel.trim(),
+      relato: relato.trim(),
+      data: dataFiltro,
     };
 
-    const currentMap = { ...diarioLogs, [key]: updatedLog };
-    setDiarioLogs(currentMap);
-    localStorage.setItem("cufa_diario_classe", JSON.stringify(currentMap));
-    window.dispatchEvent(new Event("cufa_diario_updated"));
+    const saved = await saveDiarioEntryDB(newEntry);
 
-    toast.success(`Diário de classe salvo para ${aluno.nome}!`, {
-      description: `Nível: ${nivelGraduacao} • Atualizado em ${dataAvaliacao}`,
-    });
+    if (saved) {
+      toast.success(`Diário de classe salvo para ${aluno.nome}!`, {
+        description: `Nível: "${nivel}" • Registrado em ${dataFiltro}`,
+      });
+      loadData();
+    }
   }
 
-  // Filter students by professor's assigned polo & office
+  function oficinasFallback(aluno: any) {
+    return minhasOficinas[0] || aluno.modalidade || "Jiu Jitsu";
+  }
+
+  // Filter students by professor's assigned polo & office filter
   const alunosFiltrados = alunosList.filter((a) => {
     const matchPolo = !profPolo || a.polo?.toLowerCase().includes(profPolo.toLowerCase()) || profPolo.toLowerCase().includes(a.polo?.toLowerCase() || "");
     const matchOficina = filtroOficina === "todas" || a.modalidade?.toLowerCase() === filtroOficina.toLowerCase();
@@ -177,12 +171,12 @@ export function ProfessorDiarioClassePage() {
     return matchPolo && matchOficina && matchSearch;
   });
 
-  const avaliadosCount = Object.keys(diarioLogs).length;
+  const avaliadosCount = diarioEntries.length;
 
   return (
     <ProfessorShell
       title="Diário de Classe & Evolução de Alunos"
-      description="Relate o progresso pedagógico e defina a faixa/nível de graduação de cada aluno sob sua regência."
+      description="Relate o progresso diário e defina a nomenclatura do nível/faixa de cada aluno."
     >
       <div className="space-y-6">
         {/* KPI Cards */}
@@ -200,7 +194,7 @@ export function ProfessorDiarioClassePage() {
           <Card className="border-border shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Relatos & Faixas Registradas</p>
+                <p className="text-xs font-bold uppercase text-muted-foreground">Registros</p>
                 <p className="text-2xl font-black text-emerald-600 mt-1">{avaliadosCount}</p>
               </div>
               <Award className="size-8 text-emerald-500 opacity-80" />
@@ -218,11 +212,11 @@ export function ProfessorDiarioClassePage() {
           </Card>
         </div>
 
-        {/* Filter Toolbar */}
+        {/* Filter Toolbar with Date Selector */}
         <Card className="border-border shadow-xs bg-card">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
+          <CardContent className="p-4 space-y-3 sm:space-y-0">
+            <div className="grid gap-3 sm:grid-cols-3 items-center">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar aluno por nome ou e-mail..."
@@ -232,15 +226,28 @@ export function ProfessorDiarioClassePage() {
                 />
               </div>
 
-              <div className="w-full sm:w-64">
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Data do Diário
+                </Label>
+                <Input
+                  type="date"
+                  value={dataFiltro}
+                  onChange={(e) => setDataFiltro(e.target.value)}
+                  className="text-xs font-bold h-9"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Oficina do Professor
+                </Label>
                 <select
                   value={filtroOficina}
                   onChange={(e) => setFiltroOficina(e.target.value)}
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
                 >
-                  <option value="todas">
-                    {minhasOficinas.length > 1 ? "Todas as Minhas Oficinas" : `Oficina: ${minhasOficinas[0] || "Jiu Jitsu"}`}
-                  </option>
+                  <option value="todas">Todas as Minhas Oficinas ({minhasOficinas.length})</option>
                   {minhasOficinas.map((oficina) => (
                     <option key={oficina} value={oficina}>
                       {oficina}
@@ -252,8 +259,8 @@ export function ProfessorDiarioClassePage() {
           </CardContent>
         </Card>
 
-        {/* Student Class Journal Cards */}
-        <div className="space-y-4">
+        {/* Student Class Journal Accordion List (Cascade Effect) */}
+        <div className="space-y-3">
           {alunosFiltrados.length === 0 ? (
             <Card className="border-border p-8 text-center text-muted-foreground">
               Nenhum aluno encontrado para lançamento de diário de classe.
@@ -261,96 +268,129 @@ export function ProfessorDiarioClassePage() {
           ) : (
             alunosFiltrados.map((aluno) => {
               const key = aluno.email.toLowerCase();
-              const isMartial = aluno.modalidade?.toLowerCase().includes("jiu") || aluno.modalidade?.toLowerCase().includes("karat");
-              const levelOptions = isMartial ? FAIXAS_ARTES_MARCIAIS : NIVEIS_GERAIS;
-              const hasSavedLog = Boolean(diarioLogs[key]);
+              const isExpanded = Boolean(expandedAlunos[key]);
+              const existingLog = diarioEntries.find((d) => d.aluno_email.toLowerCase() === key);
+              const currentLevel = editingLevels[key] || existingLog?.nivel || "Faixa Branca / Iniciante";
+              const isEditingNivel = Boolean(isEditingNivelToggle[key]);
 
               return (
-                <Card key={aluno.id} className="border-border shadow-xs overflow-hidden">
-                  <CardHeader className="bg-muted/40 pb-3 border-b border-border/60">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-11 border-2 border-primary/40 shadow-xs">
-                          {aluno.foto && <AvatarImage src={aluno.foto} alt={aluno.nome} className="object-cover" />}
-                          <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
-                            {aluno.nome.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <CardTitle className="text-base font-extrabold text-foreground flex items-center gap-2">
-                            <span>{aluno.nome}</span>
-                            {hasSavedLog && (
-                              <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-[10px] gap-1">
-                                <CheckCircle2 className="size-3" /> Registrado
+                <Card key={aluno.id} className="border-border shadow-xs overflow-hidden transition-all duration-200">
+                  {/* Accordion Header - Always Visible */}
+                  <div
+                    onClick={() => toggleAccordion(key)}
+                    className="p-4 bg-card hover:bg-muted/40 cursor-pointer flex items-center justify-between gap-3 select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="size-10 border border-primary/30">
+                        {aluno.foto && <AvatarImage src={aluno.foto} alt={aluno.nome} className="object-cover" />}
+                        <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+                          {aluno.nome.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div>
+                        <h4 className="text-sm font-extrabold text-foreground flex items-center gap-2">
+                          <span>{aluno.nome}</span>
+                          {existingLog && (
+                            <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20 text-[10px] gap-1">
+                              <CheckCircle2 className="size-3" /> Registrado ({dataFiltro})
+                            </Badge>
+                          )}
+                        </h4>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          {aluno.email} • Nível Atual: <b className="text-primary">{currentLevel}</b>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/10 text-primary font-bold text-xs border-primary/20 hidden sm:inline-flex">
+                        {aluno.modalidade || minhasOficinas[0]}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+                        {isExpanded ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Accordion Body - Collapsed / Expanded */}
+                  {isExpanded && (
+                    <CardContent className="pt-2 pb-5 px-4 space-y-4 border-t border-border/60 bg-muted/20">
+                      <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                        {/* Free-form Editable Level / Graduation (Texto Livre Editável com Lápis) */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                              <Award className="size-3.5 text-amber-500" /> Nível / Graduação do Aluno (Editável)
+                            </Label>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditingNivelToggle({ ...isEditingNivelToggle, [key]: !isEditingNivel });
+                              }}
+                              className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                            >
+                              <Pencil className="size-3" /> {isEditingNivel ? "Concluir" : "Editar"}
+                            </button>
+                          </div>
+
+                          {isEditingNivel ? (
+                            <Input
+                              value={editingLevels[key] ?? ""}
+                              onChange={(e) => setEditingLevels({ ...editingLevels, [key]: e.target.value })}
+                              placeholder="Digite a nomenclatura oficial (ex.: Faixa Branca 2º Grau, Nível Intermediário...)"
+                              className="text-xs font-bold text-primary h-10 border-primary"
+                              autoFocus
+                            />
+                          ) : (
+                            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center justify-between text-xs font-bold text-primary">
+                              <span>{currentLevel}</span>
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal">
+                                Texto Livre Oficial
                               </Badge>
-                            )}
-                          </CardTitle>
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {aluno.email} • Polo: <b>{aluno.polo}</b>
-                          </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Date Field (Matches Selected Date) */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <Calendar className="size-3.5 text-primary" /> Data do Registro
+                          </Label>
+                          <Input
+                            type="date"
+                            value={dataFiltro}
+                            disabled
+                            className="text-xs font-bold bg-muted/60 h-10 cursor-not-allowed"
+                          />
                         </div>
                       </div>
 
-                      <Badge className="bg-primary/10 text-primary font-black text-xs border-primary/20 shrink-0 self-start sm:self-auto">
-                        {aluno.modalidade}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="pt-4 space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                          <Award className="size-3.5 text-amber-500" /> Nível / Graduação do Aluno
-                        </Label>
-                        <select
-                          value={editingLevels[key] || levelOptions[0]}
-                          onChange={(e) => setEditingLevels({ ...editingLevels, [key]: e.target.value })}
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-black text-primary"
-                        >
-                          {levelOptions.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
+                      {/* Pedagogical Report Textarea */}
                       <div className="space-y-1.5">
                         <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                          <Calendar className="size-3.5 text-primary" /> Data da Avaliação
+                          <MessageSquare className="size-3.5 text-emerald-600" /> Relato Diário de Desenvolvimento
                         </Label>
-                        <Input
-                          type="date"
-                          value={editingDatas[key] || new Date().toISOString().slice(0, 10)}
-                          onChange={(e) => setEditingDatas({ ...editingDatas, [key]: e.target.value })}
-                          className="text-xs font-bold"
+                        <Textarea
+                          rows={3}
+                          placeholder={`Escreva o relato pedagógico de ${aluno.nome} referente ao dia ${dataFiltro}...`}
+                          value={editingRelatos[key] ?? ""}
+                          onChange={(e) => setEditingRelatos({ ...editingRelatos, [key]: e.target.value })}
+                          className="text-xs font-medium leading-relaxed bg-background"
                         />
                       </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <MessageSquare className="size-3.5 text-emerald-600" /> Relato de Desenvolvimento & Observações Pedagógicas
-                      </Label>
-                      <Textarea
-                        rows={3}
-                        placeholder="Escreva um breve relato sobre a dedicação, presença, técnica e evolução do aluno..."
-                        value={editingRelatos[key] || ""}
-                        onChange={(e) => setEditingRelatos({ ...editingRelatos, [key]: e.target.value })}
-                        className="text-xs font-medium leading-relaxed"
-                      />
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <Button
-                        onClick={() => handleSaveDiario(aluno)}
-                        className="bg-brand-gradient text-white font-black text-xs h-9 px-5 shadow-brand gap-2"
-                      >
-                        <Save className="size-4" /> Salvar no Diário de Classe
-                      </Button>
-                    </div>
-                  </CardContent>
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          onClick={() => handleSaveDiario(aluno)}
+                          className="bg-brand-gradient text-white font-black text-xs h-9 px-5 shadow-brand gap-2"
+                        >
+                          <Save className="size-4" /> Salvar Registro do Dia ({dataFiltro})
+                        </Button>
+                      </div>
+                    </CardContent>
+                  )}
                 </Card>
               );
             })

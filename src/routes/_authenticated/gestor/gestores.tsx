@@ -377,7 +377,6 @@ export function GestoresPage() {
                   <option value="Complexo da Penha">Complexo da Penha</option>
                   <option value="Viaduto de Madureira">Viaduto de Madureira</option>
                   <option value="Paraisópolis">Paraisópolis</option>
-                  <option value="Polo de Teste">Polo de Teste</option>
                 </select>
               </div>
             )}

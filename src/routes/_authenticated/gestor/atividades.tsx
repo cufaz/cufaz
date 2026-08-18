@@ -161,7 +161,7 @@ export function AtividadesPage() {
         let list = stored ? JSON.parse(stored) : [];
         if (!Array.isArray(list)) list = [];
         const poloFound = polosCriacao.find((p) => String(p['id']) === String(v['polo_id']));
-        const poloNome = poloFound ? String(poloFound['nome']) : "Polo de Teste";
+        const poloNome = poloFound ? String(poloFound['nome']) : "Complexo da Penha";
 
         const newAct = {
           id: v['id'] || `act-${Date.now()}`,

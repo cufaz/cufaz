@@ -1,60 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { GraduationCap, Search, Award, Calendar, MessageSquare, ShieldCheck, Filter, Users } from "lucide-react";
+import { Search, Award, MessageSquare } from "lucide-react";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { usePolosCadastrados } from "@/lib/cadastros";
+import { fetchDiarioEntriesDB, DiarioEntryDB } from "@/lib/diarioService";
 
 export const Route = createFileRoute("/_authenticated/gestor/diario-classe")({
   component: GestorDiarioClassePage,
 });
 
 export function GestorDiarioClassePage() {
+  const { polos } = usePolosCadastrados();
   const [filtroPolo, setFiltroPolo] = useState("todos");
   const [filtroOficina, setFiltroOficina] = useState("todas");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [logsList, setLogsList] = useState<any[]>([]);
+  const [logsList, setLogsList] = useState<DiarioEntryDB[]>([]);
 
-  function loadAllLogs() {
-    try {
-      const storedLogs = localStorage.getItem("cufa_diario_classe");
-      let map: Record<string, any> = storedLogs ? JSON.parse(storedLogs) : {};
-
-      let list = Object.values(map);
-
-      // Default fallback logs if empty
-      if (list.length === 0) {
-        list = [
-          {
-            id: "1",
-            alunoEmail: "enzojunior@gmail.com",
-            alunoNome: "Enzo Junior",
-            polo: "Complexo da Penha",
-            modalidade: "Jiu Jitsu",
-            nivelGraduacao: "Faixa Branca",
-            relato: "Ótima assiduidade, excelente evolução técnica na guarda e postura respeitosa.",
-            dataAvaliacao: "2026-08-15",
-            professorNome: "Prof.ª Santana Silva",
-          },
-          {
-            id: "2",
-            alunoEmail: "lucasoliveira@gmail.com",
-            alunoNome: "Lucas Oliveira",
-            polo: "Paraisópolis",
-            modalidade: "Karatê",
-            nivelGraduacao: "Faixa Amarela",
-            relato: "Demonstrou domínio dos kata básicos e boa pontualidade.",
-            dataAvaliacao: "2026-08-14",
-            professorNome: "Prof. Carlos Eduardo",
-          },
-        ];
-      }
-
-      setLogsList(list);
-    } catch {}
+  async function loadAllLogs() {
+    const data = await fetchDiarioEntriesDB();
+    setLogsList(data);
   }
 
   useEffect(() => {
@@ -66,47 +35,19 @@ export function GestorDiarioClassePage() {
   }, []);
 
   const logsFiltrados = logsList.filter((log) => {
-    const matchPolo = filtroPolo === "todos" || log.polo?.toLowerCase().includes(filtroPolo.toLowerCase());
-    const matchOficina = filtroOficina === "todas" || log.modalidade?.toLowerCase() === filtroOficina.toLowerCase();
-    const matchSearch = !searchQuery || log.alunoNome?.toLowerCase().includes(searchQuery.toLowerCase()) || log.alunoEmail?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchPolo = filtroPolo === "todos" || log.polo_nome?.toLowerCase().includes(filtroPolo.toLowerCase());
+    const matchOficina = filtroOficina === "todas" || log.atividade_nome?.toLowerCase() === filtroOficina.toLowerCase();
+    const matchSearch =
+      !searchQuery ||
+      log.aluno_nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.aluno_email?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchPolo && matchOficina && matchSearch;
   });
 
   return (
     <GestorShell title="Diário de Classe & Gestão de Evolução">
       <div className="space-y-6">
-        {/* KPI Summary */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-border shadow-xs">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Total de Diários Lançados</p>
-                <p className="text-2xl font-black text-foreground mt-1">{logsFiltrados.length}</p>
-              </div>
-              <GraduationCap className="size-8 text-primary opacity-80" />
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-xs">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Polos Atendidos</p>
-                <p className="text-2xl font-black text-emerald-600 mt-1">4 Unidades</p>
-              </div>
-              <ShieldCheck className="size-8 text-emerald-500 opacity-80" />
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-xs">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Acompanhamento Transparente</p>
-                <p className="text-xs font-extrabold text-foreground mt-1">Sincronizado Aluno & Polo</p>
-              </div>
-              <Users className="size-8 text-amber-500 opacity-80" />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Top KPI Cards Removed per User Directive */}
 
         {/* Filter Toolbar */}
         <Card className="border-border shadow-xs bg-card">
@@ -129,10 +70,11 @@ export function GestorDiarioClassePage() {
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
                 >
                   <option value="todos">Todos os Polos</option>
-                  <option value="penha">Complexo da Penha</option>
-                  <option value="madureira">Viaduto de Madureira</option>
-                  <option value="paraisopolis">Paraisópolis</option>
-                  <option value="teste">Polo de Teste</option>
+                  {polos.map((p) => (
+                    <option key={p.id} value={p.nome}>
+                      {p.nome}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -161,32 +103,32 @@ export function GestorDiarioClassePage() {
               Nenhum diário de classe registrado para os filtros selecionados.
             </Card>
           ) : (
-            logsFiltrados.map((log) => (
-              <Card key={log.id} className="border-border shadow-xs overflow-hidden">
+            logsFiltrados.map((log, idx) => (
+              <Card key={log.id || `log-${idx}`} className="border-border shadow-xs overflow-hidden">
                 <CardHeader className="bg-muted/40 pb-3 border-b border-border/60">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="size-10 border border-primary/40">
                         <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
-                          {log.alunoNome?.slice(0, 2).toUpperCase()}
+                          {log.aluno_nome?.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <CardTitle className="text-base font-extrabold text-foreground">
-                          {log.alunoNome}
+                          {log.aluno_nome}
                         </CardTitle>
                         <p className="text-xs text-muted-foreground font-medium">
-                          {log.alunoEmail} • Polo: <b>{log.polo}</b>
+                          {log.aluno_email} • Polo: <b>{log.polo_nome}</b>
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Badge className="bg-primary/10 text-primary font-bold text-xs">
-                        {log.modalidade}
+                        {log.atividade_nome}
                       </Badge>
                       <Badge className="bg-amber-500 text-slate-950 font-black text-xs">
-                        <Award className="size-3.5 mr-1" /> {log.nivelGraduacao || "Faixa Branca"}
+                        <Award className="size-3.5 mr-1" /> {log.nivel || "Iniciante"}
                       </Badge>
                     </div>
                   </div>
@@ -194,8 +136,8 @@ export function GestorDiarioClassePage() {
 
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground gap-2">
-                    <span>Instrutor: <b>{log.professorNome || "Prof. Responsável"}</b></span>
-                    <span>Data da Avaliação: <b>{log.dataAvaliacao || "2026-08-15"}</b></span>
+                    <span>Instrutor: <b>{log.professor_nome || "Prof. Responsável"}</b></span>
+                    <span>Data da Avaliação: <b>{log.data || "2026-08-15"}</b></span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-muted/20 border border-border text-xs leading-relaxed text-foreground font-medium">

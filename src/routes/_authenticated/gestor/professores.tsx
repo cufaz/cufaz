@@ -366,7 +366,6 @@ function ProfessoresDashboardPage() {
                 <option value="penha">Complexo da Penha</option>
                 <option value="madureira">Viaduto de Madureira</option>
                 <option value="paraisopolis">Paraisópolis</option>
-                <option value="polo-teste">Polo de Teste</option>
               </select>
             </div>
 
