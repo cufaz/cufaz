@@ -92,13 +92,15 @@ function FinanceiroPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["financeiro", dataInicio, dataFim, selectedPoloIds],
-    queryFn: () =>
-      getFinFn({
-        data: {
-          competencia: dataInicio.slice(0, 7),
-          poloId: selectedPoloIds.length === 1 ? selectedPoloIds[0] : undefined,
-        },
-      }),
+    queryFn: () => {
+      const dataPayload: { competencia?: string; poloId?: string } = {
+        competencia: dataInicio.slice(0, 7),
+      };
+      if (selectedPoloIds.length === 1 && selectedPoloIds[0]) {
+        dataPayload.poloId = selectedPoloIds[0];
+      }
+      return getFinFn({ data: dataPayload });
+    },
   });
 
   const mSalvar = useMutation({
@@ -107,8 +109,8 @@ function FinanceiroPage() {
       try {
         const stored = localStorage.getItem("cufa_lancamentos_custom");
         let list: any[] = stored ? JSON.parse(stored) : [];
-        if (payload.id) {
-          const idx = list.findIndex((l) => String(l.id) === String(payload.id));
+        if (payload['id']) {
+          const idx = list.findIndex((l) => String(l['id']) === String(payload['id']));
           if (idx !== -1) list[idx] = { ...list[idx], ...payload, ...resp };
           else list.unshift({ ...payload, ...resp });
         } else {
@@ -358,7 +360,8 @@ function FinanceiroPage() {
 
       if (l['pedido_id'] || idStr.startsWith("ped-aprov-")) {
         const realPedId = l['pedido_id'] || idStr.replace("ped-aprov-", "");
-        await supabase.from("pedidos_compra").delete().eq("id", realPedId).catch(() => {});
+        const { error: delErr } = await supabase.from("pedidos_compra").delete().eq("id", realPedId);
+        if (delErr) console.warn("Delete order error:", delErr.message);
       }
     } catch {}
 
@@ -379,7 +382,7 @@ function FinanceiroPage() {
             className="border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold"
             onClick={() =>
               exportProfessionalExcel({
-                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })),
+                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })) as any,
                 lancamentos: lancamentosFiltrados.map((l) => ({
                   id: String(l['id']),
                   tipo: l['tipo'],
@@ -405,7 +408,7 @@ function FinanceiroPage() {
             className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 font-bold"
             onClick={() =>
               generateProfessionalPdf({
-                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })),
+                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })) as any,
                 lancamentos: lancamentosFiltrados.map((l) => ({
                   id: String(l['id']),
                   tipo: l['tipo'],
@@ -757,7 +760,7 @@ function FinanceiroPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              {form?.id ? "Editar lançamento" : "Novo lançamento"}
+              {form?.['id'] ? "Editar lançamento" : "Novo lançamento"}
             </DialogTitle>
           </DialogHeader>
           {form ? (
@@ -847,7 +850,7 @@ function FinanceiroPage() {
                 </Button>
                 <Button type="submit" className="bg-brand-gradient text-white font-bold shadow-brand" disabled={mSalvar.isPending}>
                   {mSalvar.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-                  {form?.id ? "Salvar Alterações" : "Confirmar Lançamento"}
+                  {form?.['id'] ? "Salvar Alterações" : "Confirmar Lançamento"}
                 </Button>
               </DialogFooter>
             </form>

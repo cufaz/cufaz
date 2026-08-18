@@ -1,284 +1,128 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Users, BookOpen, ClipboardCheck, ShoppingCart, CheckCircle2, AlertCircle, TrendingUp, Calendar } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState, useEffect } from "react";
+import { Users, BookOpen, ClipboardCheck, ShoppingCart, Loader2 } from "lucide-react";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Kpi } from "@/components/admin/Kpi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getPoloDashboard } from "@/lib/polo.functions";
+import { usePolosCadastrados } from "@/lib/cadastros";
 
 export const Route = createFileRoute("/_authenticated/polo/")({
   component: PoloDashboardPage,
+  errorComponent: ({ error }) => (
+    <div className="p-8 text-center text-destructive font-bold">
+      Erro ao carregar Dashboard do Polo: {error.message}
+    </div>
+  ),
 });
 
-const cleanStr = (s: string) => String(s || "").toLowerCase().trim();
-
 function PoloDashboardPage() {
-  const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const getDashFn = useServerFn(getPoloDashboard);
+  const { polos } = usePolosCadastrados();
+  
+  // Use first polo from DB as default
+  const defaultPoloId = polos[0]?.id || "penha";
+  const defaultPoloNome = polos[0]?.nome || "Complexo da Penha";
+  const [poloId] = useState<string>(defaultPoloId);
 
-  // Read merged real student registrations for this polo (Anexos 2 & 3)
-  const [alunosLista, setAlunosLista] = useState<any[]>(() => {
-    return loadMergedPoloStudents(poloNome);
+  const { data: dash, isLoading, refetch } = useQuery({
+    queryKey: ["polo", "dashboard", poloId],
+    queryFn: () => getDashFn({ data: { poloId } }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
-  function loadMergedPoloStudents(unitName: string) {
-    const listMap = new Map<string, any>();
-    const cleanUnit = unitName.toLowerCase();
+  useEffect(() => {
+    window.addEventListener("cufa_pedidos_updated", () => refetch());
+    window.addEventListener("cufa_matricula_updated", () => refetch());
+    return () => {
+      window.removeEventListener("cufa_pedidos_updated", () => refetch());
+      window.removeEventListener("cufa_matricula_updated", () => refetch());
+    };
+  }, [refetch]);
 
-    try {
-      const stored = localStorage.getItem("cufa_alunos_cadastrados");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((a: any, idx: number) => {
-            const aPolo = (a.polo || "Complexo da Penha").toLowerCase();
-            if (cleanUnit.includes("penha") || aPolo.includes(cleanUnit) || cleanUnit.includes(aPolo)) {
-              const key = (a.email || a.nome || `aluno-${idx}`).toLowerCase();
-              listMap.set(key, {
-                id: a.id || `cad-${idx}`,
-                nome: a.nome,
-                email: a.email || "",
-                atividade: a.modalidade || "Jiu Jitsu",
-                turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    try {
-      const storedPolo = localStorage.getItem("cufa_alunos_polo");
-      if (storedPolo) {
-        const parsed = JSON.parse(storedPolo);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((a: any, idx: number) => {
-            const key = (a.email || a.nome || `polo-${idx}`).toLowerCase();
-            if (!listMap.has(key)) {
-              listMap.set(key, {
-                id: a.id || `polo-${idx}`,
-                nome: a.nome,
-                email: a.email || "",
-                atividade: a.atividade || a.modalidade || "Jiu Jitsu",
-                turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    return Array.from(listMap.values());
+  if (isLoading || !dash) {
+    return (
+      <PoloResponsavelShell title="Visão Geral do Polo" description="Sincronizando dados com o banco de dados...">
+        <div className="flex justify-center py-16">
+          <Loader2 className="size-10 animate-spin text-primary" />
+        </div>
+      </PoloResponsavelShell>
+    );
   }
 
-  const [comprasLista] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_compras_polo");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
-
-  const isPenha = poloNome.toLowerCase().includes("penha");
-  const isMadureira = poloNome.toLowerCase().includes("madureira");
-
-  const totalAlunos = alunosLista.length;
-  const vagasTotais = isPenha ? 150 : isMadureira ? 81 : 30;
-  const totalAtividades = isPenha ? 3 : isMadureira ? 3 : 1;
-  const totalTurmas = isPenha ? 4 : isMadureira ? 4 : 2;
-
-  // Calculate real presence % from recorded chamadas history
-  const chamadasHistory = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_professor_chamadas_history");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  })();
-
-  const taxaFrequencia = (() => {
-    if (!chamadasHistory || chamadasHistory.length === 0) return "—";
-    let totalPresentes = 0;
-    let totalAlunosEmChamadas = 0;
-
-    chamadasHistory.forEach((ch: any) => {
-      if (ch.presencas && typeof ch.presencas === "object") {
-        const values = Object.values(ch.presencas);
-        totalAlunosEmChamadas += values.length;
-        totalPresentes += values.filter((v: any) => v === true || v === "presente").length;
-      } else if (typeof ch.presentesCount === "number" && typeof ch.totalCount === "number") {
-        totalPresentes += ch.presentesCount;
-        totalAlunosEmChamadas += ch.totalCount;
-      }
-    });
-
-    if (totalAlunosEmChamadas === 0) return "—";
-    const pct = Math.round((totalPresentes / totalAlunosEmChamadas) * 100);
-    return `${pct}%`;
-  })();
-
-  const comprasPendentes = comprasLista.filter((c: any) => c.status === "pendente").length;
-
-  const baseAtividades = isPenha
-    ? [
-        { nome: "Jiu Jitsu", turmas: 2, vagas: 80 },
-        { nome: "Aula de Inglês", turmas: 1, vagas: 30 },
-        { nome: "Natação", turmas: 1, vagas: 40 },
-      ]
-    : isMadureira
-    ? [
-        { nome: "Corte e Costura", turmas: 1, vagas: 16 },
-        { nome: "Futsal", turmas: 2, vagas: 40 },
-        { nome: "Basquete", turmas: 1, vagas: 25 },
-      ]
-    : [
-        { nome: "Karatê", turmas: 2, vagas: 30 },
-      ];
-
-  const atividadesLista = baseAtividades.map((ativ) => {
-    const realAlunos = Math.max(
-      alunosLista.filter((a: any) => cleanStr(a.atividade).includes(cleanStr(ativ.nome))).length,
-      ativ.nome.includes("Jiu") ? totalAlunos : 0
-    );
-    const pct = Math.round((realAlunos / ativ.vagas) * 100);
-
-    const ativChamadas = chamadasHistory.filter((ch: any) =>
-      cleanStr(ch.atividadeNome || ch.atividade || "").includes(cleanStr(ativ.nome))
-    );
-
-    let freqStr = "—";
-    if (ativChamadas.length > 0) {
-      let totalP = 0;
-      let totalA = 0;
-      ativChamadas.forEach((ch: any) => {
-        if (ch.presencas && typeof ch.presencas === "object") {
-          const values = Object.values(ch.presencas);
-          totalA += values.length;
-          totalP += values.filter((v: any) => v === true || v === "presente").length;
-        }
-      });
-      if (totalA > 0) {
-        freqStr = `${Math.round((totalP / totalA) * 100)}%`;
-      }
-    }
-
-    return {
-      ...ativ,
-      alunos: realAlunos,
-      pctPreenchido: `${pct}% Preenchidas`,
-      frequencia: freqStr,
-    };
-  });
+  const taxaFreqStr = dash.taxaFrequencia !== null ? `${dash.taxaFrequencia}%` : "—";
 
   return (
     <PoloResponsavelShell
-      title="Visão Geral do Polo"
-      description={`Indicadores operacionais, taxa de presença e capacidade de atendimento — ${poloNome}.`}
+      title={`Visão Geral — ${defaultPoloNome}`}
+      description="Indicadores operacionais das turmas, matrículas e compras do polo"
     >
-      {/* Cards de KPIs Operacionais (SEM VALORES EM R$) */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Alunos Matriculados" value={String(totalAlunos)} hint={`${totalAlunos} de ${vagasTotais} vagas ocupadas`} />
-        <Kpi label="Atividades Ofertadas" value={String(totalAtividades)} hint={`${totalTurmas} turmas ativas`} />
-        <Kpi label="Taxa de Frequência Média" value={taxaFrequencia} hint="Últimos 30 dias" />
-        <Kpi label="Solicitações de Compras" value={String(comprasPendentes)} hint="Aguardando aprovação" />
-      </div>
+      <div className="space-y-6">
+        {/* Indicadores Principais */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Kpi
+            label="Beneficiários Ativos"
+            value={`${dash.totalAlunos} / ${dash.vagasTotais}`}
+            hint="Matrículas ativas vs Vagas ofertadas"
+          />
+          <Kpi
+            label="Oficinas / Turmas"
+            value={`${dash.totalAtividades} modalidades (${dash.totalTurmas} turmas)`}
+            hint="Em funcionamento no polo"
+          />
+          <Kpi
+            label="Taxa de Frequência Média"
+            value={taxaFreqStr}
+            hint="Baseada nos registros de chamada (últimos 30 dias)"
+          />
+          <Kpi
+            label="Pedidos de Compra Pendentes"
+            value={String(dash.pedidosPendentes)}
+            hint="Solicitações aguardando aprovação"
+          />
+        </div>
 
-      {/* Gráfico / Status das Atividades do Polo */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2 border-border shadow-xs">
-          <CardHeader className="pb-3 border-b border-border/60">
-            <CardTitle className="text-base font-bold flex items-center justify-between">
-              <span>Desempenho das Oficinas e Chamadas</span>
-              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                <Calendar className="size-3.5 text-primary" /> Mês Atual
-              </span>
-            </CardTitle>
+        {/* Desempenho por Oficina */}
+        <Card className="shadow-xs border-border">
+          <CardHeader className="border-b border-border bg-muted/30 px-6 py-4">
+            <CardTitle className="text-base font-extrabold tracking-tight">Desempenho das Oficinas no Polo</CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-4">
-            {atividadesLista.map((ativ) => (
-              <div key={ativ.nome} className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
-                    <BookOpen className="size-4 text-primary" />
-                    <span>{ativ.nome}</span>
+          <CardContent className="p-6">
+            {dash.porAtividade.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhuma oficina cadastrada para este polo no banco de dados.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {dash.porAtividade.map((ativ) => (
+                  <div key={ativ.nome} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm font-bold">
+                      <span className="text-foreground">{ativ.nome} ({ativ.turmas} turma{ativ.turmas > 1 ? "s" : ""})</span>
+                      <span className="text-muted-foreground">
+                        {ativ.alunos} / {ativ.vagas} alunos ({ativ.percentPreenchidas}%)
+                      </span>
+                    </div>
+
+                    <div className="h-2.5 w-full rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-brand-gradient transition-all duration-500"
+                        style={{ width: `${ativ.percentPreenchidas}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-[11px] font-semibold text-muted-foreground pt-0.5">
+                      <span>Vagas Ocupadas: {ativ.percentPreenchidas}%</span>
+                      <span>
+                        Frequência Média: {ativ.presencaPercent !== null ? `${ativ.presencaPercent}%` : "—"}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-xs font-extrabold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
-                    Presença: {ativ.frequencia}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground pt-1">
-                  <div>
-                    <span className="block font-semibold text-foreground">{ativ.turmas} turmas</span>
-                    <span>Configuradas</span>
-                  </div>
-                  <div>
-                    <span className="block font-semibold text-foreground">{ativ.alunos} alunos</span>
-                    <span>Matriculados</span>
-                  </div>
-                  <div>
-                    <span className="block font-semibold text-foreground">{ativ.vagas} vagas</span>
-                    <span>{ativ.pctPreenchido}</span>
-                  </div>
-                </div>
-
-                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full bg-brand-gradient rounded-full transition-all duration-500"
-                    style={{ width: ativ.frequencia }}
-                  />
-                </div>
+                ))}
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Avisos e Lembretes Operacionais */}
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-3 border-b border-border/60">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <AlertCircle className="size-4 text-amber-500" />
-              <span>Avisos e Lembretes</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3">
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900">
-              <ClipboardCheck className="size-4 shrink-0 text-amber-600 mt-0.5" />
-              <div>
-                <span className="font-bold block">Realizar Chamada Diária</span>
-                <span>Lembre-se de registrar a presença das turmas do turno da tarde antes das 18h.</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900">
-              <ShoppingCart className="size-4 shrink-0 text-blue-600 mt-0.5" />
-              <div>
-                <span className="font-bold block">Pedido de Materiais Enviado</span>
-                <span>Sua solicitação de reposição de lanches e materiais está em análise pelo Gestor Geral.</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900">
-              <CheckCircle2 className="size-4 shrink-0 text-emerald-600 mt-0.5" />
-              <div>
-                {totalAlunos >= vagasTotais && vagasTotais > 0 ? (
-                  <>
-                    <span className="font-bold block">100% de Vagas Preenchidas</span>
-                    <span>Todas as oficinas do seu polo atingiram a meta de inscrições da comunidade.</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-bold block">
-                      Vagas Disponíveis ({vagasTotais > 0 ? Math.round((totalAlunos / vagasTotais) * 100) : 0}% Preenchidas)
-                    </span>
-                    <span>
-                      Existem {Math.max(vagasTotais - totalAlunos, 0)} vagas abertas para matrículas de novos alunos no {poloNome}.
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

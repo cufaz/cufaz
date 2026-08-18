@@ -1,22 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { zipSync, strToU8 } from "fflate";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Users,
   Clock,
-  Calendar,
   CheckCircle2,
   UserCheck,
   UserX,
   Eye,
-  FileText,
   Loader2,
-  Archive,
-  AlertTriangle,
-  FileCheck2,
+  GraduationCap,
+  Layers,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,713 +27,265 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-export interface ProfessorSolicitacao {
-  id: string;
-  professorNome: string;
-  email?: string | null;
-  telefone?: string | null;
-  atividadeNome: string;
-  turmaNome?: string | null;
-  poloNome: string;
-  status: "pendente" | "aprovado" | "recusado";
-  dataSolicitacao?: string | null;
-  docIdName?: string | null;
-  docIdData?: string | null;
-  docResName?: string | null;
-  docResData?: string | null;
-  docFuncName?: string | null;
-  docFuncData?: string | null;
-  cert1Name?: string | null;
-  cert2Name?: string | null;
-  cert3Name?: string | null;
-  cert4Name?: string | null;
-}
+import { getPoloAtividades, getSolicitacoesProfessor, decidirSolicitacaoProfessor } from "@/lib/polo.functions";
+import { usePolosCadastrados } from "@/lib/cadastros";
 
 export const Route = createFileRoute("/_authenticated/polo/atividades")({
   component: PoloAtividadesPage,
+  errorComponent: ({ error }) => (
+    <div className="p-8 text-center text-destructive font-bold">
+      Erro ao carregar Atividades e Turmas do Polo: {error.message}
+    </div>
+  ),
 });
 
-function cleanStr(str: string | null | undefined = "") {
-  return (str || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "")
-    .trim();
-}
-
-function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao[] {
-  const byKey = new Map<string, ProfessorSolicitacao>();
-
-  for (const item of list) {
-    if (!item) continue;
-    const pName = item.professorNome || item.email || "prof";
-    const aName = item.atividadeNome || "ativ";
-    const tName = item.turmaNome || "";
-    const key = `${cleanStr(pName)}-${cleanStr(aName)}-${cleanStr(tName)}`;
-    const existing = byKey.get(key);
-    // Decisões (aprovado/recusado) sempre prevalecem sobre um registro pendente duplicado
-    if (!existing || (existing.status === "pendente" && item.status !== "pendente")) {
-      byKey.set(key, item);
-    }
-  }
-  return Array.from(byKey.values());
-}
-
-
 export function PoloAtividadesPage() {
-  const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
-  const [filtroOficina, setFiltroOficina] = useState("todas");
-  const [dataDe, setDataDe] = useState("");
-  const [dataAte, setDataAte] = useState("");
+  const qc = useQueryClient();
+  const { polos } = usePolosCadastrados();
+  const defaultPoloId = polos[0]?.id || "penha";
+  const defaultPoloNome = polos[0]?.nome || "Complexo da Penha";
+  const [poloId] = useState<string>(defaultPoloId);
 
-  const [selectedSolicitacao, setSelectedSolicitacao] = useState<ProfessorSolicitacao | null>(null);
-  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const getAtivsFn = useServerFn(getPoloAtividades);
+  const getSolisFn = useServerFn(getSolicitacoesProfessor);
+  const decidirFn = useServerFn(decidirSolicitacaoProfessor);
 
-  const [alunosLista] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_alunos_polo");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
+  const [selectedSolicitacao, setSelectedSolicitacao] = useState<any | null>(null);
+
+  const { data: atividades, isLoading: loadingAtivs } = useQuery({
+    queryKey: ["polo", "atividades", poloId],
+    queryFn: () => getAtivsFn({ data: { poloId } }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
-  const defaultSolicitacao: ProfessorSolicitacao = {
-    id: "solic-vitoria-jiujitsu",
-    professorNome: "Prof. Vitoria Santana",
-    email: "profvitoriasantana@cufa.com.br",
-    atividadeNome: "Jiu Jitsu",
-    turmaNome: "Turma 1",
-    poloNome: "Complexo da Penha",
-    status: "pendente",
-    dataSolicitacao: new Date().toISOString().slice(0, 10),
-  };
+  const { data: solicitacoes, isLoading: loadingSolis, refetch: refetchSolis } = useQuery({
+    queryKey: ["polo", "solicitacoes_professor", poloId],
+    queryFn: () => getSolisFn({ data: { poloId } }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
 
-  const [solicitacoes, setSolicitacoes] = useState<ProfessorSolicitacao[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_professores_solicitacoes");
-      if (stored) {
-        const list = JSON.parse(stored);
-        if (Array.isArray(list) && list.length > 0) {
-          const deduped = deduplicateRequests(list);
-          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(deduped));
-          return deduped;
-        }
+  const mDecidir = useMutation({
+    mutationFn: (v: { id: string; decisao: "aprovada" | "recusada" }) =>
+      decidirFn({ data: v }),
+    onSuccess: (res, vars) => {
+      if (res.success) {
+        toast.success(`Solicitação ${vars.decisao === "aprovada" ? "aprovada" : "recusada"} com sucesso!`);
+        qc.invalidateQueries({ queryKey: ["polo"] });
+        refetchSolis();
+        setSelectedSolicitacao(null);
+      } else {
+        toast.error(`Erro ao decidir solicitação: ${res.error}`);
       }
-    } catch {}
-    localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify([defaultSolicitacao]));
-    return [defaultSolicitacao];
+    },
+    onError: (err: Error) => toast.error(`Erro: ${err.message}`),
   });
 
-  useEffect(() => {
-    function syncProfessores() {
-      try {
-        const stored = localStorage.getItem("cufa_professores_solicitacoes");
-        if (stored) {
-          const list = JSON.parse(stored);
-          if (Array.isArray(list) && list.length > 0) {
-            const deduped = deduplicateRequests(list);
-            setSolicitacoes(deduped);
-            return;
-          }
-        }
-      } catch {}
-      setSolicitacoes([defaultSolicitacao]);
-    }
-
-    window.addEventListener("cufa_professores_updated", syncProfessores);
-    window.addEventListener("storage", syncProfessores);
-    return () => {
-      window.removeEventListener("cufa_professores_updated", syncProfessores);
-      window.removeEventListener("storage", syncProfessores);
-    };
-  }, []);
-
-  function handleAprovarProfessor(solicId: string, profNome: string, ativNome: string) {
-    const updated = solicitacoes.map((s) =>
-      s.id === solicId ? ({ ...s, status: "aprovado" as const }) : s
-    );
-    setSolicitacoes(updated);
-    localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(updated));
-    window.dispatchEvent(new Event("cufa_professores_updated"));
-    toast.success(`Professor ${profNome} aprovado e vinculado a ${ativNome}!`);
-  }
-
-  function handleRecusarProfessor(solicId: string, profNome: string) {
-    const base = solicitacoes.some((s) => s?.id === solicId)
-      ? solicitacoes
-      : [...solicitacoes, { ...defaultSolicitacao, id: solicId }];
-    const updated = base.map((s) =>
-      s.id === solicId ? ({ ...s, status: "recusado" as const }) : s
-    );
-    setSolicitacoes(updated);
-    localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(updated));
-    window.dispatchEvent(new Event("cufa_professores_updated"));
-    toast.info(`Solicitação do professor ${profNome} recusada.`);
-  }
-
-
-  function handleDownloadZip(solic: ProfessorSolicitacao) {
-    setIsDownloadingZip(true);
-    setTimeout(() => {
-      try {
-        const blob = buildProfessorZipBlob({
-          nome: solic.professorNome,
-          email: solic.email || "santana@cufa.com.br",
-          telefone: solic.telefone,
-          polo: solic.poloNome,
-          modalidade: solic.atividadeNome,
-          turma: solic.turmaNome,
-          docIdName: solic.docIdName,
-          docIdData: solic.docIdData,
-          docResName: solic.docResName,
-          docResData: solic.docResData,
-          docFuncName: solic.docFuncName,
-          docFuncData: solic.docFuncData,
-        });
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `documentos_${cleanStr(solic.professorNome)}.zip`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Download do pacote de documentos (ZIP) concluído com sucesso!");
-      } catch (err) {
-        toast.error("Erro ao gerar arquivo ZIP.");
-      } finally {
-        setIsDownloadingZip(false);
-      }
-    }, 1200);
-  }
-
-  const isPenha = poloNome.toLowerCase().includes("penha");
-  const isMadureira = poloNome.toLowerCase().includes("madureira");
-
-  const rawAtividades = isPenha
-    ? [
-        {
-          id: "1",
-          nome: "Jiu Jitsu",
-          dias: "Segundas e Quartas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (40 vagas)", "Turma 2 - Tarde 16h - 18h (40 vagas)"],
-          vagas: 80,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-        {
-          id: "2",
-          nome: "Aula de Inglês",
-          dias: "Segundas e Quartas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (30 vagas)"],
-          vagas: 30,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-        {
-          id: "3",
-          nome: "Natação",
-          dias: "Terças e Quintas",
-          horarios: "15:30 - 17h",
-          turmas: ["Turma 1 - Tarde 15:30 - 17h (40 vagas)"],
-          vagas: 40,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-      ]
-    : isMadureira
-    ? [
-        {
-          id: "m1",
-          nome: "Corte e Costura",
-          dias: "Segundas e Quartas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (16 vagas)"],
-          vagas: 16,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-        {
-          id: "m2",
-          nome: "Futsal",
-          dias: "Segundas e Quartas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (40 vagas)"],
-          vagas: 40,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-      ]
-    : [
-        {
-          id: "p1",
-          nome: "Karatê",
-          dias: "Segundas e Quartas",
-          horarios: "14h - 16h",
-          turmas: ["Turma 1 - Tarde 14h - 16h (15 vagas)", "Turma 2 - Tarde 16h - 18h (15 vagas)"],
-          vagas: 30,
-          periodoMatricula: "01/08/2026 a 31/08/2026",
-          periodoAtividade: "01/09/2026 a 31/01/2027",
-        },
-      ];
-
-  const atividadesExpandidas: any[] = [];
-  rawAtividades.forEach((ativ) => {
-    if (ativ.turmas && ativ.turmas.length > 1) {
-      ativ.turmas.forEach((turmaLabel: string, idx: number) => {
-        atividadesExpandidas.push({
-          ...ativ,
-          id: `${ativ.id}-t${idx + 1}`,
-          turmaNome: `Turma ${idx + 1}`,
-          turmaDetalhe: turmaLabel,
-          vagas: Math.round(ativ.vagas / ativ.turmas.length),
-        });
-      });
-    } else {
-      atividadesExpandidas.push({
-        ...ativ,
-        turmaNome: "Turma 1",
-        turmaDetalhe: ativ.turmas ? ativ.turmas[0] : `${ativ.nome} — Turma Única`,
-      });
-    }
-  });
-
-  const atividadesCalculadas = atividadesExpandidas.map((ativ) => {
-    const countReal = alunosLista.filter((a: any) => a.atividade === ativ.nome).length;
-    return {
-      ...ativ,
-      alunos: countReal,
-    };
-  });
-
-  const atividadesFiltradas = atividadesCalculadas.filter((ativ) => {
-    const matchOficina = filtroOficina === "todas" || ativ.nome === filtroOficina;
-    return matchOficina;
-  });
+  const listAtividades = atividades || [];
+  const listSolicitacoes = solicitacoes || [];
 
   return (
     <PoloResponsavelShell
-      title="Atividades e Turmas do Polo"
-      description={`Modalidades e turmas ativas no ${poloNome}. Cada turma possui seu controle de vagas e instrutor responsável.`}
+      title={`Atividades e Turmas — ${defaultPoloNome}`}
+      description="Gerenciamento de oficinas, turmas, ocupação de vagas e aprovação de professores"
     >
-      <div className="space-y-6">
-        {/* Barra de Filtros: Oficina e Período */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-xs">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-bold uppercase text-muted-foreground whitespace-nowrap">
-              Filtrar Oficina:
-            </span>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground w-full sm:w-64"
-              value={filtroOficina}
-              onChange={(e) => setFiltroOficina(e.target.value)}
-            >
-              <option value="todas">Todas as Oficinas</option>
-              {rawAtividades.map((a) => (
-                <option key={a.id} value={a.nome}>
-                  {a.nome}
-                </option>
-              ))}
-            </select>
+      <div className="space-y-8">
+        {/* Seção 1: Solicitações de Vínculo de Professores */}
+        <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+          <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="size-5 text-primary" />
+              <h2 className="text-sm font-extrabold uppercase tracking-wide">
+                Solicitações de Vínculo de Professores
+              </h2>
+            </div>
+            <Badge className="bg-primary text-white font-bold">
+              {listSolicitacoes.filter((s) => s.status === "pendente").length} Pendente(s)
+            </Badge>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto text-xs">
-            <span className="font-bold text-muted-foreground uppercase text-[11px]">Período:</span>
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <span className="text-muted-foreground font-medium">De:</span>
-              <input
-                type="date"
-                className="h-9 rounded-md border border-input bg-background px-2 font-medium text-xs text-foreground"
-                value={dataDe}
-                onChange={(e) => setDataDe(e.target.value)}
-              />
-              <span className="text-muted-foreground font-medium">Até:</span>
-              <input
-                type="date"
-                className="h-9 rounded-md border border-input bg-background px-2 font-medium text-xs text-foreground"
-                value={dataAte}
-                onChange={(e) => setDataAte(e.target.value)}
-              />
+          {loadingSolis ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="size-6 animate-spin text-primary" />
             </div>
-          </div>
+          ) : listSolicitacoes.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6 italic">
+              Nenhuma solicitação de professor cadastrada para este polo no banco de dados.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/60">
+              {listSolicitacoes.map((sol) => (
+                <div key={sol.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <span className="font-extrabold text-sm text-foreground block">
+                      {sol.professor_nome || sol.professor_email || "Prof. Solicitante"}
+                    </span>
+                    <span className="text-muted-foreground block font-medium">
+                      Oficina: <strong className="text-primary">{sol.atividades?.nome || "Oficina"}</strong> •
+                      Turma: {sol.turmas?.nome || "Regular"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {sol.status === "pendente" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedSolicitacao(sol)}
+                          className="h-8 text-xs font-bold gap-1 text-primary border-primary/30"
+                        >
+                          <Eye className="size-3.5" /> Detalhes
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => mDecidir.mutate({ id: sol.id, decisao: "aprovada" })}
+                          disabled={mDecidir.isPending}
+                          className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                        >
+                          <Check className="size-3.5" /> Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => mDecidir.mutate({ id: sol.id, decisao: "recusada" })}
+                          disabled={mDecidir.isPending}
+                          className="h-8 text-xs font-bold gap-1"
+                        >
+                          <X className="size-3.5" /> Recusar
+                        </Button>
+                      </>
+                    ) : (
+                      <Badge
+                        className={
+                          sol.status === "aprovada"
+                            ? "bg-emerald-500/15 text-emerald-600 font-bold border-emerald-500/30"
+                            : "bg-destructive/15 text-destructive font-bold border-destructive/30"
+                        }
+                      >
+                        {sol.status === "aprovada" ? "Aprovado" : "Recusado"}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Grid de Cards de Atividades Separadas por Turma */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {atividadesFiltradas.map((ativ) => {
-            // Read latest list directly from localStorage to catch new candidacies instantly
-            let currentList: ProfessorSolicitacao[] = solicitacoes;
-            try {
-              const rawStored = localStorage.getItem("cufa_professores_solicitacoes");
-              if (rawStored) {
-                const parsed = JSON.parse(rawStored);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  currentList = parsed;
-                }
-              }
-            } catch {}
+        {/* Seção 2: Oficinas & Turmas em Funcionamento */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-extrabold uppercase tracking-wide text-foreground flex items-center gap-2">
+            <Layers className="size-5 text-primary" /> Oficinas & Turmas no Polo
+          </h2>
 
-            // Find pending requests matching this specific activity AND turma
-            const pendingForAtiv = currentList.filter((s) => {
-              if (!s || s.status !== "pendente") return false;
-              const sAtiv = cleanStr(s.atividadeNome);
-              const aAtiv = cleanStr(ativ.nome);
-              if (!sAtiv.includes(aAtiv) && !aAtiv.includes(sAtiv)) return false;
-
-              const sTurma = cleanStr(s.turmaNome);
-              const aTurma = cleanStr(ativ.turmaNome);
-
-              if (sTurma.includes("2") || sTurma.includes("t2")) {
-                return aTurma.includes("2");
-              }
-              if (sTurma.includes("1") || sTurma.includes("t1")) {
-                return aTurma.includes("1");
-              }
-              return aTurma.includes("1") || aTurma.length === 0;
-            });
-
-            // Find approved request matching THIS specific turma ONLY (not all turmas of activity)
-            const approvedForAtiv = currentList.find((s) => {
-              if (!s || s.status !== "aprovado") return false;
-              const sAtiv = cleanStr(s.atividadeNome);
-              const aAtiv = cleanStr(ativ.nome);
-              if (!sAtiv.includes(aAtiv) && !aAtiv.includes(sAtiv)) return false;
-
-              const sTurma = cleanStr(s.turmaNome);
-              const aTurma = cleanStr(ativ.turmaNome);
-
-              if (sTurma.includes("2") || sTurma.includes("t2")) {
-                return aTurma.includes("2");
-              }
-              if (sTurma.includes("1") || sTurma.includes("t1")) {
-                return aTurma.includes("1");
-              }
-              return aTurma.includes("1") || aTurma.length === 0;
-            });
-
-            // Pick latest pending request if available, otherwise approved request for this specific turma
-            let pMatch: ProfessorSolicitacao | undefined =
-              pendingForAtiv.length > 0
-                ? pendingForAtiv[pendingForAtiv.length - 1]
-                : approvedForAtiv;
-
-            // Fallback for Jiu Jitsu Turma 1 apenas se a solicitação padrão ainda não foi decidida
-            const defaultJaDecidida = currentList.some(
-              (s) => s && s.id === defaultSolicitacao.id && s.status !== "pendente",
-            );
-            if (!pMatch && !defaultJaDecidida && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
-              pMatch = defaultSolicitacao;
-            }
-
-
-            return (
-              <Card key={ativ.id} className="border-border shadow-xs flex flex-col justify-between">
-                <CardHeader className="pb-3 border-b border-border/60">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="font-bold text-xs">
-                      {poloNome}
-                    </Badge>
-                    <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20">
-                      <CheckCircle2 className="size-3 mr-1" /> Ativa
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl font-extrabold mt-2 text-foreground flex items-center justify-between">
-                    <span>{ativ.nome}</span>
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-lg border border-primary/20">
-                      {ativ.turmaNome}
-                    </span>
-                  </CardTitle>
-
-                  {/* Section Instrutor com Botão Analisar ou Status */}
-                  {(() => {
-                    if (pMatch && pMatch.status === "pendente") {
-                      return (
-                        <div className="mt-3 p-3.5 rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 space-y-2 shadow-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
-                              Solicitação de Professor
-                            </span>
-                            <Badge className="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 shadow-xs">
-                              Pendente de Aprovação
-                            </Badge>
-                          </div>
-                          <p className="text-xs font-black text-foreground truncate">
-                            {pMatch.professorNome || "Prof. Santana Silva"}
+          {loadingAtivs ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : listAtividades.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground text-sm font-medium">
+              Nenhuma atividade / oficina cadastrada para este polo no banco de dados.
+            </Card>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {listAtividades.map((ativ) => {
+                const pct = ativ.vagasTotais > 0 ? Math.round((ativ.matriculasAtivas / ativ.vagasTotais) * 100) : 0;
+                return (
+                  <Card key={ativ.atividadeId} className="shadow-xs border-border overflow-hidden">
+                    <CardHeader className="bg-muted/30 border-b border-border p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-base font-extrabold text-foreground">{ativ.nome}</CardTitle>
+                          <p className="text-xs text-muted-foreground font-semibold">
+                            Instrutor: <strong className="text-primary">{ativ.professorNome || "Não atribuído"}</strong>
                           </p>
-                          <Button
-                            size="sm"
-                            className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs h-9 shadow-md transition-all active:scale-[0.98] mt-1"
-                            onClick={() => setSelectedSolicitacao(pMatch)}
-                          >
-                            <Eye className="size-4 mr-1.5" /> ANALISAR SOLICITAÇÃO (APROVAR / RECUSAR)
-                          </Button>
                         </div>
-                      );
-                    }
+                        <Badge className="bg-primary/10 text-primary font-extrabold border-primary/20">
+                          {ativ.matriculasAtivas} / {ativ.vagasTotais} vagas
+                        </Badge>
+                      </div>
+                    </CardHeader>
 
-                    if (pMatch && pMatch.status === "aprovado") {
-                      return (
-                        <div className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                          <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 truncate">
-                            <span>Instrutor:</span>
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto font-black text-xs text-primary underline hover:text-primary/80 truncate"
-                              onClick={() => setSelectedSolicitacao(pMatch)}
-                            >
-                              {pMatch.professorNome}
-                            </Button>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-bold text-muted-foreground">
+                          <span>Ocupação Total</span>
+                          <span>{pct}%</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-brand-gradient"
+                            style={{ width: `${Math.min(100, pct)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        <h4 className="text-xs font-bold uppercase text-muted-foreground">Turmas Cadastradas ({ativ.turmas.length})</h4>
+                        {ativ.turmas.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">Nenhuma turma criada.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {ativ.turmas.map((t) => (
+                              <div key={t.id} className="rounded-lg border border-border/80 bg-background p-2.5 flex items-center justify-between text-xs">
+                                <div>
+                                  <span className="font-bold text-foreground block">{t.nome}</span>
+                                  {t.horario && <span className="text-[11px] text-muted-foreground block">{t.horario}</span>}
+                                </div>
+                                <Badge variant="outline" className="font-bold text-[11px]">
+                                  {t.matriculasAtivas} / {t.vagas} alunos
+                                </Badge>
+                              </div>
+                            ))}
                           </div>
-                          <Badge className="bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 shadow-xs shrink-0">
-                            ✓ Vinculado
-                          </Badge>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <p className="text-xs text-muted-foreground font-medium mt-2">
-                        Instrutor: <span className="italic text-muted-foreground/60">(Em aberto)</span>
-                      </p>
-                    );
-                  })()}
-                </CardHeader>
-
-                <CardContent className="pt-4 space-y-4 text-xs">
-                  <div className="grid grid-cols-2 gap-2 bg-muted/30 p-3 rounded-xl border border-border/60">
-                    <div>
-                      <span className="text-muted-foreground block text-[11px]">Beneficiários</span>
-                      <span className="font-extrabold text-foreground text-sm flex items-center gap-1">
-                        <Users className="size-3.5 text-primary" /> {ativ.alunos} / {ativ.vagas}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block text-[11px]">Turmas</span>
-                      <span className="font-extrabold text-foreground text-sm flex items-center gap-1">
-                        <Clock className="size-3.5 text-primary" /> 1 turma
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground">
-                      Turma e Horário
-                    </span>
-                    <div className="p-2 rounded-lg bg-background border border-border text-foreground font-medium">
-                      {ativ.turmaDetalhe}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-950 space-y-1">
-                    <span className="font-bold flex items-center gap-1 text-[11px]">
-                      <Calendar className="size-3.5 text-orange-600" /> PERÍODO DA ATIVIDADE
-                    </span>
-                    <div className="flex justify-between text-[11px] font-medium pt-0.5">
-                      <span>Matrículas: <b>{ativ.periodoMatricula}</b></span>
-                    </div>
-                    <div className="flex justify-between text-[11px] font-medium">
-                      <span>Atividade: <b>{ativ.periodoAtividade}</b></span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal de Análise Completa do Professor */}
-      <Dialog open={!!selectedSolicitacao} onOpenChange={(open) => !open && setSelectedSolicitacao(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Modal Detalhar Solicitação */}
+      <Dialog open={Boolean(selectedSolicitacao)} onOpenChange={(v) => !v && setSelectedSolicitacao(null)}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <Avatar className="size-12 border-2 border-primary/30">
-                <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">
-                  {selectedSolicitacao?.professorNome?.slice(0, 2).toUpperCase() || "VS"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <DialogTitle className="text-xl font-extrabold text-foreground">
-                  Análise de Candidatura — {selectedSolicitacao?.professorNome}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Solicitação para ministrar <b>{selectedSolicitacao?.atividadeNome}</b> ({selectedSolicitacao?.turmaNome || "Turma 1"}) — Unidade {selectedSolicitacao?.poloNome || poloNome}
-                </DialogDescription>
-              </div>
-            </div>
+            <DialogTitle className="text-lg font-bold">Solicitação de Vínculo</DialogTitle>
+            <DialogDescription className="text-xs">
+              Análise de dados do professor solicitante.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedSolicitacao && (
-            <div className="space-y-5 pt-2">
-              {/* Seção 1: Dados Pessoais & Qualificação */}
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                  <UserCheck className="size-4" /> Informações Pessoais & Qualificação
-                </h4>
+            <div className="space-y-3 text-xs py-2">
+              <p><strong className="text-foreground">Professor:</strong> {selectedSolicitacao.professor_nome || selectedSolicitacao.professor_email}</p>
+              <p><strong className="text-foreground">E-mail:</strong> {selectedSolicitacao.professor_email || "Não informado"}</p>
+              <p><strong className="text-foreground">Oficina Solicitada:</strong> {selectedSolicitacao.atividades?.nome || "Não informado"}</p>
+              <p><strong className="text-foreground">Data do Pedido:</strong> {selectedSolicitacao.created_at ? selectedSolicitacao.created_at.slice(0, 10) : "Hoje"}</p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">Nome Completo</span>
-                    <span className="font-bold text-foreground text-sm">{selectedSolicitacao.professorNome}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">E-mail de Login</span>
-                    <span className="font-bold text-foreground">{selectedSolicitacao.email || "santana@cufa.com.br"}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">Telefone / WhatsApp</span>
-                    <span className="font-bold text-foreground">(11) 98765-4321</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">Data da Solicitação</span>
-                    <span className="font-bold text-foreground">{selectedSolicitacao.dataSolicitacao || "Hoje"}</span>
-                  </div>
-                  <div className="sm:col-span-2 pt-1 border-t border-border/40">
-                    <span className="text-muted-foreground block text-[11px]">Formação / Graduação</span>
-                    <span className="font-bold text-foreground">Graduação em Educação Física & Faixa Preta de Jiu-Jitsu (CBJJ) com experiência em projetos comunitários.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção 2: Pacote de Download ZIP Unificado & Lista de Documentos */}
-              <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
-                  <div>
-                    <p className="font-extrabold text-xs text-foreground flex items-center gap-1.5">
-                      <Archive className="size-4 text-orange-600" /> Pacote de Documentos para Homologação
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">Baixar todos os documentos recebidos em um único arquivo comprimido (.ZIP).</p>
-                  </div>
-
-                  <Button
-                    disabled={isDownloadingZip}
-                    onClick={() => handleDownloadZip(selectedSolicitacao)}
-                    className="bg-brand-gradient text-xs font-black h-10 px-4 shadow-brand shrink-0 w-full sm:w-auto"
-                  >
-                    {isDownloadingZip ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin mr-2" /> Baixando ZIP...
-                      </>
-                    ) : (
-                      <>
-                        <Archive className="size-4 mr-2" /> Baixar Tudo em ZIP
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <div className="space-y-3 pt-1">
-                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <FileCheck2 className="size-3.5 text-emerald-600" /> Documentos Enviados
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
-                        <div className="truncate">
-                          <p className="font-bold text-foreground truncate">Documento RG / CPF</p>
-                          <p className="text-[10px] text-emerald-700 font-medium">rg_cpf_santana.pdf (Enviado)</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileCheck2 className="size-4 text-emerald-600 shrink-0" />
-                        <div className="truncate">
-                          <p className="font-bold text-foreground truncate">Comprovante de Residência</p>
-                          <p className="text-[10px] text-emerald-700 font-medium">comprovante_residencia.pdf (Enviado)</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-1 border-t border-border/60">
-                  <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <AlertTriangle className="size-3.5 text-amber-600" /> Documentos Faltantes / Não Enviados
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
-                      <div className="truncate">
-                        <p className="font-bold text-foreground truncate">Registro Funcional / CREF</p>
-                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                      <AlertTriangle className="size-4 text-amber-600 shrink-0" />
-                      <div className="truncate">
-                        <p className="font-bold text-foreground truncate">Certificado de Especialização</p>
-                        <p className="text-[10px] text-amber-700 font-medium">Não anexado pelo professor</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção 3: Status / Botões de Decisão */}
-              <div className="pt-2 border-t border-border">
-                {selectedSolicitacao.status === "aprovado" ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                    <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
-                      <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
-                      <div>
-                        <p className="font-extrabold text-xs">Professor Aprovado e Vinculado</p>
-                        <p className="text-[11px] text-muted-foreground">Esta turma está sob a responsabilidade de {selectedSolicitacao.professorNome}.</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs font-bold text-destructive hover:bg-destructive/10 border-destructive/30"
-                        onClick={() => {
-                          handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
-                          setSelectedSolicitacao(null);
-                        }}
-                      >
-                        <UserX className="size-3.5 mr-1" /> Desvincular / Reabrir Vaga
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="text-xs font-bold"
-                        onClick={() => setSelectedSolicitacao(null)}
-                      >
-                        Fechar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 shadow-md"
-                      onClick={() => {
-                        handleAprovarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome, selectedSolicitacao.atividadeNome);
-                        setSelectedSolicitacao(null);
-                      }}
-                    >
-                      <UserCheck className="size-4 mr-1.5" /> Aprovar e Vincular Professor
-                    </Button>
-
-                    <Button
-                      variant="destructive"
-                      className="flex-1 font-extrabold text-xs h-10 shadow-md"
-                      onClick={() => {
-                        handleRecusarProfessor(selectedSolicitacao.id, selectedSolicitacao.professorNome);
-                        setSelectedSolicitacao(null);
-                      }}
-                    >
-                      <UserX className="size-4 mr-1.5" /> Recusar Solicitação
-                    </Button>
-                  </div>
-                )}
+              <div className="pt-3 flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => mDecidir.mutate({ id: selectedSolicitacao.id, decisao: "recusada" })}
+                  disabled={mDecidir.isPending}
+                  className="font-bold text-destructive"
+                >
+                  Recusar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => mDecidir.mutate({ id: selectedSolicitacao.id, decisao: "aprovada" })}
+                  disabled={mDecidir.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  Aprovar Vínculo
+                </Button>
               </div>
             </div>
           )}

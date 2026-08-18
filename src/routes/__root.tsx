@@ -135,6 +135,24 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem("cufa_data_version") !== "v3") {
+        const businessKeys = [
+          "cufa_alunos_cadastrados",
+          "cufa_alunos_polo",
+          "cufa_professores_solicitacoes",
+          "cufa_professor_chamadas_history",
+          "cufa_compras_polo",
+          "cufa_lancamentos_custom",
+          "cufa_deleted_categorias",
+        ];
+        businessKeys.forEach((key) => localStorage.removeItem(key));
+        localStorage.setItem("cufa_data_version", "v3");
+      }
+    } catch {}
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

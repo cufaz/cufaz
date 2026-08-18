@@ -107,20 +107,27 @@ export function GestorShell({
     window.location.href = "/";
   }
 
-  const navBefore = [
+  interface NavItem {
+    to: string;
+    label: string;
+    icon: any;
+    exact?: boolean;
+  }
+
+  const navBefore: NavItem[] = [
     { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/gestor/polos", label: "Polos", icon: Building2 },
     { to: "/gestor/atividades", label: "Atividades", icon: Layers },
     { to: "/gestor/financeiro", label: "Financeiro", icon: Wallet },
   ];
 
-  const contabilidadeSubNav = [
+  const contabilidadeSubNav: NavItem[] = [
     { to: "/gestor/contabilidade/fornecedores", label: "Fornecedores", icon: Truck },
     { to: "/gestor/contabilidade/centro-custo", label: "Centro de Custo", icon: PieChart },
     { to: "/gestor/contabilidade/documentos", label: "Gestão de Documentos", icon: FolderArchive },
   ];
 
-  const navAfter = [
+  const navAfter: NavItem[] = [
     { to: "/gestor/gestores", label: "Gestores", icon: UserCheck },
     { to: "/gestor/pedidos", label: "Pedidos", icon: ShoppingCart },
     { to: "/gestor/alunos", label: "Alunos", icon: Users },

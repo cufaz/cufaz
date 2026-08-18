@@ -1,56 +1,77 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { GraduationCap, Search, Award, MessageSquare, ShieldCheck, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { GraduationCap, Search, Award, MessageSquare, ShieldCheck, Users, Loader2 } from "lucide-react";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { fetchDiarioEntriesDB, DiarioEntryDB } from "@/lib/diarioService";
+import { getPoloAtividades } from "@/lib/polo.functions";
+import { usePolosCadastrados } from "@/lib/cadastros";
 
 export const Route = createFileRoute("/_authenticated/polo/diario-classe")({
   component: PoloDiarioClassePage,
+  errorComponent: ({ error }) => (
+    <div className="p-8 text-center text-destructive font-bold">
+      Erro ao carregar Diário do Polo: {error.message}
+    </div>
+  ),
 });
 
 export function PoloDiarioClassePage() {
-  const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const { polos } = usePolosCadastrados();
+  const defaultPoloId = polos[0]?.id || "penha";
+  const defaultPoloNome = polos[0]?.nome || "Complexo da Penha";
+  const [poloId] = useState<string>(defaultPoloId);
+
+  const getAtivsFn = useServerFn(getPoloAtividades);
   const [filtroOficina, setFiltroOficina] = useState("todas");
   const [searchQuery, setSearchQuery] = useState("");
-
   const [logsList, setLogsList] = useState<DiarioEntryDB[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { data: ativs } = useQuery({
+    queryKey: ["polo", "atividades", poloId],
+    queryFn: () => getAtivsFn({ data: { poloId } }),
+    staleTime: 30_000,
+  });
 
   async function loadPoloLogs() {
-    const data = await fetchDiarioEntriesDB({ polo_nome: poloNome });
+    setIsLoading(true);
+    const data = await fetchDiarioEntriesDB({ polo_nome: defaultPoloNome });
     setLogsList(data);
+    setIsLoading(false);
   }
 
   useEffect(() => {
     loadPoloLogs();
     window.addEventListener("cufa_diario_updated", loadPoloLogs);
-    return () => {
-      window.removeEventListener("cufa_diario_updated", loadPoloLogs);
-    };
-  }, [poloNome]);
+    return () => window.removeEventListener("cufa_diario_updated", loadPoloLogs);
+  }, [defaultPoloNome]);
 
   const logsFiltrados = logsList.filter((log) => {
-    const matchPolo = !poloNome || log.polo_nome?.toLowerCase().includes(poloNome.toLowerCase()) || poloNome.toLowerCase().includes(log.polo_nome?.toLowerCase() || "");
     const matchOficina = filtroOficina === "todas" || log.atividade_nome?.toLowerCase() === filtroOficina.toLowerCase();
     const matchSearch =
       !searchQuery ||
       log.aluno_nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.aluno_email?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchPolo && matchOficina && matchSearch;
+    return matchOficina && matchSearch;
   });
 
   return (
-    <PoloResponsavelShell title="Diário de Classe do Polo">
+    <PoloResponsavelShell
+      title={`Diário de Classe — ${defaultPoloNome}`}
+      description="Acompanhamento dos registros pedagógicos e graduações dos alunos"
+    >
       <div className="space-y-6">
         {/* KPI Summary */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-border shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase text-muted-foreground">Alunos Avaliados no Polo</p>
+                <p className="text-xs font-bold uppercase text-muted-foreground">Registros do Polo</p>
                 <p className="text-2xl font-black text-foreground mt-1">{logsFiltrados.length}</p>
               </div>
               <GraduationCap className="size-8 text-primary opacity-80" />
@@ -61,7 +82,7 @@ export function PoloDiarioClassePage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground">Unidade</p>
-                <p className="text-lg font-extrabold text-emerald-600 mt-1">{poloNome}</p>
+                <p className="text-lg font-extrabold text-emerald-600 mt-1">{defaultPoloNome}</p>
               </div>
               <ShieldCheck className="size-8 text-emerald-500 opacity-80" />
             </CardContent>
@@ -88,7 +109,7 @@ export function PoloDiarioClassePage() {
                   placeholder="Filtrar aluno por nome ou e-mail..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 text-xs"
+                  className="pl-9 text-xs font-medium"
                 />
               </div>
 
@@ -98,66 +119,55 @@ export function PoloDiarioClassePage() {
                   onChange={(e) => setFiltroOficina(e.target.value)}
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
                 >
-                  <option value="todas">Todas as Oficinas do Polo</option>
-                  <option value="Jiu Jitsu">Jiu Jitsu</option>
-                  <option value="Karatê">Karatê</option>
-                  <option value="Corte e Costura">Corte e Costura</option>
-                  <option value="Aula de Inglês">Aula de Inglês</option>
-                  <option value="Futsal">Futsal</option>
+                  <option value="todas">Todas as Oficinas</option>
+                  {(ativs || []).map((at) => (
+                    <option key={at.atividadeId} value={at.nome}>
+                      {at.nome}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Logs List */}
-        <div className="space-y-4">
-          {logsFiltrados.length === 0 ? (
-            <Card className="border-border p-8 text-center text-muted-foreground">
-              Nenhum diário de classe registrado para este polo até o momento.
+        {/* List of Entries */}
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : logsFiltrados.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground text-xs font-semibold">
+              Nenhum registro de diário de classe encontrado no banco de dados.
             </Card>
           ) : (
-            logsFiltrados.map((log, idx) => (
-              <Card key={log.id || `log-${idx}`} className="border-border shadow-xs overflow-hidden">
-                <CardHeader className="bg-muted/40 pb-3 border-b border-border/60">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-10 border border-primary/40">
-                        <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
-                          {log.aluno_nome?.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-base font-extrabold text-foreground">
-                          {log.aluno_nome}
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {log.aluno_email} • Polo: <b>{log.polo_nome}</b>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-primary/10 text-primary font-bold text-xs">
-                        {log.atividade_nome}
-                      </Badge>
-                      <Badge className="bg-amber-500 text-slate-950 font-black text-xs">
-                        <Award className="size-3.5 mr-1" /> {log.nivel || "Iniciante"}
-                      </Badge>
-                    </div>
+            logsFiltrados.map((log) => (
+              <Card key={log.id} className="border-border shadow-xs overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-sm font-extrabold text-foreground">{log.aluno_nome}</CardTitle>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Oficina: <strong className="text-primary">{log.atividade_nome}</strong> • Data: {log.created_at || "Hoje"}
+                    </p>
                   </div>
+                  <Badge className="bg-primary/10 text-primary font-bold border-primary/20">
+                    {log.nivel_graduacao || "Sem Nível"}
+                  </Badge>
                 </CardHeader>
 
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground gap-2">
-                    <span>Instrutor: <b>{log.professor_nome || "Prof. Responsável"}</b></span>
-                    <span>Data da Avaliação: <b>{log.data || "2026-08-15"}</b></span>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-muted/20 border border-border text-xs leading-relaxed text-foreground font-medium">
-                    <MessageSquare className="size-4 text-emerald-600 inline mr-2" />
-                    "{log.relato}"
-                  </div>
+                <CardContent className="p-4 space-y-2 text-xs">
+                  {log.relato && (
+                    <div className="rounded-lg bg-muted/40 p-3 flex gap-2">
+                      <MessageSquare className="size-4 text-primary shrink-0 mt-0.5" />
+                      <p className="text-muted-foreground leading-relaxed">{log.relato}</p>
+                    </div>
+                  )}
+                  {log.professor_nome && (
+                    <p className="text-[11px] text-muted-foreground font-semibold">
+                      Registrado por: <span className="text-foreground">{log.professor_nome}</span>
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))

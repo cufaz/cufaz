@@ -38,8 +38,12 @@ interface PedidoItem {
 
 import { fetchPedidosDB, createPedidoDB, PedidoDB } from "@/lib/pedidosService";
 
+import { usePolosCadastrados } from "@/lib/cadastros";
+
 export function PoloComprasPage() {
-  const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
+  const { polos } = usePolosCadastrados();
+  const poloNome = polos[0]?.nome || "Complexo da Penha";
+  const poloId = polos[0]?.id || "penha";
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidos, setPedidos] = useState<PedidoDB[]>([]);
@@ -51,7 +55,7 @@ export function PoloComprasPage() {
         const pPolo = String(p.polo_nome || p.polo_id || "").toLowerCase();
         return pPolo.includes(cleanUnit) || cleanUnit.includes(pPolo);
       });
-      setPedidos(filtered.length > 0 ? filtered : list);
+      setPedidos(filtered);
     });
   }
 
