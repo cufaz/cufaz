@@ -265,15 +265,15 @@ export function AtividadesPage() {
   });
 
   const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
+  const [selectedModalidade, setSelectedModalidade] = useState<string>("todas");
   const [dataInicio, setDataInicio] = useState<string>("2026-08-01");
   const [dataFim, setDataFim] = useState<string>("2026-08-31");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const defaultAllPolos: Row[] = [
-    { id: "polo-penha", nome: "Complexo da Penha" },
-    { id: "polo-paraisopolis", nome: "Paraisópolis" },
-    { id: "polo-teste", nome: "Polo de Teste" },
-    { id: "polo-madureira", nome: "Viaduto de Madureira" },
+    { id: "penha", nome: "Complexo da Penha" },
+    { id: "paraisopolis", nome: "Paraisópolis" },
+    { id: "madureira", nome: "Viaduto de Madureira" },
   ];
 
   const polos: Row[] = (() => {
@@ -288,7 +288,6 @@ export function AtividadesPage() {
     return merged;
   })();
 
-  // Dynamic list of ONLY registered/active polos for Activity Creation Dialog (Anexo 1)
   const polosCriacao: Row[] = (() => {
     const listMap = new Map<string, Row>();
 
@@ -316,9 +315,9 @@ export function AtividadesPage() {
 
     if (listMap.size === 0) {
       return [
-        { id: "polo-penha", nome: "Complexo da Penha" },
-        { id: "polo-paraisopolis", nome: "Paraisópolis" },
-        { id: "polo-madureira", nome: "Viaduto de Madureira" },
+        { id: "penha", nome: "Complexo da Penha" },
+        { id: "paraisopolis", nome: "Paraisópolis" },
+        { id: "madureira", nome: "Viaduto de Madureira" },
       ];
     }
 
@@ -327,20 +326,25 @@ export function AtividadesPage() {
 
   const atividades: Row[] = data?.atividades ?? [];
 
-  // Filter activities dynamically by multi-polo, date, and search term
+  const modalidadesUnicas = Array.from(
+    new Set(atividades.map((a) => String(a['nome'] ?? "").trim()))
+  ).filter(Boolean);
+
   const atividadesFiltradas = atividades.filter((a) => {
-    // Multi-Polo Filter
     const matchPolo =
       selectedPoloIds.length === 0 ||
       selectedPoloIds.includes(String(a['polo_id']));
 
-    // Search Query Filter
+    const matchModalidade =
+      selectedModalidade === "todas" ||
+      String(a['nome']).toLowerCase() === selectedModalidade.toLowerCase();
+
     const matchSearch =
       !searchQuery ||
       String(a['nome']).toLowerCase().includes(searchQuery.toLowerCase()) ||
       String(a['polos']?.nome ?? "").toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchPolo && matchSearch;
+    return matchPolo && matchModalidade && matchSearch;
   });
 
   return (
@@ -348,34 +352,18 @@ export function AtividadesPage() {
       title="Atividades e turmas"
       description="Modalidades ofertadas em cada polo, com vagas, turmas e itens de custo."
       actions={
-        <Button
-          className="bg-brand-gradient font-bold text-white shadow-brand"
-          onClick={() =>
-            setForm({
-              nome: "",
-              slug: "",
-              polo_id: polos[0]?.['id'] ?? "",
-              descricao: "",
-              dias: "",
-              vagas: 0,
-              beneficiarios_projetados: 0,
-              custo_mensal: 0,
-              ativo: true,
-            })
-          }
-        >
+        <Button onClick={() => setForm({ ativo: true, vagas: 30, beneficiarios_projetados: 30, custo_mensal: 2500 })} className="bg-brand-gradient font-bold text-white shadow-brand">
           <Plus className="mr-1 size-4" /> Nova atividade
         </Button>
       }
     >
-      {/* Filtros de Polos e Período (Anexo 1) */}
-      <div className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
             <Search className="size-3.5 text-primary" /> Buscar Atividade
           </Label>
           <Input
-            placeholder="Nome ou modalidade..."
+            placeholder="Nome ou polo..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="mt-1 h-10 font-medium"
@@ -393,6 +381,23 @@ export function AtividadesPage() {
           />
         </div>
         <div>
+          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1 mb-1">
+            <Filter className="size-3.5 text-primary" /> Atividade / Modalidade
+          </Label>
+          <select
+            value={selectedModalidade}
+            onChange={(e) => setSelectedModalidade(e.target.value)}
+            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
+          >
+            <option value="todas">Todas as Atividades ({modalidadesUnicas.length})</option>
+            {modalidadesUnicas.map((mod) => (
+              <option key={mod} value={mod}>
+                {mod}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
           <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
             <Calendar className="size-3.5 text-primary" /> Período De (Início)
           </Label>
@@ -400,17 +405,6 @@ export function AtividadesPage() {
             type="date"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
-            className="mt-1 h-10 font-medium"
-          />
-        </div>
-        <div>
-          <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
-            <Calendar className="size-3.5 text-primary" /> Período Até (Fim)
-          </Label>
-          <Input
-            type="date"
-            value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
             className="mt-1 h-10 font-medium"
           />
         </div>
@@ -424,104 +418,109 @@ export function AtividadesPage() {
               Nenhuma atividade encontrada com os filtros selecionados.
             </div>
           ) : (
-            atividadesFiltradas.map((a) => (
-            <article key={String(a['id'])} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <Badge variant="secondary" className="mb-1 text-[10px] font-bold">
-                    {a['polos']?.nome}
-                  </Badge>
-                  <h2 className="text-base font-bold">{String(a['nome'])}</h2>
-                  <p className="text-xs text-muted-foreground">{String(a['dias'] ?? "")}</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setOrcamentoDe(a)}>
-                    <Wallet className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      const p = getPeriodos(String(a['id'] || a['slug'] || a['nome']));
-                      setForm({
-                        ...a,
-                        data_inicio_matricula: p.data_inicio_matricula,
-                        data_fim_matricula: p.data_fim_matricula,
-                        data_inicio_atividade: p.data_inicio_atividade,
-                        data_fim_atividade: p.data_fim_atividade,
-                        polos: undefined,
-                        turmas: undefined,
-                      });
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => mDelAtividade.mutate(String(a['id']))}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
+            atividadesFiltradas.map((a) => {
+              const vagasVal = Number(a['vagas'] ?? 0);
+              const benVal = Number(a['beneficiarios_projetados'] ?? vagasVal ?? 0);
+              const custoVal = Number(a['custo_mensal'] ?? a['orcamento_mensal'] ?? 0);
 
-              <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                {String(a['descricao'] ?? "")}
-              </p>
+              return (
+                <article key={String(a['id'])} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Badge variant="secondary" className="mb-1 text-[10px] font-bold">
+                        {a['polos']?.nome || "Complexo da Penha"}
+                      </Badge>
+                      <h2 className="text-base font-bold">{String(a['nome'])}</h2>
+                      <p className="text-xs text-muted-foreground">{String(a['dias'] ?? "")}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => setOrcamentoDe(a)}>
+                        <Wallet className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          const p = getPeriodos(String(a['id'] || a['slug'] || a['nome']));
+                          setForm({
+                            ...a,
+                            data_inicio_matricula: p.data_inicio_matricula,
+                            data_fim_matricula: p.data_fim_matricula,
+                            data_inicio_atividade: p.data_inicio_atividade,
+                            data_fim_atividade: p.data_fim_atividade,
+                            polos: undefined,
+                            turmas: undefined,
+                          });
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => mDelAtividade.mutate(String(a['id']))}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
-                <div>
-                  <p className="text-[11px] text-muted-foreground">Vagas</p>
-                  <p className="font-bold">{String(a['vagas'])}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground">Beneficiários</p>
-                  <p className="font-bold">{String(a['beneficiarios_projetados'])}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground">Custo/mês</p>
-                  <p className="font-bold text-primary">{brl(a['custo_mensal'])}</p>
-                </div>
-              </div>
+                  <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                    {String(a['descricao'] ?? "")}
+                  </p>
 
-              <div className="mt-3 border-t border-border pt-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Turmas</p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs font-bold text-primary"
-                    onClick={() =>
-                      setTurmaForm({ atividade_id: a['id'], nome: "", turno: "Tarde", horario: "", vagas: 0 })
-                    }
-                  >
-                    <Plus className="mr-1 size-3" /> Turma
-                  </Button>
-                </div>
-                <ul className="mt-1 grid gap-1">
-                  {(() => {
-                    let list: Row[] = a['turmas'] ?? [];
-                    if (String(a['nome']).toLowerCase().includes("jiu jitsu") && list.length <= 1) {
-                      list = [
-                        { id: "t1-jiu", nome: "Turma 1 - Tarde", turno: "Tarde", horario: "14h - 16h", vagas: 40 },
-                        { id: "t2-jiu", nome: "Turma 2 - Tarde", turno: "Tarde", horario: "16h - 18h", vagas: 40 },
-                      ];
-                    }
-                    return list.map((t: Row) => (
-                      <li key={String(t['id'])} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
-                        <span className="font-semibold">
-                          {String(t['nome'])} · {String(t['turno'])} {String(t['horario'] ?? "")} · {String(t['vagas'])} vagas
-                        </span>
-                        <span className="flex gap-1">
-                          <button type="button" className="text-primary" onClick={() => setTurmaForm({ ...t })}>
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button type="button" className="text-destructive" onClick={() => mDelTurma.mutate(String(t['id']))}>
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </span>
-                      </li>
-                    ));
-                  })()}
-                </ul>
-              </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Vagas</p>
+                      <p className="font-bold">{String(vagasVal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Beneficiários</p>
+                      <p className="font-bold">{String(benVal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Custo/mês</p>
+                      <p className="font-bold text-primary">{custoVal > 0 ? brl(custoVal) : "Sob Orçamento"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Turmas</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs font-bold text-primary"
+                        onClick={() =>
+                          setTurmaForm({ atividade_id: a['id'], nome: "", turno: "Tarde", horario: "", vagas: 0 })
+                        }
+                      >
+                        <Plus className="mr-1 size-3" /> Turma
+                      </Button>
+                    </div>
+                    <ul className="mt-1 grid gap-1">
+                      {(() => {
+                        let list: Row[] = a['turmas'] ?? [];
+                        if (String(a['nome']).toLowerCase().includes("jiu jitsu") && list.length <= 1) {
+                          list = [
+                            { id: "t1-jiu", nome: "Turma 1 - Tarde", turno: "Tarde", horario: "14h - 16h", vagas: 40 },
+                            { id: "t2-jiu", nome: "Turma 2 - Tarde", turno: "Tarde", horario: "16h - 18h", vagas: 40 },
+                          ];
+                        }
+                        return list.map((t: Row) => (
+                          <li key={String(t['id'])} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
+                            <span className="font-semibold">
+                              {String(t['nome'])} · {String(t['turno'])} {String(t['horario'] ?? "")} · {String(t['vagas'])} vagas
+                            </span>
+                            <span className="flex gap-1">
+                              <button type="button" className="text-primary" onClick={() => setTurmaForm({ ...t })}>
+                                <Pencil className="size-3.5" />
+                              </button>
+                              <button type="button" className="text-destructive" onClick={() => mDelTurma.mutate(String(t['id']))}>
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </span>
+                          </li>
+                        ));
+                      })()}
+                    </ul>
+                  </div>
 
               {/* PERÍODO DE MATRÍCULAS E DURAÇÃO DA ATIVIDADE (Anexo 4) */}
               {(() => {
@@ -555,8 +554,8 @@ export function AtividadesPage() {
                 );
               })()}
             </article>
-          )))
-        }
+          );
+        }))}
         </div>
       )}
 

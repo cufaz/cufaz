@@ -294,6 +294,8 @@ export function PoloResponsavelShell({
       to: "/polo/galeria",
       label: "Galeria de Fotos",
       icon: ImageIcon,
+      disabled: true,
+      badge: "Em breve",
     },
     {
       to: "/polo/perfil",
@@ -490,6 +492,21 @@ export function PoloResponsavelShell({
                   : currentPath.startsWith(item.to);
 
               const Icon = item.icon;
+
+              if (item.disabled) {
+                return (
+                  <div
+                    key={item.to}
+                    className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-xs opacity-50 cursor-not-allowed text-muted-foreground bg-muted/20 border border-border/40 select-none"
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                      {item.badge}
+                    </span>
+                  </div>
+                );
+              }
 
               return (
                 <Link

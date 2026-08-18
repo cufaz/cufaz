@@ -32,43 +32,41 @@ const cor: Record<string, string> = {
   reprovado: "bg-destructive/15 text-destructive",
 };
 
+import { fetchPedidosDB, createPedidoDB, updatePedidoStatusDB, deletePedidoDB } from "@/lib/pedidosService";
+
 function PedidosPage() {
   const qc = useQueryClient();
-  const fetchPedidos = useServerFn(listPedidos);
-  const decidir = useServerFn(decidirPedido);
-  const criar = useServerFn(criarPedido);
-  const excluir = useServerFn(deletePedido);
   const fetchPolos = useServerFn(listPolos);
   const fetchFin = useServerFn(getFinanceiro);
 
   const meses = competenciaOptions();
   const [form, setForm] = useState<Row | null>(null);
 
-  const { data, isLoading } = useQuery({ queryKey: ["pedidos"], queryFn: () => fetchPedidos({}) });
+  const { data, isLoading } = useQuery({ queryKey: ["pedidos"], queryFn: () => fetchPedidosDB() });
   const polos = useQuery({ queryKey: ["polos"], queryFn: () => fetchPolos({}) });
   const fin = useQuery({ queryKey: ["financeiro-cats"], queryFn: () => fetchFin({ data: {} }) });
 
   const mDecidir = useMutation({
-    mutationFn: (v: { id: string; status: "aprovado" | "reprovado" }) => decidir({ data: v }),
+    mutationFn: (v: { id: string; status: "aprovado" | "reprovado"; observacao?: string }) => updatePedidoStatusDB(v.id, v.status, v.observacao),
     onSuccess: () => {
-      toast.success("Pedido atualizado");
+      toast.success("Status do pedido atualizado no banco!");
       qc.invalidateQueries();
     },
-    onError: (e: Error) => toast.error("Erro", { description: e.message }),
+    onError: (e: Error) => toast.error("Erro ao atualizar pedido", { description: e.message }),
   });
 
   const mCriar = useMutation({
-    mutationFn: (v: Row) => criar({ data: v }),
+    mutationFn: (v: Row) => createPedidoDB(v as any),
     onSuccess: () => {
       setForm(null);
-      toast.success("Pedido registrado");
+      toast.success("Pedido registrado no banco!");
       qc.invalidateQueries();
     },
-    onError: (e: Error) => toast.error("Erro", { description: e.message }),
+    onError: (e: Error) => toast.error("Erro ao criar pedido", { description: e.message }),
   });
 
   const mExcluir = useMutation({
-    mutationFn: (v: { id: string }) => excluir({ data: v }),
+    mutationFn: (v: { id: string }) => deletePedidoDB(v.id),
     onSuccess: () => {
       toast.success("Pedido excluído de todo o sistema");
       qc.invalidateQueries();
@@ -774,7 +772,6 @@ function PedidosPage() {
                   <option value="Complexo da Penha">Complexo da Penha</option>
                   <option value="Viaduto de Madureira">Viaduto de Madureira</option>
                   <option value="Paraisópolis">Paraisópolis</option>
-                  <option value="Polo de Teste">Polo de Teste</option>
                 </select>
               </div>
 
@@ -874,7 +871,6 @@ function PedidosPage() {
                   <option value="Complexo da Penha">Complexo da Penha</option>
                   <option value="Viaduto de Madureira">Viaduto de Madureira</option>
                   <option value="Paraisópolis">Paraisópolis</option>
-                  <option value="Polo de Teste">Polo de Teste</option>
                 </select>
               </div>
 

@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Search, UserCheck, Phone, Mail, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import { Search, UserCheck, Phone, Mail, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, UserPlus, Eye, School, ShieldCheck, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 import { PoloResponsavelShell } from "@/components/polo/PoloResponsavelShell";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/polo/alunos")({
   component: PoloAlunosPage,
@@ -16,6 +23,7 @@ export function PoloAlunosPage() {
   const [busca, setBusca] = useState("");
   const [atividadeFiltro, setAtividadeFiltro] = useState("todas");
   const [pagina, setPagina] = useState(1);
+  const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
   const itensPorPagina = 20;
 
   function loadMergedPoloAlunosList() {
@@ -39,8 +47,17 @@ export function PoloAlunosPage() {
                 atividade: a.modalidade || "Jiu Jitsu",
                 turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
                 idade: a.dataNasc ? `${new Date().getFullYear() - new Date(a.dataNasc).getFullYear()} anos` : "14 anos",
+                dataNasc: a.dataNasc || "2010-05-12",
                 responsavel: a.nomeResponsavel || "Próprio Aluno",
+                cpfResponsavel: a.cpfResponsavel || "123.456.789-00",
                 telefone: a.telResponsavel || a.telefone || "(11) 98877-6655",
+                telefonePai: a.telefonePai || "Não informado",
+                telefoneVizinho: a.telefoneVizinho || "Não informado",
+                telefoneAvo: a.telefoneAvo || "Não informado",
+                hospitalEmergencia: a.hospitalEmergencia || "UPA 24h Mais Próxima",
+                nomeEscola: a.nomeEscola || "Escola Municipal Comunitária",
+                anoEscolar: a.anoEscolar || "8º Ano - Ensino Fundamental",
+                turnoEscolar: a.turnoEscolar || "Manhã",
                 dataMatricula: a.dataCriacao || new Date().toISOString().slice(0, 10),
                 status: "Ativo",
               });
@@ -66,8 +83,17 @@ export function PoloAlunosPage() {
                 atividade: a.atividade || a.modalidade || "Jiu Jitsu",
                 turma: a.turma || "Turma 1 - Tarde (14h - 16h)",
                 idade: a.idade || "15 anos",
+                dataNasc: "2009-08-20",
                 responsavel: a.responsavel || a.nomeResponsavel || "Responsável Legal",
+                cpfResponsavel: a.cpfResponsavel || "123.456.789-00",
                 telefone: a.telefone || "(11) 98877-6655",
+                telefonePai: "Não informado",
+                telefoneVizinho: "Não informado",
+                telefoneAvo: "Não informado",
+                hospitalEmergencia: "UPA 24h Mais Próxima",
+                nomeEscola: "Escola Estadual Local",
+                anoEscolar: "9º Ano",
+                turnoEscolar: "Manhã",
                 dataMatricula: a.dataMatricula || new Date().toISOString().slice(0, 10),
                 status: "Ativo",
               });
@@ -80,7 +106,7 @@ export function PoloAlunosPage() {
     return Array.from(listMap.values());
   }
 
-  const [alunosMock, setAlunosMock] = useState<any[]>(() => {
+  const [alunosMock] = useState<any[]>(() => {
     return loadMergedPoloAlunosList();
   });
 
@@ -155,13 +181,14 @@ export function PoloAlunosPage() {
                   <th className="py-3 px-4">Responsável Legal</th>
                   <th className="py-3 px-4">Telefone / Whats</th>
                   <th className="py-3 px-4">Data Matrícula</th>
-                  <th className="py-3 px-4 text-right">Status</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center">Detalhes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
                 {alunosPaginados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
                       <UserPlus className="size-10 mx-auto text-muted-foreground/40 mb-2" />
                       <p className="font-bold text-sm text-foreground">Nenhum aluno cadastrado no momento.</p>
                       <p className="text-xs">Novos alunos inscritos pela comunidade aparecerão automaticamente nesta lista.</p>
@@ -181,16 +208,26 @@ export function PoloAlunosPage() {
                           <BookOpen className="size-3 mr-1 text-primary" /> {a.atividade}
                         </Badge>
                       </td>
-                      <td className="py-3.5 px-4 text-muted-foreground font-medium">{a.idade} anos</td>
+                      <td className="py-3.5 px-4 text-muted-foreground font-medium">{a.idade}</td>
                       <td className="py-3.5 px-4 text-foreground font-semibold">{a.responsavel}</td>
                       <td className="py-3.5 px-4 text-muted-foreground font-medium flex items-center gap-1">
                         <Phone className="size-3.5 text-emerald-600" /> {a.telefone}
                       </td>
                       <td className="py-3.5 px-4 text-muted-foreground font-medium">{a.dataMatricula}</td>
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4 text-center">
                         <Badge className="bg-emerald-500/10 text-emerald-700 font-bold border-emerald-500/20">
                           <CheckCircle2 className="size-3 mr-1" /> {a.status}
                         </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs font-extrabold text-primary border-primary/30 hover:bg-primary/10 shadow-xs"
+                          onClick={() => setSelectedAluno(a)}
+                        >
+                          <Eye className="size-3.5 mr-1" /> Analisar
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -199,7 +236,7 @@ export function PoloAlunosPage() {
             </table>
           </div>
 
-          {/* Paginação de 20 em 20 (Anexo 2) */}
+          {/* Paginação de 20 em 20 */}
           <div className="border-t border-border bg-muted/20 p-4 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
               Exibindo <b>{alunosPaginados.length}</b> de <b>{alunosFiltrados.length}</b> alunos (Página {pagina} de {totalPaginas})
@@ -231,6 +268,129 @@ export function PoloAlunosPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Análise Detalhada do Aluno */}
+      <Dialog open={!!selectedAluno} onOpenChange={(open) => !open && setSelectedAluno(null)}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary font-black text-xl border border-primary/20">
+                {selectedAluno?.nome?.slice(0, 2).toUpperCase()}
+              </span>
+              <div>
+                <DialogTitle className="text-xl font-extrabold text-foreground">
+                  Ficha do Aluno — {selectedAluno?.nome}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Matriculado em <b>{selectedAluno?.atividade}</b> ({selectedAluno?.turma}) — {poloNome}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedAluno && (
+            <div className="space-y-4 pt-2 text-xs">
+              {/* Card 1: Dados Pessoais */}
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-2">
+                <h4 className="font-black uppercase text-[11px] text-primary tracking-wider flex items-center gap-1.5">
+                  <UserCheck className="size-3.5" /> Informações do Aluno
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Nome Completo</span>
+                    <span className="font-bold text-foreground">{selectedAluno.nome}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">E-mail</span>
+                    <span className="font-bold text-foreground">{selectedAluno.email || "Não informado"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Idade / Nasc.</span>
+                    <span className="font-bold text-foreground">{selectedAluno.idade} ({selectedAluno.dataNasc})</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Data da Matrícula</span>
+                    <span className="font-bold text-foreground">{selectedAluno.dataMatricula}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Responsável Legal & Contatos de Emergência */}
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-2">
+                <h4 className="font-black uppercase text-[11px] text-emerald-600 tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="size-3.5" /> Responsável Legal & Contatos de Emergência
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Nome do Responsável</span>
+                    <span className="font-bold text-foreground">{selectedAluno.responsavel}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">CPF do Responsável</span>
+                    <span className="font-bold text-foreground">{selectedAluno.cpfResponsavel}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Telefone Principal</span>
+                    <span className="font-bold text-emerald-700 flex items-center gap-1">
+                      <Phone className="size-3" /> {selectedAluno.telefone}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Contato Pai</span>
+                    <span className="font-bold text-foreground">{selectedAluno.telefonePai}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Contato Vizinho/Parente</span>
+                    <span className="font-bold text-foreground">{selectedAluno.telefoneVizinho}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Contato Avó/Outro</span>
+                    <span className="font-bold text-foreground">{selectedAluno.telefoneAvo}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground block text-[10px]">Hospital de Emergência Preferencial</span>
+                    <span className="font-bold text-amber-700 flex items-center gap-1">
+                      <HeartPulse className="size-3 text-amber-600" /> {selectedAluno.hospitalEmergencia}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Escola & Turma */}
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-2">
+                <h4 className="font-black uppercase text-[11px] text-blue-600 tracking-wider flex items-center gap-1.5">
+                  <School className="size-3.5" /> Informações Escolares & Oficina
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Escola</span>
+                    <span className="font-bold text-foreground">{selectedAluno.nomeEscola}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Ano / Turno</span>
+                    <span className="font-bold text-foreground">{selectedAluno.anoEscolar} ({selectedAluno.turnoEscolar})</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Oficina Vinc.</span>
+                    <span className="font-bold text-primary">{selectedAluno.atividade}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px]">Turma & Horário</span>
+                    <span className="font-bold text-foreground">{selectedAluno.turma}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button size="sm" className="font-bold text-xs" onClick={() => setSelectedAluno(null)}>
+                  Fechar Ficha
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PoloResponsavelShell>
   );
 }
+

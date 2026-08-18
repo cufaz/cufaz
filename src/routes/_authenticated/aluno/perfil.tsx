@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCPF, formatPhone, capitalizeWords } from "@/lib/formatters";
+import { getAvatarLocal, setAvatarLocal } from "@/lib/cadastros";
 import { AlunoShell } from "@/components/aluno/AlunoShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -62,7 +63,7 @@ function PerfilAlunoPage() {
     const userEmail = localStorage.getItem("cufa_logged_user") || "aluno@cufa.com.br";
     setAlunoEmail(userEmail);
 
-    const fUser = localStorage.getItem(`cufa_perfil_foto_${userEmail}`) || localStorage.getItem("cufa_perfil_foto");
+    const fUser = getAvatarLocal(userEmail);
     if (fUser) setFotoPerfil(fUser);
 
     try {
@@ -123,9 +124,7 @@ function PerfilAlunoPage() {
       localStorage.setItem("cufa_aluno_nome", nome);
       if (telefone) localStorage.setItem("cufa_aluno_telefone", telefone);
       if (fotoPerfil) {
-        localStorage.setItem("cufa_perfil_foto", fotoPerfil);
-        localStorage.setItem(`cufa_perfil_foto_${alunoEmail}`, fotoPerfil);
-        window.dispatchEvent(new Event("cufa_perfil_foto_updated"));
+        setAvatarLocal(alunoEmail, fotoPerfil);
       }
 
       // Update in cufa_alunos_cadastrados

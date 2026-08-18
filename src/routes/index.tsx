@@ -239,7 +239,7 @@ function Index() {
         <section id="comunidades" className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Onde estamos</h2>
           <ul className="mt-6 flex flex-wrap gap-2.5">
-            {["Madureira", "Complexo da Penha", "Paraisópolis", "Cidade de Deus", "Heliópolis"].map(
+            {["Complexo da Penha", "Viaduto de Madureira", "Paraisópolis"].map(
               (c) => (
                 <li
                   key={c}

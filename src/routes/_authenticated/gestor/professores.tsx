@@ -110,7 +110,7 @@ function ProfessoresDashboardPage() {
           parsed.forEach((solic: any) => {
             const pEmail = String(solic.email || "").toLowerCase();
             const pNome = solic.professorNome || "Professor";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`) || localStorage.getItem("cufa_perfil_foto");
+            const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`);
 
             if (pEmail && !seenEmails.has(pEmail)) {
               seenEmails.add(pEmail);
@@ -157,7 +157,7 @@ function ProfessoresDashboardPage() {
           parsed.forEach((cad: any) => {
             const cEmail = String(cad.email || "").toLowerCase();
             const cNome = cad.professorNome || "Prof. Cadastrado";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`) || localStorage.getItem("cufa_perfil_foto");
+            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
 
             if (cEmail && !seenEmails.has(cEmail)) {
               seenEmails.add(cEmail);

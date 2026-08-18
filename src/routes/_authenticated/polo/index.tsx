@@ -85,17 +85,39 @@ function PoloDashboardPage() {
   const totalAtividades = isPenha ? 3 : isMadureira ? 3 : 1;
   const totalTurmas = isPenha ? 4 : isMadureira ? 4 : 2;
 
-  // Calculate real presence % from professor chamadas history
+  // Calculate real presence % from recorded chamadas history
   const chamadasHistory = (() => {
     try {
       const stored = localStorage.getItem("cufa_professor_chamadas_history");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch {}
     return [];
   })();
 
-  const chamadasCount = chamadasHistory.length;
-  const taxaFrequencia = chamadasCount > 0 ? "100%" : (totalAlunos > 0 ? "100%" : "0%");
+  const taxaFrequencia = (() => {
+    if (!chamadasHistory || chamadasHistory.length === 0) return "—";
+    let totalPresentes = 0;
+    let totalAlunosEmChamadas = 0;
+
+    chamadasHistory.forEach((ch: any) => {
+      if (ch.presencas && typeof ch.presencas === "object") {
+        const values = Object.values(ch.presencas);
+        totalAlunosEmChamadas += values.length;
+        totalPresentes += values.filter((v: any) => v === true || v === "presente").length;
+      } else if (typeof ch.presentesCount === "number" && typeof ch.totalCount === "number") {
+        totalPresentes += ch.presentesCount;
+        totalAlunosEmChamadas += ch.totalCount;
+      }
+    });
+
+    if (totalAlunosEmChamadas === 0) return "—";
+    const pct = Math.round((totalPresentes / totalAlunosEmChamadas) * 100);
+    return `${pct}%`;
+  })();
+
   const comprasPendentes = comprasLista.filter((c: any) => c.status === "pendente").length;
 
   const baseAtividades = isPenha
@@ -120,11 +142,32 @@ function PoloDashboardPage() {
       ativ.nome.includes("Jiu") ? totalAlunos : 0
     );
     const pct = Math.round((realAlunos / ativ.vagas) * 100);
+
+    const ativChamadas = chamadasHistory.filter((ch: any) =>
+      cleanStr(ch.atividadeNome || ch.atividade || "").includes(cleanStr(ativ.nome))
+    );
+
+    let freqStr = "—";
+    if (ativChamadas.length > 0) {
+      let totalP = 0;
+      let totalA = 0;
+      ativChamadas.forEach((ch: any) => {
+        if (ch.presencas && typeof ch.presencas === "object") {
+          const values = Object.values(ch.presencas);
+          totalA += values.length;
+          totalP += values.filter((v: any) => v === true || v === "presente").length;
+        }
+      });
+      if (totalA > 0) {
+        freqStr = `${Math.round((totalP / totalA) * 100)}%`;
+      }
+    }
+
     return {
       ...ativ,
       alunos: realAlunos,
       pctPreenchido: `${pct}% Preenchidas`,
-      frequencia: chamadasCount > 0 || realAlunos > 0 ? "100%" : "0%",
+      frequencia: freqStr,
     };
   });
 

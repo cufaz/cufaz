@@ -113,7 +113,7 @@ function GestorAlunosDashboardPage() {
           parsed.forEach((cad: any) => {
             const cEmail = String(cad.email || "").toLowerCase();
             const cNome = cad.nome || "Aluno";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`) || localStorage.getItem("cufa_perfil_foto");
+            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
 
             let userPolo = cad.polo || "Complexo da Penha";
             let userMod = cad.modalidade || "Jiu Jitsu";
@@ -478,9 +478,6 @@ DOCUMENTOS ANEXADOS:
                 <option value="penha">Complexo da Penha</option>
                 <option value="madureira">Viaduto de Madureira</option>
                 <option value="paraisopolis">Paraisópolis</option>
-                <option value="heliopolis">Heliópolis</option>
-                <option value="cidade-de-deus">Cidade de Deus</option>
-                <option value="rocinha">Rocinha</option>
               </select>
             </div>
 

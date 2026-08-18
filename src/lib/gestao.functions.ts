@@ -6,7 +6,6 @@ const defaultPolos = [
   { id: "penha", nome: "Complexo da Penha", slug: "penha", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ricardo Brito", ativo: true, orcamento_mensal: 109017.99 },
   { id: "madureira", nome: "Viaduto de Madureira", slug: "madureira", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ana Paula Silva", ativo: true, orcamento_mensal: 64800.00 },
   { id: "paraisopolis", nome: "Paraisópolis", slug: "paraisopolis", cidade: "São Paulo", estado: "SP", gestor_nome: "Carlos Eduardo", ativo: true, orcamento_mensal: 45000.00 },
-  { id: "cidade-de-deus", nome: "Cidade de Deus", slug: "cidade-de-deus", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Fernanda Costa", ativo: true, orcamento_mensal: 38000.00 },
 ];
 
 const defaultAtividades = [
@@ -258,14 +257,12 @@ const defaultPolosFinanceiro = [
   { id: "penha", nome: "Complexo da Penha", slug: "penha" },
   { id: "madureira", nome: "Viaduto de Madureira", slug: "madureira" },
   { id: "paraisopolis", nome: "Paraisópolis", slug: "paraisopolis" },
-  { id: "cidade-de-deus", nome: "Cidade de Deus", slug: "cidade-de-deus" },
-  { id: "polo-teste", nome: "Polo de Teste", slug: "polo-teste" },
 ];
 
 const defaultLancamentos = [
   {
     id: "11111111-1111-4111-a111-111111111111",
-    polo_id: "polo-teste",
+    polo_id: "penha",
     descricao: "Materiais de Consumo e Apoio Operacional",
     valor: 500.00,
     tipo: "despesa",
@@ -274,18 +271,6 @@ const defaultLancamentos = [
     categoria_nome: "Materiais / consumo",
     competencia: "2026-08-01",
     created_at: "2026-08-10",
-  },
-  {
-    id: "22222222-2222-4222-a222-222222222222",
-    polo_id: "polo-teste",
-    descricao: "Higienização e Suprimentos da Unidade",
-    valor: 250.00,
-    tipo: "despesa",
-    natureza: "realizado",
-    categoria_id: "cat-7",
-    categoria_nome: "Materiais / consumo",
-    competencia: "2026-08-01",
-    created_at: "2026-08-12",
   },
 ];
 

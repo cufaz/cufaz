@@ -98,49 +98,58 @@ function PolosPage() {
         <Loader2 className="size-6 animate-spin text-primary" />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {(data ?? []).map((p: Polo) => (
-            <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-bold">{String(p['nome'])}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {String(p['cidade'])} / {String(p['uf'])} · {p['ativo'] ? "Ativo" : "Inativo"}
-                  </p>
+          {(data ?? []).map((p: Polo) => {
+            const nome = String(p['nome'] ?? "Polo CUFA");
+            const cidade = String(p['cidade'] ?? p['cidade_nome'] ?? "—");
+            const uf = String(p['uf'] ?? p['estado'] ?? "RJ");
+            const vagas = p['vagas_totais'] ?? p['vagas'] ?? 0;
+            const beneficiarios = p['beneficiarios_projetados'] ?? p['beneficiarios'] ?? 0;
+            const orcamento = Number(p['orcamento_mensal'] ?? 0);
+
+            return (
+              <article key={String(p['id'])} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-base font-bold">{nome}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {cidade} / {uf} · {p['ativo'] !== false ? "Ativo" : "Inativo"}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => editar(p)}>
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => mApagar.mutate(String(p['id']))}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => editar(p)}>
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => mApagar.mutate(String(p['id']))}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{String(p['endereco'] ?? "")}</p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
-                <div>
-                  <dt className="text-[11px] text-muted-foreground">Vagas</dt>
-                  <dd className="break-words font-bold tabular-nums">{String(p['vagas_totais'])}</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] text-muted-foreground">Beneficiários</dt>
-                  <dd className="break-words font-bold tabular-nums">{String(p['beneficiarios_projetados'])}</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] text-muted-foreground">Orçamento/mês</dt>
-                  <dd className="break-words font-bold tabular-nums text-primary">{brl(Number(p['orcamento_mensal']))}</dd>
-                </div>
-              </dl>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Ponto focal: <span className="font-semibold text-foreground">{String(p['ponto_focal'] ?? "—")}</span>
-              </p>
-            </article>
-          ))}
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{String(p['endereco'] ?? "")}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 sm:text-sm">
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Vagas</dt>
+                    <dd className="break-words font-bold tabular-nums">{String(vagas)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Beneficiários</dt>
+                    <dd className="break-words font-bold tabular-nums">{String(beneficiarios)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Orçamento/mês</dt>
+                    <dd className="break-words font-bold tabular-nums text-primary">{brl(orcamento)}</dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Ponto focal: <span className="font-semibold text-foreground">{String(p['ponto_focal'] ?? "—")}</span>
+                </p>
+              </article>
+            );
+          })}
         </div>
       )}
 

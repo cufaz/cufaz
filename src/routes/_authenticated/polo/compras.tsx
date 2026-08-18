@@ -36,41 +36,30 @@ interface PedidoItem {
   dataSolicitacao: string;
 }
 
+import { fetchPedidosDB, createPedidoDB, PedidoDB } from "@/lib/pedidosService";
+
 export function PoloComprasPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
   const [modalOpen, setModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pedidos, setPedidos] = useState<PedidoDB[]>([]);
 
-  function loadPoloPedidosList(unitName: string) {
-    const cleanUnit = unitName.toLowerCase().trim();
-    let list: PedidoItem[] = [];
-
-    try {
-      const storedUnit = localStorage.getItem(`cufa_compras_${cleanUnit}`);
-      if (storedUnit) {
-        const parsedUnit = JSON.parse(storedUnit);
-        if (Array.isArray(parsedUnit)) {
-          return parsedUnit;
-        }
-      }
-
-      const storedAll = localStorage.getItem("cufa_compras_polo") || localStorage.getItem("cufa_compras_all");
-      if (storedAll) {
-        const parsed = JSON.parse(storedAll);
-        if (Array.isArray(parsed)) {
-          list = parsed.filter((p: any) => {
-            const pName = String(p.polo_nome || p.polo || "").toLowerCase();
-            return pName.includes(cleanUnit) || cleanUnit.includes(pName);
-          });
-        }
-      }
-    } catch {}
-
-    return list;
+  function loadPedidos() {
+    fetchPedidosDB().then((list) => {
+      const cleanUnit = poloNome.toLowerCase().trim();
+      const filtered = list.filter((p) => {
+        const pPolo = String(p.polo_nome || p.polo_id || "").toLowerCase();
+        return pPolo.includes(cleanUnit) || cleanUnit.includes(pPolo);
+      });
+      setPedidos(filtered.length > 0 ? filtered : list);
+    });
   }
 
-  const [pedidos, setPedidos] = useState<PedidoItem[]>(() => {
-    return loadPoloPedidosList(poloNome);
-  });
+  useEffect(() => {
+    loadPedidos();
+    window.addEventListener("cufa_pedidos_updated", loadPedidos);
+    return () => window.removeEventListener("cufa_pedidos_updated", loadPedidos);
+  }, [poloNome]);
 
   const BASE_CATEGORIAS_CUFA = [
     "Pessoal",
@@ -122,7 +111,7 @@ export function PoloComprasPage() {
   const [valorTotalStr, setValorTotalStr] = useState("");
   const [observacao, setObservacao] = useState("");
 
-  function handleEnviarPedido(e: React.FormEvent) {
+  async function handleEnviarPedido(e: React.FormEvent) {
     e.preventDefault();
     if (!itemNome || !quantidade) {
       toast.error("Preencha o nome do item e a quantidade.");
@@ -134,44 +123,42 @@ export function PoloComprasPage() {
     const vTotalNum = parseBRLToNumber(valorTotalStr);
     const vUnitNum = vTotalNum > 0 ? vTotalNum / qtdNum : 0;
 
-    const novo: PedidoItem = {
-      id: `ped-${Date.now()}`,
-      item: itemNome,
-      categoria,
-      quantidade: String(qtdNum),
-      valor_total: vTotalNum,
-      valor_unitario: vUnitNum,
-      observacao,
-      polo_nome: currentPoloNome,
-      polo_id: currentPoloNome.toLowerCase().includes("penha") ? "penha" : currentPoloNome.toLowerCase().includes("madureira") ? "madureira" : currentPoloNome.toLowerCase().includes("paraisopolis") ? "paraisopolis" : "polo-teste",
-      competencia: "2026-08-01",
-      status: "pendente",
-      dataSolicitacao: new Date().toLocaleDateString("pt-BR"),
-    };
+    const poloIdCode = currentPoloNome.toLowerCase().includes("madureira")
+      ? "madureira"
+      : currentPoloNome.toLowerCase().includes("paraisopolis") || currentPoloNome.toLowerCase().includes("paraisópolis")
+      ? "paraisopolis"
+      : "penha";
 
-    const cleanUnit = currentPoloNome.toLowerCase().trim();
-    const atualizados = [novo, ...pedidos];
-    setPedidos(atualizados);
+    setIsSubmitting(true);
     try {
-      localStorage.setItem(`cufa_compras_${cleanUnit}`, JSON.stringify(atualizados));
+      await createPedidoDB({
+        polo_id: poloIdCode,
+        polo_nome: currentPoloNome,
+        solicitante_nome: `Responsável (${currentPoloNome})`,
+        item: itemNome,
+        categoria,
+        quantidade: qtdNum,
+        valor_unitario: vUnitNum,
+        valor_total: vTotalNum,
+        competencia: "2026-08-01",
+        status: "pendente",
+        descricao: observacao,
+      });
 
-      const storedAll = localStorage.getItem("cufa_compras_polo") || localStorage.getItem("cufa_compras_all");
-      let allList: any[] = storedAll ? JSON.parse(storedAll) : [];
-      allList = [novo, ...allList.filter((p) => p.id !== novo.id)];
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(allList));
-      localStorage.setItem("cufa_compras_all", JSON.stringify(allList));
-
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-    } catch {}
-
-    toast.success("Solicitação de compra enviada ao Gestor Geral!", {
-      description: `Polo: ${currentPoloNome} | Item: ${itemNome} (${quantidade})`,
-    });
-    setModalOpen(false);
-    setItemNome("");
-    setQuantidade("");
-    setValorTotalStr("");
-    setObservacao("");
+      toast.success("Solicitação de compra salva no banco com sucesso!", {
+        description: `Polo: ${currentPoloNome} | Item: ${itemNome} (${quantidade})`,
+      });
+      setModalOpen(false);
+      setItemNome("");
+      setQuantidade("");
+      setValorTotalStr("");
+      setObservacao("");
+      loadPedidos();
+    } catch {
+      toast.error("Erro ao enviar pedido.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
