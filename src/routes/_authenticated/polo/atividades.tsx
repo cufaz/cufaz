@@ -162,7 +162,10 @@ export function PoloAtividadesPage() {
   }
 
   function handleRecusarProfessor(solicId: string, profNome: string) {
-    const updated = solicitacoes.map((s) =>
+    const base = solicitacoes.some((s) => s?.id === solicId)
+      ? solicitacoes
+      : [...solicitacoes, { ...defaultSolicitacao, id: solicId }];
+    const updated = base.map((s) =>
       s.id === solicId ? ({ ...s, status: "recusado" as const }) : s
     );
     setSolicitacoes(updated);
@@ -170,6 +173,7 @@ export function PoloAtividadesPage() {
     window.dispatchEvent(new Event("cufa_professores_updated"));
     toast.info(`Solicitação do professor ${profNome} recusada.`);
   }
+
 
   function handleDownloadZip(solic: ProfessorSolicitacao) {
     setIsDownloadingZip(true);
