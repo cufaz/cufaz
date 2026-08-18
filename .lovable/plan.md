@@ -1,23 +1,24 @@
 # Plano: Novo favicon + correção de erro SSR
 
-## O que vamos fazer
+## 1. Trocar o favicon pelo logo enviado
 
-1. **Trocar o favicon**
-   - Você faz o upload da imagem que quer usar como favicon.
-   - Eu adapto a imagem para um quadrado 64x64px (crop/pad preservando proporções).
-   - Salvo o resultado em `public/favicon.png`.
-   - Atualizo o link no `src/routes/__root.tsx` para apontar para o novo `favicon.png`.
-   - Removo o `public/favicon.ico` padrão, se ainda existir.
+Você enviou o logo horizontal da CUFA (pássaro + "CUFA / Central Única das Favelas").
 
-2. **Corrigir erro de runtime no preview**
-   - O erro `localStorage is not defined` acontece em `src/components/site/MasterAdminDialog.tsx` porque `useState` lê `localStorage` durante a renderização no servidor (SSR).
-   - Ajusto os estados iniciais para valores seguros no servidor e movo a leitura do `localStorage` para dentro de `useEffect`, garantindo que só execute no cliente.
+- Adapto a imagem para um quadrado de 64x64px com fundo transparente, usando padding (nunca esticando), para o logo manter as proporções.
+- Salvo o resultado em `public/favicon.png`.
+- Atualizo o link do ícone em `src/routes/__root.tsx` para apontar ao novo arquivo.
+- Removo `public/favicon.ico` se ainda existir, para não servir o ícone antigo.
+
+Observação: por ser um logo horizontal e largo, no tamanho de 16-32px da aba o texto fica pequeno. Se preferir mais legibilidade, posso recortar só o pássaro como marca do favicon — me avise e ajusto.
+
+## 2. Corrigir erro de runtime no preview
+
+O preview está registrando `localStorage is not defined` em `src/components/site/MasterAdminDialog.tsx`: os estados iniciais leem `localStorage` durante a renderização no servidor.
+
+- Inicializo esses estados com valores seguros para o servidor.
+- Movo a leitura do `localStorage` para dentro de `useEffect`, executando apenas no navegador.
 
 ## Resultado esperado
 
-- Favicon novo e quadrado em todas as abas do navegador.
-- Preview sem o erro de SSR e sem queda para renderização apenas no cliente.
-
-## Próximo passo
-
-Envie a imagem que será usada como favicon para eu prosseguir com a adaptação.
+- Favicon novo com a marca da CUFA em todas as abas.
+- Preview sem o erro de SSR.
