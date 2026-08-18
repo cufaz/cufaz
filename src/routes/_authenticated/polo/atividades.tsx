@@ -66,8 +66,7 @@ function cleanStr(str: string | null | undefined = "") {
 }
 
 function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao[] {
-  const seen = new Set<string>();
-  const cleanList: ProfessorSolicitacao[] = [];
+  const byKey = new Map<string, ProfessorSolicitacao>();
 
   for (const item of list) {
     if (!item) continue;
@@ -75,13 +74,15 @@ function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao
     const aName = item.atividadeNome || "ativ";
     const tName = item.turmaNome || "";
     const key = `${cleanStr(pName)}-${cleanStr(aName)}-${cleanStr(tName)}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      cleanList.push(item);
+    const existing = byKey.get(key);
+    // Decisões (aprovado/recusado) sempre prevalecem sobre um registro pendente duplicado
+    if (!existing || (existing.status === "pendente" && item.status !== "pendente")) {
+      byKey.set(key, item);
     }
   }
-  return cleanList;
+  return Array.from(byKey.values());
 }
+
 
 export function PoloAtividadesPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
