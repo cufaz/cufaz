@@ -24,30 +24,13 @@ export function MasterAdminDialog({
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [authenticated, setAuthenticated] = useState(() => {
-    return localStorage.getItem("cufa_master_authenticated") === "true";
-  });
+  const [authenticated, setAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<"gestores" | "alunos" | "professores">("gestores");
 
-  const [gestoresData, setGestoresData] = useState(() => {
-    try {
-      const stored = localStorage.getItem("cufa_gestores_lista");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.map((g: any) => ({
-          id: g.id,
-          nome: g.nome,
-          email: g.email,
-          senha: g.senha,
-          polo: g.poloNome,
-          status: g.ativo ? "Ativo" : "Inativo",
-        }));
-      }
-    } catch {}
-    return [
-      { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
-    ];
-  });
+  const [gestoresData, setGestoresData] = useState<any[]>(() => [
+    { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
+  ]);
+
 
   useEffect(() => {
     function syncMasterGestores() {
