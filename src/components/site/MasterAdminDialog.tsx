@@ -269,8 +269,9 @@ export function MasterAdminDialog({
     return Array.from(listMap.values());
   }
 
-  const [alunosData, setAlunosData] = useState<any[]>(() => loadMasterAlunos());
-  const [professoresData, setProfessoresData] = useState<any[]>(() => loadMasterProfessores());
+  const [alunosData, setAlunosData] = useState<any[]>([]);
+  const [professoresData, setProfessoresData] = useState<any[]>([]);
+
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
