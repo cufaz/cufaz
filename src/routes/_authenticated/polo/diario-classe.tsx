@@ -152,7 +152,7 @@ export function PoloDiarioClassePage() {
                     </p>
                   </div>
                   <Badge className="bg-primary/10 text-primary font-bold border-primary/20">
-                    {log.nivel_graduacao || "Sem Nível"}
+                    {log.nivel || "Sem Nível"}
                   </Badge>
                 </CardHeader>
 

@@ -70,68 +70,7 @@ function loadLocalDocumentosGestao(): DocumentoGestaoDB[] {
     const stored = localStorage.getItem("cufa_documentos_gestao");
     if (stored) return JSON.parse(stored);
   } catch {}
-  return [
-    {
-      id: "doc-f-1",
-      setor: "fornecedor",
-      entidade_id: "f1",
-      entidade_nome: "Favela Artes Gráfica e Editora LTDA",
-      tipo: "Cartão CNPJ",
-      nome: "cartao_cnpj_favela_artes.pdf",
-      url: "#",
-      created_at: "2026-08-10",
-    },
-    {
-      id: "doc-f-2",
-      setor: "fornecedor",
-      entidade_id: "f1",
-      entidade_nome: "Favela Artes Gráfica e Editora LTDA",
-      tipo: "Proposta Comercial",
-      nome: "proposta_fornecimento_grafico.pdf",
-      url: "#",
-      created_at: "2026-08-12",
-    },
-    {
-      id: "doc-p-1",
-      setor: "professor",
-      entidade_id: "p1",
-      entidade_nome: "Prof.ª Santana Silva",
-      tipo: "Contrato de Prestação de Serviços",
-      nome: "contrato_professor_santana_2026.pdf",
-      url: "#",
-      created_at: "2026-08-01",
-    },
-    {
-      id: "doc-p-2",
-      setor: "professor",
-      entidade_id: "p1",
-      entidade_nome: "Prof.ª Santana Silva",
-      tipo: "NF de Serviço",
-      nome: "nota_fiscal_servico_agosto_2026.pdf",
-      url: "#",
-      created_at: "2026-08-15",
-    },
-    {
-      id: "doc-a-1",
-      setor: "aluno",
-      entidade_id: "a1",
-      entidade_nome: "Enzo Junior",
-      tipo: "Termo de Autorização Assinado",
-      nome: "termo_autorizacao_enzo_junior.pdf",
-      url: "#",
-      created_at: "2026-08-05",
-    },
-    {
-      id: "doc-a-2",
-      setor: "aluno",
-      entidade_id: "a1",
-      entidade_nome: "Enzo Junior",
-      tipo: "Comprovante de Residência",
-      nome: "comprovante_residencia_enzo.pdf",
-      url: "#",
-      created_at: "2026-08-05",
-    },
-  ];
+  return [];
 }
 
 function saveLocalDocumentoGestao(doc: DocumentoGestaoDB) {

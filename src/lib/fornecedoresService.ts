@@ -160,7 +160,7 @@ export async function fetchFornecedoresDB(filters?: {
     const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error || !data) {
-      return loadLocalFornecedores(filters);
+      return [];
     }
 
     let list = (data || []) as unknown as FornecedorDB[];
@@ -181,8 +181,9 @@ export async function fetchFornecedoresDB(filters?: {
     }
 
     return list;
-  } catch {
-    return loadLocalFornecedores(filters);
+  } catch (err) {
+    console.error("fetchFornecedoresDB error:", err);
+    return [];
   }
 }
 
@@ -347,60 +348,19 @@ function loadLocalFornecedores(filters?: { status?: string; uf?: string }): Forn
 }
 
 function getDefaultInitialFornecedores(): FornecedorDB[] {
-  return [
-    {
-      id: "f1",
-      cnpj: "12.345.678/0001-99",
-      razao_social: "Favela Artes Gráfica e Editora LTDA",
-      nome_fantasia: "Favela Artes Gráfica",
-      endereco: "Rua Carvalho de Souza, 120",
-      cidade: "Rio de Janeiro",
-      uf: "RJ",
-      cep: "21350-180",
-      email: "contato@favelaartes.com.br",
-      telefone: "(21) 98877-1122",
-      responsavel: "Roberto Mello",
-      cnae: "18.13-0-01 - Impressão gráfica",
-      atividades_texto: "Impressão gráfica de banners, panfletos, cartazes e certificados para eventos comunitários.",
-      categorias: ["Impressão Gráfica & Comunicação Visual"],
-      status: "aprovado",
-      texto_nota_fiscal: "Prestação de serviços gráficos de confecção de banners e certificados para oficinas da CUFA.",
-      codigo_tributacao: "17.06 - Serviços de artes gráficas",
-      observacao_gestor: "Fornecedor credenciado com excelente histórico e preços comunitários.",
-      created_at: "2026-08-10",
-    },
-    {
-      id: "f2",
-      cnpj: "98.765.432/0001-11",
-      razao_social: "Alimentação & Marmitas Penha ME",
-      nome_fantasia: "Marmitas Penha",
-      endereco: "Rua Montevideu, 450",
-      cidade: "Rio de Janeiro",
-      uf: "RJ",
-      cep: "21020-030",
-      email: "vendas@marmitaspenha.com.br",
-      telefone: "(21) 97123-4455",
-      responsavel: "Dona Maria da Penha",
-      cnae: "56.20-1-01 - Fornecimento de alimentos preparados para empresas",
-      atividades_texto: "Fornecimento de refeições e lanches nutritivos para os alunos e monitores dos projetos esportivos.",
-      categorias: ["Alimentação & Catering"],
-      status: "pendente",
-      created_at: "2026-08-17",
-    },
-  ];
+  return [];
 }
 
 function saveLocalFornecedor(f: FornecedorDB, propostas: any[]) {
   try {
     const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : getDefaultInitialFornecedores();
+    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
     const id = `f-${Date.now()}`;
     const entry = { ...f, id, created_at: new Date().toISOString().slice(0, 10) };
     list.unshift(entry);
     localStorage.setItem("cufa_fornecedores_list", JSON.stringify(list));
 
     if (propostas && propostas.length > 0) {
-      const storedP = localStorage.getItem(`cufa_fornecedor_propostas_${id}`);
       localStorage.setItem(`cufa_fornecedor_propostas_${id}`, JSON.stringify(propostas));
     }
   } catch {}
@@ -409,7 +369,7 @@ function saveLocalFornecedor(f: FornecedorDB, propostas: any[]) {
 function updateLocalFornecedorStatus(id: string, updatePayload: any) {
   try {
     const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : getDefaultInitialFornecedores();
+    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
     const idx = list.findIndex((f) => f.id === id);
     if (idx !== -1 && list[idx]) {
       list[idx] = { ...list[idx], ...updatePayload };
@@ -423,17 +383,7 @@ function loadLocalPropostas(fornecedorId: string): FornecedorPropostaDB[] {
     const stored = localStorage.getItem(`cufa_fornecedor_propostas_${fornecedorId}`);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return [
-    {
-      id: `prop-${fornecedorId}`,
-      fornecedor_id: fornecedorId,
-      titulo: "Fornecimento Mensal de Material",
-      descricao: "Proposta de fornecimento com desconto de 15% para projetos sociais CUFA.",
-      valor: 4500.0,
-      prazo: "10 dias",
-      created_at: "2026-08-15",
-    },
-  ];
+  return [];
 }
 
 function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
@@ -441,14 +391,5 @@ function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
     const stored = localStorage.getItem(`cufa_fornecedor_documentos_${fornecedorId}`);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return [
-    {
-      id: `doc-${fornecedorId}-1`,
-      fornecedor_id: fornecedorId,
-      tipo: "Cartão CNPJ",
-      nome: "cartao_cnpj_oficial.pdf",
-      url: "#",
-      created_at: "2026-08-15",
-    },
-  ];
+  return [];
 }

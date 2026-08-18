@@ -105,10 +105,9 @@ function CentroCustoPage() {
     if (filtroSetor !== "todos" && c.setor !== filtroSetor) return false;
     return true;
   });
-
   const totalOrcado = centrosFiltrados.reduce((acc, c) => acc + Number(c.orcamento_mensal || 0), 0);
-  const totalRealizadoEstimado = Math.round(totalOrcado * 0.76);
-  const consumoPercGeral = totalOrcado > 0 ? Math.round((totalRealizadoEstimado / totalOrcado) * 100) : 0;
+  const totalRealizado = centrosFiltrados.reduce((acc, c) => acc + Number((c as any).realizado || 0), 0);
+  const consumoPercGeral = totalOrcado > 0 ? Math.round((totalRealizado / totalOrcado) * 100) : 0;
 
   // Chart data
   const dataPie = centrosFiltrados.map((c) => ({
@@ -149,7 +148,7 @@ function CentroCustoPage() {
 
           <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
             <dt className="text-xs font-bold text-muted-foreground uppercase">Executado Realizado</dt>
-            <dd className="text-2xl font-black text-emerald-600 tabular-nums">{brl(totalRealizadoEstimado)}</dd>
+            <dd className="text-2xl font-black text-emerald-600 tabular-nums">{brl(totalRealizado)}</dd>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
@@ -168,12 +167,12 @@ function CentroCustoPage() {
           <div className="rounded-2xl border border-border bg-card p-5 shadow-xs lg:col-span-1 flex flex-col justify-between">
             <div>
               <h3 className="text-base font-extrabold text-foreground mb-1">Distribuição Orçamentária</h3>
-              <p className="text-xs text-muted-foreground font-medium mb-4">Proporção por centro de custo</p>
-              
-              <div className="mb-4">
-                <Label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Filtrar Setor</Label>
+              <p className="text-xs text-muted-foreground font-medium mb-3">Proporção por centro de custo</p>
+
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase text-muted-foreground">Filtrar Setor</Label>
                 <select
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs font-bold"
                   value={filtroSetor}
                   onChange={(e) => setFiltroSetor(e.target.value)}
                 >
@@ -187,17 +186,21 @@ function CentroCustoPage() {
               </div>
             </div>
 
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={dataPie} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
-                    {dataPie.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: any) => brl(Number(v))} contentStyle={{ backgroundColor: "#0f172a", borderRadius: "12px", border: "none", color: "#fff" }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="h-48 w-full flex items-center justify-center">
+              {dataPie.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={dataPie} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
+                      {dataPie.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: any) => brl(Number(v))} contentStyle={{ backgroundColor: "#0f172a", borderRadius: "12px", border: "none", color: "#fff" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-xs font-semibold text-muted-foreground">Nenhum centro de custo cadastrado.</p>
+              )}
             </div>
           </div>
 

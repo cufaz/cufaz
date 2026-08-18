@@ -84,52 +84,11 @@ function loadLocalCentrosCusto(): CentroCustoDB[] {
     const stored = localStorage.getItem("cufa_centros_custo");
     if (stored) return JSON.parse(stored);
   } catch {}
-  return getDefaultInitialCentrosCusto();
+  return [];
 }
 
 function getDefaultInitialCentrosCusto(): CentroCustoDB[] {
-  return [
-    {
-      id: "cc-101",
-      codigo: "CC-101",
-      nome: "Esporte & Inclusão",
-      setor: "Projetos Esportivos",
-      responsavel: "Carlos Mello",
-      descricao: "Gestão das turmas de Jiu Jitsu, Basquete de Rua, Karatê e Futsal nos polos.",
-      orcamento_mensal: 45000.0,
-      ativo: true,
-    },
-    {
-      id: "cc-102",
-      codigo: "CC-102",
-      nome: "Cultura & Arte Periférica",
-      setor: "Oficinas Culturais",
-      responsavel: "Ana Paula Silva",
-      descricao: "Capoeira, Corte e Costura, Dança e eventos culturais comunitários.",
-      orcamento_mensal: 25000.0,
-      ativo: true,
-    },
-    {
-      id: "cc-103",
-      codigo: "CC-103",
-      nome: "Educação & Cidadania",
-      setor: "Capacitação & Idiomas",
-      responsavel: "Mariana Souza",
-      descricao: "Aulas de Inglês, reforço escolar, laboratório e inclusão digital.",
-      orcamento_mensal: 20000.0,
-      ativo: true,
-    },
-    {
-      id: "cc-104",
-      codigo: "CC-104",
-      nome: "Administrativo & Operações",
-      setor: "Gestão Central",
-      responsavel: "Santana Silva",
-      descricao: "Manutenção de polos, logística, infraestrutura, insumos e custos fixos.",
-      orcamento_mensal: 35000.0,
-      ativo: true,
-    },
-  ];
+  return [];
 }
 
 function saveLocalCentroCusto(payload: any, id?: string) {
