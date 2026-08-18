@@ -52,3 +52,12 @@ Limpar cache não resolve; o que resolve é ler e gravar no banco.
 
 Ao aprovar, eu devolvo no chat o prompt técnico completo (schema SQL, arquivos a
 alterar, contratos das server functions e critérios de aceite) com base neste plano.
+
+## Antes de tudo: erros de build pendentes
+
+O projeto está com erros de TypeScript que impedem a publicação e precisam ser
+corrigidos como primeiro passo da implementação:
+
+- `src/components/admin/GestorShell.tsx` (296-297): `navAfter` não tem a propriedade `exact`.
+- `src/routes/_authenticated/gestor/financeiro.tsx`: `poloId` opcional, acessos
+  `row['id']`, `.catch` em query do Supabase e tipagem incompleta da lista de polos.
