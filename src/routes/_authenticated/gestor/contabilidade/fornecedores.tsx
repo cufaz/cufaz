@@ -428,17 +428,45 @@ function FornecedoresGestorPage() {
 
           {inspecionandoFornecedor && (
             <div className="space-y-6 text-xs py-2">
-              <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-2">
+              <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
                 <h4 className="text-sm font-bold text-foreground">{inspecionandoFornecedor.razao_social}</h4>
                 <div className="grid grid-cols-2 gap-2 text-muted-foreground font-medium">
                   <p><strong className="text-foreground">CNPJ:</strong> {inspecionandoFornecedor.cnpj}</p>
                   <p><strong className="text-foreground">Fantasia:</strong> {inspecionandoFornecedor.nome_fantasia || "—"}</p>
+                  <p><strong className="text-foreground">Data de Abertura:</strong> {inspecionandoFornecedor.data_abertura || "—"}</p>
+                  <p><strong className="text-foreground">Porte:</strong> {inspecionandoFornecedor.porte || "—"}</p>
+                  <p><strong className="text-foreground">Situação Cadastral:</strong> <span className="font-bold text-emerald-600">{inspecionandoFornecedor.situacao_cadastral || "ATIVA"}</span></p>
+                  <p><strong className="text-foreground">Natureza Jurídica:</strong> {inspecionandoFornecedor.natureza_juridica || "—"}</p>
                   <p><strong className="text-foreground">Endereço:</strong> {inspecionandoFornecedor.endereco}</p>
                   <p><strong className="text-foreground">Cidade/UF:</strong> {inspecionandoFornecedor.cidade} / {inspecionandoFornecedor.uf}</p>
                   <p><strong className="text-foreground">Email:</strong> {inspecionandoFornecedor.email}</p>
                   <p><strong className="text-foreground">Telefone:</strong> {inspecionandoFornecedor.telefone}</p>
                   <p><strong className="text-foreground">Responsável:</strong> {inspecionandoFornecedor.responsavel}</p>
-                  <p><strong className="text-foreground">CNAE:</strong> {inspecionandoFornecedor.cnae || "—"}</p>
+                </div>
+
+                <div className="pt-2 border-t border-border/60 space-y-2">
+                  <div>
+                    <strong className="text-foreground block mb-1">CNAE Principal:</strong>
+                    <Badge variant="outline" className="font-bold text-xs bg-primary/10 text-primary border-primary/20">
+                      {inspecionandoFornecedor.cnae || inspecionandoFornecedor.cnae_principal_codigo || "—"}
+                    </Badge>
+                  </div>
+
+                  {inspecionandoFornecedor.cnae_secundarios && inspecionandoFornecedor.cnae_secundarios.length > 0 && (
+                    <div>
+                      <strong className="text-foreground block mb-1">Atividades Econômicas Secundárias (CNAEs Secundários):</strong>
+                      <div className="space-y-1.5 pt-0.5">
+                        {inspecionandoFornecedor.cnae_secundarios.map((sec, idx) => (
+                          <div key={idx} className="flex items-start gap-2 bg-card p-2 rounded-lg border border-border text-xs">
+                            <Badge variant="secondary" className="font-bold text-[10px] shrink-0">
+                              {sec.codigo}
+                            </Badge>
+                            <span className="text-muted-foreground font-medium">{sec.descricao}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

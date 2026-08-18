@@ -36,20 +36,42 @@ interface PropostaFormItem {
   prazo: string;
 }
 
+interface CnaeFormItem {
+  id: string;
+  codigo: string;
+  descricao: string;
+}
+
 function FornecedorCadastroPage() {
   const [parsingOcr, setParsingOcr] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [concluido, setConcluido] = useState(false);
 
-  // Form Fields
+  // Form Fields - Dados Oficiais RFB
   const [cnpj, setCnpj] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
   const [nomeFantasia, setNomeFantasia] = useState("");
+  const [dataAbertura, setDataAbertura] = useState("15/03/2018");
+  const [porte, setPorte] = useState("ME");
+  const [situacaoCadastral, setSituacaoCadastral] = useState("ATIVA");
+  const [naturezaJuridica, setNaturezaJuridica] = useState("206-2 - Sociedade Empresária Limitada");
+
+  // CNAE Principal (Código + Descrição)
+  const [cnaePrincipalCodigo, setCnaePrincipalCodigo] = useState("47.89-0-99");
+  const [cnaePrincipalDescricao, setCnaePrincipalDescricao] = useState("Comércio varejista de outros produtos não especificados anteriormente");
+  const [cnae, setCnae] = useState("47.89-0-99 - Comércio varejista de outros produtos");
+
+  // CNAEs Secundários (Lista dinâmica com código + descrição)
+  const [cnaeSecundarios, setCnaeSecundarios] = useState<CnaeFormItem[]>([
+    { id: "s1", codigo: "56.20-1-01", descricao: "Fornecimento de alimentos preparados para empresas" },
+    { id: "s2", codigo: "73.19-0-02", descricao: "Promotores de vendas" },
+    { id: "s3", codigo: "82.30-0-01", descricao: "Serviços de organização de feiras, congressos e festas" },
+  ]);
+
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("Rio de Janeiro");
   const [uf, setUf] = useState("RJ");
   const [cep, setCep] = useState("");
-  const [cnae, setCnae] = useState("");
 
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -84,17 +106,45 @@ function FornecedorCadastroPage() {
       setCnpj(result.cnpj);
       setRazaoSocial(result.razao_social);
       setNomeFantasia(result.nome_fantasia);
+      setDataAbertura(result.data_abertura);
+      setPorte(result.porte);
+      setNaturezaJuridica(result.natureza_juridica);
+      setSituacaoCadastral(result.situacao_cadastral);
+      setCnaePrincipalCodigo(result.cnae_principal_codigo);
+      setCnaePrincipalDescricao(result.cnae_principal_descricao);
+      setCnae(result.cnae);
+
+      if (result.cnae_secundarios && result.cnae_secundarios.length > 0) {
+        setCnaeSecundarios(
+          result.cnae_secundarios.map((item, idx) => ({
+            id: `sec-${idx}-${Date.now()}`,
+            codigo: item.codigo,
+            descricao: item.descricao,
+          }))
+        );
+      }
+
       setEndereco(result.endereco);
       setCidade(result.cidade);
       setUf(result.uf);
       setCep(result.cep);
-      setCnae(result.cnae);
-      toast.success("Dados do Cartão CNPJ extraídos com sucesso! Você pode editá-los se necessário.");
+      toast.success("Cartão CNPJ analisado com sucesso! CNAE principal e atividades secundárias importadas.");
     } catch {
       toast.error("Erro na leitura automática. Preencha os campos manualmente.");
     } finally {
       setParsingOcr(false);
     }
+  }
+
+  function addCnaeSecundarioRow() {
+    setCnaeSecundarios((prev) => [
+      ...prev,
+      { id: String(Date.now()), codigo: "", descricao: "" },
+    ]);
+  }
+
+  function removeCnaeSecundarioRow(id: string) {
+    setCnaeSecundarios((prev) => prev.filter((item) => item.id !== id));
   }
 
   function addPropostaRow() {
@@ -117,16 +167,26 @@ function FornecedorCadastroPage() {
 
     setSubmitting(true);
     try {
+      const fullCnaePrincipal = `${cnaePrincipalCodigo} - ${cnaePrincipalDescricao}`;
       await createFornecedorPublicDB(
         {
           cnpj,
           razao_social: razaoSocial,
           nome_fantasia: nomeFantasia,
+          data_abertura: dataAbertura,
+          porte,
+          natureza_juridica: naturezaJuridica,
+          situacao_cadastral: situacaoCadastral,
+          cnae_principal_codigo: cnaePrincipalCodigo,
+          cnae_principal_descricao: cnaePrincipalDescricao,
+          cnae: fullCnaePrincipal,
+          cnae_secundarios: cnaeSecundarios
+            .filter((s) => s.codigo.trim() || s.descricao.trim())
+            .map((s) => ({ codigo: s.codigo, descricao: s.descricao })),
           endereco,
           cidade,
           uf,
           cep,
-          cnae,
           email,
           telefone,
           responsavel,
@@ -264,12 +324,18 @@ function FornecedorCadastroPage() {
           </div>
 
           {/* Dados Gerais da Empresa */}
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-xs space-y-4">
-            <h2 className="text-base font-extrabold text-foreground flex items-center gap-2 border-b border-border pb-3">
-              <Building className="size-5 text-primary" /> Dados Oficiais da Empresa
-            </h2>
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-xs space-y-6">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h2 className="text-base font-extrabold text-foreground flex items-center gap-2">
+                <Building className="size-5 text-primary" /> Dados Oficiais da Empresa (Receita Federal)
+              </h2>
+              <span className="text-xs font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                Extração RFB / Cartão CNPJ
+              </span>
+            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Identificação Básica */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-foreground">CNPJ *</Label>
                 <Input
@@ -282,19 +348,21 @@ function FornecedorCadastroPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="sm:col-span-2 space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-foreground">Razão Social *</Label>
                 <Input
                   required
                   type="text"
                   value={razaoSocial}
                   onChange={(e) => setRazaoSocial(e.target.value)}
-                  placeholder="Nome empresarial oficial"
+                  placeholder="Nome empresarial oficial na Receita Federal"
                   className="h-10 font-medium"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="sm:col-span-2 space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Nome Fantasia</Label>
                 <Input
                   type="text"
@@ -306,18 +374,170 @@ function FornecedorCadastroPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">CNAE Principal</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Data de Abertura</Label>
                 <Input
                   type="text"
-                  value={cnae}
-                  onChange={(e) => setCnae(e.target.value)}
-                  placeholder="Código e atividade econômica"
+                  value={dataAbertura}
+                  onChange={(e) => setDataAbertura(e.target.value)}
+                  placeholder="DD/MM/AAAA"
+                  className="h-10 font-medium text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Porte</Label>
+                <Input
+                  type="text"
+                  value={porte}
+                  onChange={(e) => setPorte(e.target.value)}
+                  placeholder="ME / EPP / DEMAIS"
+                  className="h-10 font-bold text-xs uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Situação Cadastral</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={situacaoCadastral}
+                    onChange={(e) => setSituacaoCadastral(e.target.value)}
+                    placeholder="ATIVA / INAPTA / SUSPENSA"
+                    className="h-10 font-bold text-emerald-600 bg-emerald-500/10 border-emerald-500/30 uppercase text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Natureza Jurídica</Label>
+                <Input
+                  type="text"
+                  value={naturezaJuridica}
+                  onChange={(e) => setNaturezaJuridica(e.target.value)}
+                  placeholder="Código e Descrição da Natureza Jurídica"
                   className="h-10 font-medium text-xs"
                 />
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3 pt-2">
+            {/* Atividade Econômica Principal (CNAE Principal) */}
+            <div className="rounded-2xl border border-border/80 bg-muted/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-extrabold uppercase tracking-wide text-foreground flex items-center gap-1.5">
+                  <FileCheck2 className="size-4 text-primary" /> Atividade Econômica Principal (CNAE Principal)
+                </h3>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  Principal
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-bold uppercase text-muted-foreground">Código CNAE</Label>
+                  <Input
+                    type="text"
+                    value={cnaePrincipalCodigo}
+                    onChange={(e) => setCnaePrincipalCodigo(e.target.value)}
+                    placeholder="Ex: 18.13-0-01"
+                    className="h-9 font-bold text-xs"
+                  />
+                </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <Label className="text-[11px] font-bold uppercase text-muted-foreground">Descrição da Atividade Principal</Label>
+                  <Input
+                    type="text"
+                    value={cnaePrincipalDescricao}
+                    onChange={(e) => setCnaePrincipalDescricao(e.target.value)}
+                    placeholder="Descrição oficial da atividade econômica principal"
+                    className="h-9 font-medium text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Atividades Econômicas Secundárias (CNAEs Secundários) */}
+            <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-extrabold uppercase tracking-wide text-foreground flex items-center gap-1.5">
+                    <CreditCard className="size-4 text-amber-500" /> Atividades Econômicas Secundárias (CNAEs Secundários)
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Todas as atividades secundárias constantes no Cartão CNPJ com seus respectivos códigos e descrições.
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                  {cnaeSecundarios.length} Atividades
+                </span>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {cnaeSecundarios.map((item, index) => (
+                  <div key={item.id} className="grid gap-2 sm:grid-cols-12 items-center bg-card p-2.5 rounded-xl border border-border/70 shadow-2xs">
+                    <div className="sm:col-span-4 space-y-1">
+                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Código CNAE Secundário #{index + 1}
+                      </Label>
+                      <Input
+                        type="text"
+                        value={item.codigo}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCnaeSecundarios((prev) =>
+                            prev.map((s) => (s.id === item.id ? { ...s, codigo: val } : s))
+                          );
+                        }}
+                        placeholder="Ex: 56.20-1-01"
+                        className="h-9 font-bold text-xs"
+                      />
+                    </div>
+                    <div className="sm:col-span-7 space-y-1">
+                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Descrição da Atividade Secundária
+                      </Label>
+                      <Input
+                        type="text"
+                        value={item.descricao}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCnaeSecundarios((prev) =>
+                            prev.map((s) => (s.id === item.id ? { ...s, descricao: val } : s))
+                          );
+                        }}
+                        placeholder="Descrição da atividade secundária"
+                        className="h-9 font-medium text-xs"
+                      />
+                    </div>
+                    <div className="sm:col-span-1 flex justify-end pt-3 sm:pt-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCnaeSecundarioRow(item.id)}
+                        className="size-8 text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addCnaeSecundarioRow}
+                className="w-full font-bold text-xs gap-1.5 border-dashed border-primary/40 text-primary hover:bg-primary/10"
+              >
+                <Plus className="size-3.5" /> Adicionar Atividade Secundária
+              </Button>
+            </div>
+
+            {/* Endereço Completo */}
+            <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t border-border/60">
               <div className="sm:col-span-2 space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Endereço Completo</Label>
                 <Input

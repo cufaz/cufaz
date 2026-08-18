@@ -1,10 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface CnaeItem {
+  codigo: string;
+  descricao: string;
+}
+
 export interface FornecedorDB {
   id?: string;
   cnpj: string;
   razao_social: string;
   nome_fantasia?: string | null;
+  data_abertura?: string | null;
+  porte?: string | null;
+  natureza_juridica?: string | null;
+  situacao_cadastral?: string | null;
   endereco?: string | null;
   cidade?: string | null;
   uf?: string | null;
@@ -13,6 +22,9 @@ export interface FornecedorDB {
   telefone?: string | null;
   responsavel?: string | null;
   cnae?: string | null;
+  cnae_principal_codigo?: string | null;
+  cnae_principal_descricao?: string | null;
+  cnae_secundarios?: CnaeItem[] | null;
   atividades_texto?: string | null;
   categorias?: string[];
   cartao_cnpj_url?: string | null;
@@ -95,50 +107,82 @@ export function categorizeAtuacaoText(text: string): string[] {
   return Array.from(matched);
 }
 
-// Simulated OCR / AI Extractor for Cartão CNPJ PDF/Image Upload
-export async function parseCnpjCardOcr(file: File): Promise<{
+export interface OcrCartaoCnpjResult {
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
+  data_abertura: string;
+  porte: string;
+  natureza_juridica: string;
+  situacao_cadastral: string;
+  cnae_principal_codigo: string;
+  cnae_principal_descricao: string;
+  cnae_secundarios: CnaeItem[];
   endereco: string;
   cidade: string;
   uf: string;
   cep: string;
   cnae: string;
-}> {
-  // Simulate AI parsing delay
+}
+
+// Simulated / AI Extractor for Cartão CNPJ PDF/Image Upload
+export async function parseCnpjCardOcr(file: File): Promise<OcrCartaoCnpjResult> {
   await new Promise((r) => setTimeout(r, 1200));
 
   const fileName = file.name.toLowerCase();
-  let cnpj = "12.345.678/0001-99";
-  let razao = "FORNECEDOR DE TESTE LTDA";
-  let fantasia = "SERVIÇOS PERIFÉRICOS CUFA";
-  let end = "Avenida Brasil, nº 5000";
-  let cid = "Rio de Janeiro";
-  let ufStr = "RJ";
-  let cepStr = "21040-361";
-  let cnaeStr = "47.89-0-99 - Comércio varejista de outros produtos";
+
+  let result: OcrCartaoCnpjResult = {
+    cnpj: "12.345.678/0001-99",
+    razao_social: "FORNECEDOR DE TESTE LTDA",
+    nome_fantasia: "SERVIÇOS PERIFÉRICOS CUFA",
+    data_abertura: "15/03/2018",
+    porte: "ME",
+    natureza_juridica: "206-2 - Sociedade Empresária Limitada",
+    situacao_cadastral: "ATIVA",
+    cnae_principal_codigo: "47.89-0-99",
+    cnae_principal_descricao: "Comércio varejista de outros produtos não especificados anteriormente",
+    cnae_secundarios: [
+      { codigo: "56.20-1-01", descricao: "Fornecimento de alimentos preparados para empresas" },
+      { codigo: "73.19-0-02", descricao: "Promotores de vendas" },
+      { codigo: "82.30-0-01", descricao: "Serviços de organização de feiras, congressos e festas" },
+    ],
+    endereco: "Avenida Brasil, nº 5000",
+    cidade: "Rio de Janeiro",
+    uf: "RJ",
+    cep: "21040-361",
+    cnae: "47.89-0-99 - Comércio varejista de outros produtos não especificados anteriormente",
+  };
 
   if (fileName.includes("grafica") || fileName.includes("impressa")) {
-    razao = "GRÁFICA E EDITORA FAVELA ARTES ME";
-    fantasia = "FAVELA ARTES GRÁFICA";
-    cnaeStr = "18.13-0-01 - Impressão de material para uso publicitário";
+    result = {
+      ...result,
+      razao_social: "GRÁFICA E EDITORA FAVELA ARTES ME",
+      nome_fantasia: "FAVELA ARTES GRÁFICA",
+      cnae_principal_codigo: "18.13-0-01",
+      cnae_principal_descricao: "Impressão de material para uso publicitário",
+      cnae: "18.13-0-01 - Impressão de material para uso publicitário",
+      cnae_secundarios: [
+        { codigo: "18.13-0-99", descricao: "Impressão de material para outros usos" },
+        { codigo: "18.21-1-00", descricao: "Serviços de pré-impressão" },
+        { codigo: "58.11-6-00", descricao: "Edição de livros" },
+      ],
+    };
   } else if (fileName.includes("costura") || fileName.includes("textil")) {
-    razao = "TEXTIL E CONFECÇÕES MADUREIRA LTDA";
-    fantasia = "MADUREIRA TECIDOS";
-    cnaeStr = "14.12-6-01 - Confecção de peças do vestuário";
+    result = {
+      ...result,
+      razao_social: "TEXTIL E CONFECÇÕES MADUREIRA LTDA",
+      nome_fantasia: "MADUREIRA TECIDOS",
+      cnae_principal_codigo: "14.12-6-01",
+      cnae_principal_descricao: "Confecção de peças do vestuário, exceto roupas intimas",
+      cnae: "14.12-6-01 - Confecção de peças do vestuário",
+      cnae_secundarios: [
+        { codigo: "14.13-4-01", descricao: "Confecção de roupas profissionais" },
+        { codigo: "47.55-5-01", descricao: "Comércio varejista de tecidos" },
+      ],
+    };
   }
 
-  return {
-    cnpj,
-    razao_social: razao,
-    nome_fantasia: fantasia,
-    endereco: end,
-    cidade: cid,
-    uf: ufStr,
-    cep: cepStr,
-    cnae: cnaeStr,
-  };
+  return result;
 }
 
 export async function fetchFornecedoresDB(filters?: {
