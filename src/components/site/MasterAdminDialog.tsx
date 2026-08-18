@@ -24,30 +24,13 @@ export function MasterAdminDialog({
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [authenticated, setAuthenticated] = useState(() => {
-    return localStorage.getItem("cufa_master_authenticated") === "true";
-  });
+  const [authenticated, setAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<"gestores" | "alunos" | "professores">("gestores");
 
-  const [gestoresData, setGestoresData] = useState(() => {
-    try {
-      const stored = localStorage.getItem("cufa_gestores_lista");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.map((g: any) => ({
-          id: g.id,
-          nome: g.nome,
-          email: g.email,
-          senha: g.senha,
-          polo: g.poloNome,
-          status: g.ativo ? "Ativo" : "Inativo",
-        }));
-      }
-    } catch {}
-    return [
-      { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
-    ];
-  });
+  const [gestoresData, setGestoresData] = useState<any[]>(() => [
+    { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
+  ]);
+
 
   useEffect(() => {
     function syncMasterGestores() {
@@ -77,11 +60,18 @@ export function MasterAdminDialog({
       setAlunosData(loadMasterAlunos());
     }
 
+    // Hidratação inicial no cliente (evita ler localStorage durante o SSR)
+    setAuthenticated(localStorage.getItem("cufa_master_authenticated") === "true");
+    syncMasterGestores();
+    syncMasterProfessores();
+    syncMasterAlunos();
+
     window.addEventListener("cufa_gestores_updated", syncMasterGestores);
     window.addEventListener("cufa_professores_updated", syncMasterProfessores);
     window.addEventListener("cufa_alunos_updated", syncMasterAlunos);
     window.addEventListener("storage", syncMasterProfessores);
     window.addEventListener("storage", syncMasterAlunos);
+
     return () => {
       window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
       window.removeEventListener("cufa_professores_updated", syncMasterProfessores);
@@ -279,8 +269,9 @@ export function MasterAdminDialog({
     return Array.from(listMap.values());
   }
 
-  const [alunosData, setAlunosData] = useState<any[]>(() => loadMasterAlunos());
-  const [professoresData, setProfessoresData] = useState<any[]>(() => loadMasterProfessores());
+  const [alunosData, setAlunosData] = useState<any[]>([]);
+  const [professoresData, setProfessoresData] = useState<any[]>([]);
+
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
