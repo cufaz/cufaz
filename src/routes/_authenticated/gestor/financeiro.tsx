@@ -95,8 +95,7 @@ function FinanceiroPage() {
     queryFn: () =>
       getFinFn({
         data: {
-          dataInicio: dataInicio || undefined,
-          dataFim: dataFim || undefined,
+          competencia: dataInicio.slice(0, 7),
           poloId: selectedPoloIds.length === 1 ? selectedPoloIds[0] : undefined,
         },
       }),
@@ -379,20 +378,22 @@ function FinanceiroPage() {
             size="sm"
             className="border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold"
             onClick={() =>
-              exportProfessionalExcel(
-                {
-                  totalReceitas,
-                  totalDespesas,
-                  previstoTotal,
-                  saldoRealizado: totalReceitas - totalDespesas,
-                  variacao: previstoTotal - totalDespesas,
-                  dataInicio,
-                  dataFim,
-                },
-                receitas,
-                despesas,
-                poloItensPrevisto
-              )
+              exportProfessionalExcel({
+                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })),
+                lancamentos: lancamentosFiltrados.map((l) => ({
+                  id: String(l['id']),
+                  tipo: l['tipo'],
+                  valor: Number(l['valor']),
+                  descricao: String(l['descricao']),
+                  categoria: String(l['categoria_nome'] || "Geral"),
+                  poloId: String(l['polo_id']),
+                  data: String(l['competencia'] || "2026-08"),
+                })),
+                categoriasDespesas: [],
+                selectedPoloId: selectedPoloIds[0] || "todos",
+                dataInicio,
+                dataFim,
+              })
             }
             title="Baixar Relatório Excel"
           >
@@ -403,20 +404,22 @@ function FinanceiroPage() {
             size="sm"
             className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 font-bold"
             onClick={() =>
-              generateProfessionalPdf(
-                {
-                  totalReceitas,
-                  totalDespesas,
-                  previstoTotal,
-                  saldoRealizado: totalReceitas - totalDespesas,
-                  variacao: previstoTotal - totalDespesas,
-                  dataInicio,
-                  dataFim,
-                },
-                receitas,
-                despesas,
-                poloItensPrevisto
-              )
+              generateProfessionalPdf({
+                polos: polosList.map((p) => ({ id: String(p['id']), nome: String(p['nome']) })),
+                lancamentos: lancamentosFiltrados.map((l) => ({
+                  id: String(l['id']),
+                  tipo: l['tipo'],
+                  valor: Number(l['valor']),
+                  descricao: String(l['descricao']),
+                  categoria: String(l['categoria_nome'] || "Geral"),
+                  poloId: String(l['polo_id']),
+                  data: String(l['competencia'] || "2026-08"),
+                })),
+                categoriasDespesas: [],
+                selectedPoloId: selectedPoloIds[0] || "todos",
+                dataInicio,
+                dataFim,
+              })
             }
             title="Baixar Relatório PDF"
           >
