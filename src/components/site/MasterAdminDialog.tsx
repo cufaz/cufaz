@@ -60,11 +60,18 @@ export function MasterAdminDialog({
       setAlunosData(loadMasterAlunos());
     }
 
+    // Hidratação inicial no cliente (evita ler localStorage durante o SSR)
+    setAuthenticated(localStorage.getItem("cufa_master_authenticated") === "true");
+    syncMasterGestores();
+    syncMasterProfessores();
+    syncMasterAlunos();
+
     window.addEventListener("cufa_gestores_updated", syncMasterGestores);
     window.addEventListener("cufa_professores_updated", syncMasterProfessores);
     window.addEventListener("cufa_alunos_updated", syncMasterAlunos);
     window.addEventListener("storage", syncMasterProfessores);
     window.addEventListener("storage", syncMasterAlunos);
+
     return () => {
       window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
       window.removeEventListener("cufa_professores_updated", syncMasterProfessores);
