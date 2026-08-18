@@ -292,7 +292,7 @@ export async function registrarChamadaServer(payload: {
       return false;
     }
 
-    const chamadaId = chamada.id;
+    const chamadaId = (chamada as any).id;
 
     // 2. Delete existing items for this chamada and insert fresh
     await supabase.from("chamada_itens" as any).delete().eq("chamada_id", chamadaId);
