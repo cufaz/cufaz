@@ -66,8 +66,7 @@ function cleanStr(str: string | null | undefined = "") {
 }
 
 function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao[] {
-  const seen = new Set<string>();
-  const cleanList: ProfessorSolicitacao[] = [];
+  const byKey = new Map<string, ProfessorSolicitacao>();
 
   for (const item of list) {
     if (!item) continue;
@@ -75,13 +74,15 @@ function deduplicateRequests(list: ProfessorSolicitacao[]): ProfessorSolicitacao
     const aName = item.atividadeNome || "ativ";
     const tName = item.turmaNome || "";
     const key = `${cleanStr(pName)}-${cleanStr(aName)}-${cleanStr(tName)}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      cleanList.push(item);
+    const existing = byKey.get(key);
+    // Decisões (aprovado/recusado) sempre prevalecem sobre um registro pendente duplicado
+    if (!existing || (existing.status === "pendente" && item.status !== "pendente")) {
+      byKey.set(key, item);
     }
   }
-  return cleanList;
+  return Array.from(byKey.values());
 }
+
 
 export function PoloAtividadesPage() {
   const [poloNome] = useState(() => localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha");
@@ -162,7 +163,10 @@ export function PoloAtividadesPage() {
   }
 
   function handleRecusarProfessor(solicId: string, profNome: string) {
-    const updated = solicitacoes.map((s) =>
+    const base = solicitacoes.some((s) => s?.id === solicId)
+      ? solicitacoes
+      : [...solicitacoes, { ...defaultSolicitacao, id: solicId }];
+    const updated = base.map((s) =>
       s.id === solicId ? ({ ...s, status: "recusado" as const }) : s
     );
     setSolicitacoes(updated);
@@ -170,6 +174,7 @@ export function PoloAtividadesPage() {
     window.dispatchEvent(new Event("cufa_professores_updated"));
     toast.info(`Solicitação do professor ${profNome} recusada.`);
   }
+
 
   function handleDownloadZip(solic: ProfessorSolicitacao) {
     setIsDownloadingZip(true);
@@ -417,10 +422,14 @@ export function PoloAtividadesPage() {
                 ? pendingForAtiv[pendingForAtiv.length - 1]
                 : approvedForAtiv;
 
-            // Fallback for Jiu Jitsu Turma 1 if pending request exists in system
-            if (!pMatch && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
+            // Fallback for Jiu Jitsu Turma 1 apenas se a solicitação padrão ainda não foi decidida
+            const defaultJaDecidida = currentList.some(
+              (s) => s && s.id === defaultSolicitacao.id && s.status !== "pendente",
+            );
+            if (!pMatch && !defaultJaDecidida && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
               pMatch = defaultSolicitacao;
             }
+
 
             return (
               <Card key={ativ.id} className="border-border shadow-xs flex flex-col justify-between">
