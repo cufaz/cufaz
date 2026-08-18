@@ -1,52 +1,51 @@
-# Alinhar o sistema aos dados reais (polos, atividades, pedidos, fotos, presença)
+# Ajustes CUFAZ — diário de classe, atividades e alinhamento de polos
 
-## Diagnóstico (verificado no banco e no código)
+## Verificações feitas
 
-- O banco tem **3 polos**: Complexo da Penha, Viaduto de Madureira, Paraisópolis. "Cidade de Deus" e "Polo de Teste" **não existem no banco** — são listas fixas de exemplo dentro do código (`src/lib/gestao.functions.ts`), usadas como "plano B" quando a leitura falha. Por isso as listas suspensas mostram 4 ou 5 polos e a tela de Polos mostra 4.
-- Os números divergentes (vagas/beneficiários "undefined", orçamento R$ 64.800 vs R$ 74.301,77) vêm dessas mesmas listas de exemplo, com nomes de campos diferentes dos do banco.
-- **Pedidos de compra: a tabela do banco está vazia (0 registros).** O pedido pendente que aparecia nunca chegou ao banco — pedidos são gravados só no navegador (`localStorage`). Trocar de navegador, limpar dados ou entrar em outro dispositivo faz o pedido "sumir". Não foi apagado por ninguém.
-- Fotos de perfil também vivem só no navegador. A chave antiga era global (`cufa_perfil_foto`), o que fazia a foto de um usuário aparecer para outro; hoje há chave por e-mail, mas o resto do sistema ainda lê caminhos antigos em vários lugares.
-- A presença no painel do responsável é fixa: o código devolve "100%" se existir qualquer chamada ou aluno, senão "0%" — não é cálculo real.
+- O banco tem exatamente **3 polos**: Complexo da Penha, Paraisópolis, Viaduto de Madureira. **Não existe "Polo de Teste" no banco** — ele é texto fixo (hardcoded) em `professor/oportunidades.tsx`, `aluno/atividades.tsx`, `gestor/professores.tsx`, `gestor/diario-classe.tsx`, `gestor/atividades.tsx`, `gestor/gestores.tsx`, `gestor/financeiro.tsx` e `components/admin/GestorPanel.tsx`. Não há registro para apagar; o que precisa é remover o texto fixo.
+- O diário de classe hoje é salvo em `localStorage` (`cufa_diario_classe`), com **um único registro por aluno** (sem data), lido em `professor/`, `aluno/`, `polo/` e `gestor/diario-classe.tsx`. Por isso o mesmo nível/relato aparece igual em todas as visões e não há histórico diário.
 
-## O que será feito
+## Prompt técnico para o Antigravity
 
-### 1. Polo como fonte única
-- Remover todas as listas fixas de polos/atividades/lançamentos do código. Sem polo inventado em lugar nenhum.
-- Criar um seletor único de polos, alimentado pelo banco, usado em Dashboard, Polos, Atividades, Financeiro, Pedidos, Alunos, Professores, Diário e cadastro público.
-- Corrigir os campos exibidos na tela de Polos (vagas, beneficiários, UF) para os nomes reais do banco — acabam os "undefined".
-- Se a leitura falhar, a tela mostra erro/estado vazio em vez de dados fictícios.
+Copie o bloco abaixo:
 
-### 2. Atividades
-- A tela de Atividades passa a listar **todas** as atividades de todos os polos (7 hoje) direto do banco, com beneficiários e custo/mês reais.
-- Adicionar filtro de lista suspensa por atividade/modalidade, junto dos filtros de polo e período.
+---
 
-### 3. Pedidos de compra passam a ser reais
-- Gravar pedido, aprovação, reprovação e exclusão na tabela do banco (`pedidos_compra`), não no navegador.
-- Migrar automaticamente, na primeira abertura, os pedidos que ainda estiverem salvos no navegador do usuário, para não perder o histórico existente.
-- Pedido aprovado continua virando despesa realizada no financeiro.
+Ajustes no sistema CUFAZ (TanStack Start + Supabase). Regra geral: nenhuma tela pode exibir dado fictício/hardcoded; sem registro, mostrar estado vazio.
 
-### 4. Fotos de perfil (correção definitiva)
-- Criar um bucket de arquivos no backend para avatares; a foto passa a ser gravada no servidor, vinculada ao usuário/cadastro, e lida sempre pelo mesmo identificador.
-- Remover as chaves globais antigas do navegador e o cache compartilhado que causava a troca de fotos entre pessoas.
-- Um único componente de avatar em todo o sistema (gestor, responsável, professor, aluno).
+**1. Diário de Classe do Professor (`src/routes/_authenticated/professor/diario-classe.tsx`)**
+- O campo "Nível / Graduação do Aluno" deixa de ser select fixo: vira texto livre editável pelo professor (ícone de lápis ao lado do valor atual; clicar habilita edição inline). O texto digitado pelo professor é a nomenclatura oficial e deve aparecer igual em TODAS as visões (aluno, responsável de polo, gestor).
+- Trocar o rótulo do card "Relatos & Faixas Registradas" por **"Registros"**.
+- Remover os cards indicadores do topo da tela do **gestor** (`gestor/diario-classe.tsx`).
+- O diário passa a ser **diário**: cada salvamento gera um registro com `data` (nível + relato + professor + oficina). Adicionar filtro de data na tela; o professor escolhe o dia e vê/edita o registro daquele dia. Manter histórico, não sobrescrever.
+- A lista de alunos vira **lista em acordeão (efeito cascata)**: só nome/e-mail visíveis; ao clicar no nome, expande os campos (nível, data, relato, salvar).
+- O filtro "Oficina" deve listar **apenas as atividades aprovadas** do professor (as que aparecem em "Minhas Atividades" com status aprovado), sem duplicar a opção placeholder com o mesmo nome.
 
-### 5. Presença real
-- Calcular a taxa de presença a partir das chamadas registradas: presenças ÷ (presenças + faltas) no período, por oficina e no total do polo. Sem chamada no período, mostrar "—" em vez de 0%/100%.
+**2. Modelo de dados do diário**
+- Substituir o `localStorage` `cufa_diario_classe` por tabela no banco, ex.: `diario_classe (id, aluno_email, aluno_nome, professor_id, professor_nome, atividade_id, polo_nome, nivel text, relato text, data date, created_at)` com GRANTs e RLS: professor insere/edita os próprios registros; aluno lê os próprios; gestor lê tudo.
+- Migrar o conteúdo existente do `localStorage` na primeira abertura, para não perder dados.
 
-### 6. Alunos do polo — coluna Detalhes
-- Nova coluna "Detalhes" com botão **Analisar**, abrindo painel com dados do aluno: contato, responsável legal, escola, oficinas/turmas, matrícula e histórico de presença.
+**3. Visão do aluno**
+- `aluno/diario-classe.tsx`: exibir o histórico por data, com o nível exatamente como o professor escreveu.
+- `aluno/minhas-atividades.tsx`: abaixo de "Matriculado em...", mostrar o **último relato do professor** e o **nível atual** daquela oficina.
+- `aluno/perfil.tsx`: os campos novos criados no cadastro (endereço, telefone do avô/responsável adicional etc.) não estão sendo exibidos/salvos — incluir todos os campos do cadastro no perfil do aluno, carregando de `cadastros_alunos`.
 
-### 7. Galeria de fotos
-- Item continua no menu, marcado como **Em breve**, desabilitado e sem acesso à tela.
+**4. Site institucional / lista de atividades (tela inicial)**
+- Remover as imagens dos cards de atividades: manter apenas título, polo e descrição.
+- A lista deve vir do banco (`atividades`), incluindo toda atividade nova automaticamente, com **paginação de 5 em 5**.
 
-## Detalhes técnicos
+**5. Polos alinhados**
+- O banco tem só 3 polos: Complexo da Penha, Paraisópolis, Viaduto de Madureira. Remover TODAS as ocorrências hardcoded de "Polo de Teste" (e similares) em `professor/oportunidades.tsx`, `aluno/atividades.tsx`, `gestor/professores.tsx`, `gestor/diario-classe.tsx`, `gestor/atividades.tsx`, `gestor/gestores.tsx`, `gestor/financeiro.tsx`, `components/admin/GestorPanel.tsx`.
+- Todo select/lista suspensa de polo deve usar o hook único que lê a tabela `polos` (`usePolosCadastrados` em `src/lib/cadastros.ts`). Se a leitura falhar, mostrar erro/vazio — nunca fallback fictício.
+- Se existir qualquer registro remanescente de "Polo de Teste" no banco, apagar o polo e seus vínculos.
 
-- Excluir `defaultPolos`, `defaultAtividades`, `defaultPolosFinanceiro`, `defaultLancamentos` e afins de `src/lib/gestao.functions.ts`; os handlers passam a propagar erro em vez de devolver mock.
-- Hook único `usePolos()` em `src/lib/cadastros.ts` (TanStack Query, chave `["polos"]`), consumido por `PoloMultiSelect` e por todos os selects.
-- Novas server functions para pedidos (`criarPedido`, `decidirPedido`, `deletePedido`, `listarPedidos`) com `requireSupabaseAuth`; migração pontual do `localStorage` (`cufa_compras_polo`) para o banco.
-- Bucket `avatars` no Storage com políticas por usuário; coluna `avatar_url` já existente em `cadastros_alunos`/`cadastros_professores` passa a guardar a URL pública.
-- Presença calculada sobre os registros de chamada; ausência de dados retorna `null` tratado na UI.
+**6. NF de Serviço (professor)** — manter como está; sem alterações nesta rodada.
 
-## Prompt para o Antigravity
+---
 
-Ao final da implementação eu entrego, na conversa, um prompt em texto único descrevendo esses sete ajustes para você colar no Antigravity.
+## Detalhes técnicos (implementação)
+
+- Nova migração para `diario_classe` + GRANTs + políticas RLS por papel.
+- Server functions com `requireSupabaseAuth` para criar/listar registros do diário.
+- Componente compartilhado de nível/graduação para garantir que professor, aluno, polo e gestor leiam a mesma fonte.
+- Paginação de atividades na home via query paginada (5 por página).
