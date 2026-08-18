@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, ShieldCheck, Download, LogIn } from "lucide-react";
+import { Menu, X, ShieldCheck, Download, LogIn, Truck } from "lucide-react";
 
 import logo from "@/assets/cufa-z-logo.png";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,14 @@ export function SiteHeader() {
             className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
           >
             <ShieldCheck className="size-4" /> Credenciado
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/fornecedor/status" })}
+            className="flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:underline"
+          >
+            <Truck className="size-4" /> Fornecedor
           </button>
         </nav>
 

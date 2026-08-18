@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedGestorRouteRouteImport } from './routes/_authenticated/gestor/route'
 import { Route as AuthenticatedPoloRouteRouteImport } from './routes/_authenticated/polo/route'
+import { Route as FornecedorCadastroRouteImport } from './routes/fornecedor/cadastro'
+import { Route as FornecedorStatusRouteImport } from './routes/fornecedor/status'
 import { Route as AuthenticatedAlunoIndexRouteImport } from './routes/_authenticated/aluno/index'
 import { Route as AuthenticatedAlunoAtividadesRouteImport } from './routes/_authenticated/aluno/atividades'
 import { Route as AuthenticatedAlunoDiarioClasseRouteImport } from './routes/_authenticated/aluno/diario-classe'
@@ -44,6 +46,10 @@ import { Route as AuthenticatedProfessorDiarioClasseRouteImport } from './routes
 import { Route as AuthenticatedProfessorNfServicoRouteImport } from './routes/_authenticated/professor/nf-servico'
 import { Route as AuthenticatedProfessorOportunidadesRouteImport } from './routes/_authenticated/professor/oportunidades'
 import { Route as AuthenticatedProfessorPerfilRouteImport } from './routes/_authenticated/professor/perfil'
+import { Route as AuthenticatedGestorContabilidadeIndexRouteImport } from './routes/_authenticated/gestor/contabilidade/index'
+import { Route as AuthenticatedGestorContabilidadeCentroCustoRouteImport } from './routes/_authenticated/gestor/contabilidade/centro-custo'
+import { Route as AuthenticatedGestorContabilidadeDocumentosRouteImport } from './routes/_authenticated/gestor/contabilidade/documentos'
+import { Route as AuthenticatedGestorContabilidadeFornecedoresRouteImport } from './routes/_authenticated/gestor/contabilidade/fornecedores'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -69,6 +75,16 @@ const AuthenticatedPoloRouteRoute = AuthenticatedPoloRouteRouteImport.update({
   id: '/polo',
   path: '/polo',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const FornecedorCadastroRoute = FornecedorCadastroRouteImport.update({
+  id: '/fornecedor/cadastro',
+  path: '/fornecedor/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FornecedorStatusRoute = FornecedorStatusRouteImport.update({
+  id: '/fornecedor/status',
+  path: '/fornecedor/status',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAlunoIndexRoute = AuthenticatedAlunoIndexRouteImport.update({
   id: '/aluno/',
@@ -246,12 +262,38 @@ const AuthenticatedProfessorPerfilRoute =
     path: '/professor/perfil',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedGestorContabilidadeIndexRoute =
+  AuthenticatedGestorContabilidadeIndexRouteImport.update({
+    id: '/contabilidade/',
+    path: '/contabilidade/',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
+const AuthenticatedGestorContabilidadeCentroCustoRoute =
+  AuthenticatedGestorContabilidadeCentroCustoRouteImport.update({
+    id: '/contabilidade/centro-custo',
+    path: '/contabilidade/centro-custo',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
+const AuthenticatedGestorContabilidadeDocumentosRoute =
+  AuthenticatedGestorContabilidadeDocumentosRouteImport.update({
+    id: '/contabilidade/documentos',
+    path: '/contabilidade/documentos',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
+const AuthenticatedGestorContabilidadeFornecedoresRoute =
+  AuthenticatedGestorContabilidadeFornecedoresRouteImport.update({
+    id: '/contabilidade/fornecedores',
+    path: '/contabilidade/fornecedores',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
   '/polo': typeof AuthenticatedPoloRouteRouteWithChildren
+  '/fornecedor/cadastro': typeof FornecedorCadastroRoute
+  '/fornecedor/status': typeof FornecedorStatusRoute
   '/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
   '/aluno/diario-classe': typeof AuthenticatedAlunoDiarioClasseRoute
   '/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
@@ -282,10 +324,16 @@ export interface FileRoutesByFullPath {
   '/gestor/': typeof AuthenticatedGestorIndexRoute
   '/polo/': typeof AuthenticatedPoloIndexRoute
   '/professor/': typeof AuthenticatedProfessorIndexRoute
+  '/gestor/contabilidade/centro-custo': typeof AuthenticatedGestorContabilidadeCentroCustoRoute
+  '/gestor/contabilidade/documentos': typeof AuthenticatedGestorContabilidadeDocumentosRoute
+  '/gestor/contabilidade/fornecedores': typeof AuthenticatedGestorContabilidadeFornecedoresRoute
+  '/gestor/contabilidade/': typeof AuthenticatedGestorContabilidadeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/fornecedor/cadastro': typeof FornecedorCadastroRoute
+  '/fornecedor/status': typeof FornecedorStatusRoute
   '/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
   '/aluno/diario-classe': typeof AuthenticatedAlunoDiarioClasseRoute
   '/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
@@ -316,6 +364,10 @@ export interface FileRoutesByTo {
   '/gestor': typeof AuthenticatedGestorIndexRoute
   '/polo': typeof AuthenticatedPoloIndexRoute
   '/professor': typeof AuthenticatedProfessorIndexRoute
+  '/gestor/contabilidade/centro-custo': typeof AuthenticatedGestorContabilidadeCentroCustoRoute
+  '/gestor/contabilidade/documentos': typeof AuthenticatedGestorContabilidadeDocumentosRoute
+  '/gestor/contabilidade/fornecedores': typeof AuthenticatedGestorContabilidadeFornecedoresRoute
+  '/gestor/contabilidade': typeof AuthenticatedGestorContabilidadeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -324,6 +376,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/gestor': typeof AuthenticatedGestorRouteRouteWithChildren
   '/_authenticated/polo': typeof AuthenticatedPoloRouteRouteWithChildren
+  '/fornecedor/cadastro': typeof FornecedorCadastroRoute
+  '/fornecedor/status': typeof FornecedorStatusRoute
   '/_authenticated/aluno/atividades': typeof AuthenticatedAlunoAtividadesRoute
   '/_authenticated/aluno/diario-classe': typeof AuthenticatedAlunoDiarioClasseRoute
   '/_authenticated/aluno/frequencia': typeof AuthenticatedAlunoFrequenciaRoute
@@ -354,6 +408,10 @@ export interface FileRoutesById {
   '/_authenticated/gestor/': typeof AuthenticatedGestorIndexRoute
   '/_authenticated/polo/': typeof AuthenticatedPoloIndexRoute
   '/_authenticated/professor/': typeof AuthenticatedProfessorIndexRoute
+  '/_authenticated/gestor/contabilidade/centro-custo': typeof AuthenticatedGestorContabilidadeCentroCustoRoute
+  '/_authenticated/gestor/contabilidade/documentos': typeof AuthenticatedGestorContabilidadeDocumentosRoute
+  '/_authenticated/gestor/contabilidade/fornecedores': typeof AuthenticatedGestorContabilidadeFornecedoresRoute
+  '/_authenticated/gestor/contabilidade/': typeof AuthenticatedGestorContabilidadeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -362,6 +420,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/gestor'
     | '/polo'
+    | '/fornecedor/cadastro'
+    | '/fornecedor/status'
     | '/aluno/atividades'
     | '/aluno/diario-classe'
     | '/aluno/frequencia'
@@ -392,10 +452,16 @@ export interface FileRouteTypes {
     | '/gestor/'
     | '/polo/'
     | '/professor/'
+    | '/gestor/contabilidade/centro-custo'
+    | '/gestor/contabilidade/documentos'
+    | '/gestor/contabilidade/fornecedores'
+    | '/gestor/contabilidade/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/fornecedor/cadastro'
+    | '/fornecedor/status'
     | '/aluno/atividades'
     | '/aluno/diario-classe'
     | '/aluno/frequencia'
@@ -426,6 +492,10 @@ export interface FileRouteTypes {
     | '/gestor'
     | '/polo'
     | '/professor'
+    | '/gestor/contabilidade/centro-custo'
+    | '/gestor/contabilidade/documentos'
+    | '/gestor/contabilidade/fornecedores'
+    | '/gestor/contabilidade'
   id:
     | '__root__'
     | '/'
@@ -433,6 +503,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/gestor'
     | '/_authenticated/polo'
+    | '/fornecedor/cadastro'
+    | '/fornecedor/status'
     | '/_authenticated/aluno/atividades'
     | '/_authenticated/aluno/diario-classe'
     | '/_authenticated/aluno/frequencia'
@@ -463,12 +535,18 @@ export interface FileRouteTypes {
     | '/_authenticated/gestor/'
     | '/_authenticated/polo/'
     | '/_authenticated/professor/'
+    | '/_authenticated/gestor/contabilidade/centro-custo'
+    | '/_authenticated/gestor/contabilidade/documentos'
+    | '/_authenticated/gestor/contabilidade/fornecedores'
+    | '/_authenticated/gestor/contabilidade/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  FornecedorCadastroRoute: typeof FornecedorCadastroRoute
+  FornecedorStatusRoute: typeof FornecedorStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -507,6 +585,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/polo'
       preLoaderRoute: typeof AuthenticatedPoloRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/fornecedor/cadastro': {
+      id: '/fornecedor/cadastro'
+      path: '/fornecedor/cadastro'
+      fullPath: '/fornecedor/cadastro'
+      preLoaderRoute: typeof FornecedorCadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fornecedor/status': {
+      id: '/fornecedor/status'
+      path: '/fornecedor/status'
+      fullPath: '/fornecedor/status'
+      preLoaderRoute: typeof FornecedorStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/aluno/': {
       id: '/_authenticated/aluno/'
@@ -718,6 +810,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfessorPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/gestor/contabilidade/': {
+      id: '/_authenticated/gestor/contabilidade/'
+      path: '/contabilidade'
+      fullPath: '/gestor/contabilidade/'
+      preLoaderRoute: typeof AuthenticatedGestorContabilidadeIndexRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
+    '/_authenticated/gestor/contabilidade/centro-custo': {
+      id: '/_authenticated/gestor/contabilidade/centro-custo'
+      path: '/contabilidade/centro-custo'
+      fullPath: '/gestor/contabilidade/centro-custo'
+      preLoaderRoute: typeof AuthenticatedGestorContabilidadeCentroCustoRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
+    '/_authenticated/gestor/contabilidade/documentos': {
+      id: '/_authenticated/gestor/contabilidade/documentos'
+      path: '/contabilidade/documentos'
+      fullPath: '/gestor/contabilidade/documentos'
+      preLoaderRoute: typeof AuthenticatedGestorContabilidadeDocumentosRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
+    '/_authenticated/gestor/contabilidade/fornecedores': {
+      id: '/_authenticated/gestor/contabilidade/fornecedores'
+      path: '/contabilidade/fornecedores'
+      fullPath: '/gestor/contabilidade/fornecedores'
+      preLoaderRoute: typeof AuthenticatedGestorContabilidadeFornecedoresRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
   }
 }
 
@@ -731,6 +851,10 @@ interface AuthenticatedGestorRouteRouteChildren {
   AuthenticatedGestorPolosRoute: typeof AuthenticatedGestorPolosRoute
   AuthenticatedGestorProfessoresRoute: typeof AuthenticatedGestorProfessoresRoute
   AuthenticatedGestorIndexRoute: typeof AuthenticatedGestorIndexRoute
+  AuthenticatedGestorContabilidadeCentroCustoRoute: typeof AuthenticatedGestorContabilidadeCentroCustoRoute
+  AuthenticatedGestorContabilidadeDocumentosRoute: typeof AuthenticatedGestorContabilidadeDocumentosRoute
+  AuthenticatedGestorContabilidadeFornecedoresRoute: typeof AuthenticatedGestorContabilidadeFornecedoresRoute
+  AuthenticatedGestorContabilidadeIndexRoute: typeof AuthenticatedGestorContabilidadeIndexRoute
 }
 
 const AuthenticatedGestorRouteRouteChildren: AuthenticatedGestorRouteRouteChildren =
@@ -744,6 +868,14 @@ const AuthenticatedGestorRouteRouteChildren: AuthenticatedGestorRouteRouteChildr
     AuthenticatedGestorPolosRoute: AuthenticatedGestorPolosRoute,
     AuthenticatedGestorProfessoresRoute: AuthenticatedGestorProfessoresRoute,
     AuthenticatedGestorIndexRoute: AuthenticatedGestorIndexRoute,
+    AuthenticatedGestorContabilidadeCentroCustoRoute:
+      AuthenticatedGestorContabilidadeCentroCustoRoute,
+    AuthenticatedGestorContabilidadeDocumentosRoute:
+      AuthenticatedGestorContabilidadeDocumentosRoute,
+    AuthenticatedGestorContabilidadeFornecedoresRoute:
+      AuthenticatedGestorContabilidadeFornecedoresRoute,
+    AuthenticatedGestorContabilidadeIndexRoute:
+      AuthenticatedGestorContabilidadeIndexRoute,
   }
 
 const AuthenticatedGestorRouteRouteWithChildren =
@@ -825,6 +957,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  FornecedorCadastroRoute: FornecedorCadastroRoute,
+  FornecedorStatusRoute: FornecedorStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

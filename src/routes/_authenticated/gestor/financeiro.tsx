@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter, Pencil } from "lucide-react";
+import { Loader2, Plus, Trash2, FileSpreadsheet, FileText, Calendar, Filter, Pencil, MoreVertical, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { getFinanceiro, saveLancamento, deleteLancamento } from "@/lib/gestao.functions";
@@ -18,10 +18,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { brl } from "@/lib/format";
 import { exportProfessionalExcel } from "@/components/admin/utils";
 import { generateProfessionalPdf } from "@/components/admin/exportPdf";
 import { itensOrcamentoOFICIAIS } from "@/components/admin/dataDetalhada";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/gestor/financeiro")({
   component: FinanceiroPage,
@@ -44,105 +51,88 @@ function Linha({ label, valor, forte }: { label: string; valor: number; forte?: 
 
 function FinanceiroPage() {
   const qc = useQueryClient();
-  const fetchFinanceiro = useServerFn(getFinanceiro);
+  const getFinFn = useServerFn(getFinanceiro);
   const salvar = useServerFn(saveLancamento);
   const apagar = useServerFn(deleteLancamento);
 
-  const [dataInicio, setDataInicio] = useState<string>("2026-08-01");
-  const [dataFim, setDataFim] = useState<string>("2026-08-31");
+  const [dataInicio, setDataInicio] = useState("2026-08-01");
+  const [dataFim, setDataFim] = useState("2026-08-31");
   const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
-  const [isFilterLoading, setIsFilterLoading] = useState<boolean>(false);
   const [form, setForm] = useState<Row | null>(null);
-
-  // Form BRL currency formatting
   const [valorDisplay, setValorDisplay] = useState("0,00");
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["financeiro", dataInicio, dataFim],
-    queryFn: () => fetchFinanceiro({ data: {} }),
+  // Deleted launches tracked in state & local storage
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("cufa_deleted_lancamentos");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
   });
 
-  function triggerLoading(action: () => void) {
+  const handleDataInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsFilterLoading(true);
-    action();
-    setTimeout(() => {
-      setIsFilterLoading(false);
-    }, 450);
-  }
+    setDataInicio(e.target.value);
+    setTimeout(() => setIsFilterLoading(false), 300);
+  };
 
-  function handlePoloChange(val: string[]) {
-    triggerLoading(() => setSelectedPoloIds(val));
-  }
+  const handleDataFimChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsFilterLoading(true);
+    setDataFim(e.target.value);
+    setTimeout(() => setIsFilterLoading(false), 300);
+  };
 
-  function handleDataInicioChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    triggerLoading(() => setDataInicio(val));
-  }
+  const handlePoloChange = (ids: string[]) => {
+    setIsFilterLoading(true);
+    setSelectedPoloIds(ids);
+    setTimeout(() => setIsFilterLoading(false), 300);
+  };
 
-  function handleDataFimChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    triggerLoading(() => setDataFim(val));
-  }
+  const { data, isLoading } = useQuery({
+    queryKey: ["financeiro", dataInicio, dataFim, selectedPoloIds],
+    queryFn: () =>
+      getFinFn({
+        data: {
+          dataInicio: dataInicio || undefined,
+          dataFim: dataFim || undefined,
+          poloId: selectedPoloIds.length === 1 ? selectedPoloIds[0] : undefined,
+        },
+      }),
+  });
 
   const mSalvar = useMutation({
-    mutationFn: (v: Row) => {
-      const compRaw = String(v['competencia'] || dataInicio || "2026-08-01").slice(0, 10);
-      const competenciaVal = compRaw.length === 7 ? `${compRaw}-01` : compRaw;
-
-      const payload: Row = {
-        tipo: v['tipo'] || "despesa",
-        natureza: v['natureza'] || "realizado",
-        descricao: String(v['descricao'] || ""),
-        valor: Number(v['valor'] || 0),
-        competencia: competenciaVal,
-        polo_id: v['polo_id'] || null,
-        categoria_id: v['categoria_id'] || null,
-      };
-      if (v['id']) {
-        payload['id'] = v['id'];
-      }
-      return salvar({ data: payload });
+    mutationFn: async (payload: Row) => {
+      const resp = await salvar({ data: payload });
+      try {
+        const stored = localStorage.getItem("cufa_lancamentos_custom");
+        let list: any[] = stored ? JSON.parse(stored) : [];
+        if (payload.id) {
+          const idx = list.findIndex((l) => String(l.id) === String(payload.id));
+          if (idx !== -1) list[idx] = { ...list[idx], ...payload, ...resp };
+          else list.unshift({ ...payload, ...resp });
+        } else {
+          list.unshift({ ...payload, ...resp, id: `local-${Date.now()}` });
+        }
+        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(list));
+      } catch {}
+      return resp;
     },
     onSuccess: () => {
       toast.success("Lançamento salvo com sucesso!");
       setForm(null);
+      setValorDisplay("0,00");
+      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
       qc.invalidateQueries({ queryKey: ["financeiro"] });
     },
-    onError: (err: Error) => {
-      toast.error("Erro ao salvar lançamento", { description: err.message });
-    },
-  });
-
-  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_deleted_lancamentos");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
-
-  const mApagar = useMutation({
-    mutationFn: async (id: string) => {
-      const updated = [...deletedIds, id];
-      setDeletedIds(updated);
-      try {
-        localStorage.setItem("cufa_deleted_lancamentos", JSON.stringify(updated));
-      } catch {}
-      await apagar({ data: { id } }).catch(() => {});
-      return id;
-    },
-    onSuccess: () => {
-      toast.success("Lançamento removido com sucesso!");
-      qc.invalidateQueries({ queryKey: ["financeiro"] });
-    },
-    onError: () => {
-      toast.success("Lançamento removido!");
-      qc.invalidateQueries({ queryKey: ["financeiro"] });
+    onError: (err: any) => {
+      toast.error("Erro ao salvar lançamento: " + (err.message || err));
     },
   });
 
   const polosList: Row[] = data?.polos ?? [];
-  const categorias: Row[] = data?.categorias ?? [];
   const serverLancamentos: Row[] = data?.lancamentos ?? [];
   const itens: Row[] = data?.itens ?? [];
 
@@ -163,7 +153,7 @@ function FinanceiroPage() {
             ? "madureira"
             : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
             ? "paraisopolis"
-            : "polo-teste";
+            : "penha";
           const valNum = Number(p.valor_total || p.valor || 0);
 
           return {
@@ -208,7 +198,6 @@ function FinanceiroPage() {
     return [];
   }
 
-  // Read local custom lancamentos + approved purchase orders from local storage (Anexo 2 & 3)
   const [localCustomLancamentos, setLocalCustomLancamentos] = useState<Row[]>(getDeduplicatedLocalLancamentos);
 
   useEffect(() => {
@@ -251,8 +240,7 @@ function FinanceiroPage() {
             (lPoloNome !== "" && (lPoloNome.includes(pName) || pName.includes(lPoloNome))) ||
             (pName.includes("penha") && lPoloId.includes("penha")) ||
             (pName.includes("madureira") && lPoloId.includes("madureira")) ||
-            ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && lPoloId.includes("paraisopolis")) ||
-            (pName.includes("teste") && lPoloId.includes("teste"))
+            ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && lPoloId.includes("paraisopolis"))
         ));
 
     const dMatch = (!dataInicio || String(l['competencia'] || l['created_at'] || "").slice(0, 10) >= dataInicio) &&
@@ -282,7 +270,7 @@ function FinanceiroPage() {
     return ["jiu", "basq", "futs", "karat", "ingl", "nata", "corte", "vôl", "vol", "tatame", "kimono", "lanche", "professor", "monitor"].some((k) => n.includes(k));
   };
 
-  // 2. Custom Database Budget Items (Only for brand new custom activities created by user)
+  // 2. Custom Database Budget Items
   const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
   const atividadesList: Row[] = data?.atividades ?? [];
 
@@ -291,7 +279,7 @@ function FinanceiroPage() {
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
     const ativNome = String(i['atividades']?.['nome'] || i['atividade_nome'] || i['item'] || "");
 
-    if (isOfficialAtiv(ativNome)) return; // Prevent duplicating official preset activities
+    if (isOfficialAtiv(ativNome)) return;
     if (i['is_preset'] || String(i['id']).startsWith("preset-")) return;
 
     const itemClean = String(i['item'] || "").toLowerCase();
@@ -300,8 +288,7 @@ function FinanceiroPage() {
     const matchPolo =
       isAllSelected ||
       selectedPoloIds.includes(itemPoloId) ||
-      (itemPoloNome !== "" && selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome))) ||
-      (selectedPoloNames.some((pName) => pName.includes("teste")) && (itemPoloId.includes("teste") || itemPoloNome.includes("teste")));
+      (itemPoloNome !== "" && selectedPoloNames.some((pName) => itemPoloNome.includes(pName) || pName.includes(itemPoloNome)));
 
     if (matchPolo) {
       const catNome = String(i['categorias_custo']?.['nome'] || i['categoria_nome'] || "Pessoal");
@@ -324,179 +311,113 @@ function FinanceiroPage() {
     }
   });
 
-  // Fallback: Custom activities with custo_mensal
-  atividadesList.forEach((a) => {
-    const ativNome = String(a['nome']);
-    const aPoloId = String(a['polo_id'] || "");
-    const aPoloNome = String(a['polos']?.['nome'] || "").toLowerCase();
-
-    if (isOfficialAtiv(ativNome)) return;
-
-    const matchPolo =
-      isAllSelected ||
-      selectedPoloIds.includes(aPoloId) ||
-      (aPoloNome !== "" && selectedPoloNames.some((pName) => aPoloNome.includes(pName) || pName.includes(aPoloNome))) ||
-      (selectedPoloNames.some((pName) => pName.includes("teste")) && (aPoloId.includes("teste") || aPoloNome.includes("teste") || ativNome.toLowerCase().includes("vôlei") || ativNome.toLowerCase().includes("volei")));
-
-    if (matchPolo && Number(a['custo_mensal'] || 0) > 0) {
-      const alreadyInDbCustom = dbCustomItems.some((di) => di.atividade.toLowerCase() === ativNome.toLowerCase());
-      if (!alreadyInDbCustom) {
-        dbCustomItems.push({
-          id: `ativ-${a['id']}`,
-          poloId: aPoloId || "polo-teste",
-          atividade: ativNome,
-          categoria: "Pessoal",
-          item: `Professor/Instrutor ${ativNome}`,
-          descricao: String(a['descricao'] || "Professor Profissional"),
-          quantidade: "1",
-          previsto: Number(a['custo_mensal']),
-          realizado: 0,
-        });
-      }
-    }
-  });
-
+  // Combine official preset items + custom DB items
   const poloItensPrevisto = [...presetItems, ...dbCustomItems];
-  let previstoTotal = poloItensPrevisto.reduce((s, i) => s + i.previsto, 0);
+  const previstoTotal = poloItensPrevisto.reduce((acc, i) => acc + i.previsto, 0);
 
-  const previstoPorCategoria = categorias
-    .filter((c) => c['tipo'] === "despesa")
-    .map((c) => {
-      const catNomeStr = String(c['nome']).toLowerCase();
-      const catPrevisto = poloItensPrevisto
-        .filter((i) => {
-          const itemCat = i.categoria.toLowerCase();
-          return itemCat === catNomeStr || catNomeStr.includes(itemCat) || itemCat.includes(catNomeStr);
-        })
-        .reduce((s, i) => s + i.previsto, 0);
+  // Edit action: pre-fill modal
+  function handleEditLancamento(l: Row) {
+    setValorDisplay(String(l['valor'] || 0).replace(".", ","));
+    setForm({
+      id: l['id'],
+      tipo: l['tipo'] || "despesa",
+      natureza: l['natureza'] || "realizado",
+      descricao: l['descricao'] || "",
+      valor: Number(l['valor'] || 0),
+      competencia: String(l['competencia'] || dataInicio.slice(0, 7)),
+      polo_id: l['polo_id'] || selectedPoloIds[0] || null,
+      categoria_id: l['categoria_id'] || null,
+    });
+  }
 
-      const catRealizado = despesas
-        .filter((l) => {
-          const lCatId = String(l['categoria_id'] || "");
-          const lCatNome = String(l['categoria_nome'] || l['categoria'] || "").toLowerCase();
-          return lCatId === String(c['id']) || lCatNome === catNomeStr;
-        })
-        .reduce((s, l) => s + Number(l['valor']), 0);
+  // Real Delete action: delete from DB, unlink purchase order, update local state & exports
+  async function handleDeleteLancamento(l: Row) {
+    const idStr = String(l['id']);
+    const descStr = String(l['descricao'] || "lançamento");
 
-      return {
-        categoria: c,
-        previsto: catPrevisto,
-        realizado: catRealizado,
-      };
-    })
-    .filter((r) => r.previsto > 0 || r.realizado > 0);
-
-  function handleValorInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "");
-    if (!raw) {
-      setValorDisplay("0,00");
-      setForm((f) => f ? { ...f, valor: 0 } : null);
+    if (!window.confirm(`Tem certeza que deseja excluir o lançamento "${descStr}"?`)) {
       return;
     }
-    const val = parseFloat(raw) / 100;
-    setValorDisplay(
-      val.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
-    );
-    setForm((f) => f ? { ...f, valor: val } : null);
-  }
 
-  function handleExportExcel() {
-    // Convert to types expected by exportProfessionalExcel
-    const exportPolos = polosList.map((p) => ({
-      id: String(p['id']),
-      nome: String(p['nome']),
-      slug: String(p['slug'] || ""),
-      cidade: String(p['cidade'] || ""),
-      uf: String(p['uf'] || "RJ"),
-      endereco: String(p['endereco'] || ""),
-      perfilTematico: String(p['perfil_tematico'] || ""),
-      pontoFocal: String(p['ponto_focal'] || ""),
-      vagasTotais: Number(p['vagas_totais'] || 0),
-      beneficiariosProjetados: Number(p['beneficiarios_projetados'] || 0),
-      orcamentoMensal: Number(p['orcamento_mensal'] || 0),
-      ativo: Boolean(p['ativo']),
-    }));
+    const updatedDeleted = [...deletedIds, idStr];
+    setDeletedIds(updatedDeleted);
+    try {
+      localStorage.setItem("cufa_deleted_lancamentos", JSON.stringify(updatedDeleted));
 
-    const exportLancamentos = lancamentos.map((l) => ({
-      id: String(l['id']),
-      tipo: (l['tipo'] === "receita" ? "receita" : "despesa") as "receita" | "despesa",
-      valor: Number(l['valor'] || 0),
-      descricao: String(l['descricao'] || ""),
-      categoria: String(l['categoria'] || l['categoria_nome'] || "Geral"),
-      poloId: String(l['polo_id'] || "todos"),
-      data: String(l['data'] || l['created_at'] || "").slice(0, 10),
-    }));
+      const storedCustom = localStorage.getItem("cufa_lancamentos_custom");
+      if (storedCustom) {
+        const parsed = JSON.parse(storedCustom);
+        const filtered = parsed.filter((item: any) => String(item.id) !== idStr);
+        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(filtered));
+      }
+    } catch {}
 
-    const exportCatDespesas = categorias.map((c) => ({
-      nome: String(c['nome']),
-      previsto: Number(c['previsto'] || 0),
-    }));
+    setLocalCustomLancamentos((prev) => prev.filter((item) => String(item['id']) !== idStr));
 
-    exportProfessionalExcel({
-      polos: exportPolos,
-      lancamentos: exportLancamentos,
-      categoriasDespesas: exportCatDespesas,
-      selectedPoloId: selectedPoloIds[0] || "todos",
-      dataInicio,
-      dataFim,
-    });
-  }
+    try {
+      await apagar({ data: { id: idStr } }).catch(() => {});
 
-  function handleExportPdf() {
-    const exportPolos = polosList.map((p) => ({
-      id: String(p['id']),
-      nome: String(p['nome']),
-    }));
+      if (l['pedido_id'] || idStr.startsWith("ped-aprov-")) {
+        const realPedId = l['pedido_id'] || idStr.replace("ped-aprov-", "");
+        await supabase.from("pedidos_compra").delete().eq("id", realPedId).catch(() => {});
+      }
+    } catch {}
 
-    const exportLancamentos = lancamentos.map((l) => ({
-      id: String(l['id']),
-      tipo: (l['tipo'] === "receita" ? "receita" : "despesa") as "receita" | "despesa",
-      valor: Number(l['valor'] || 0),
-      descricao: String(l['descricao'] || ""),
-      categoria: String(l['categoria'] || l['categoria_nome'] || "Geral"),
-      poloId: String(l['polo_id'] || "todos"),
-      data: String(l['data'] || l['created_at'] || "").slice(0, 10),
-    }));
-
-    const exportCatDespesas = categorias.map((c) => ({
-      nome: String(c['nome']),
-      previsto: Number(c['previsto'] || 0),
-    }));
-
-    generateProfessionalPdf({
-      polos: exportPolos,
-      lancamentos: exportLancamentos,
-      categoriasDespesas: exportCatDespesas,
-      selectedPoloId: selectedPoloIds[0] || "todos",
-      dataInicio,
-      dataFim,
-    });
+    qc.invalidateQueries({ queryKey: ["financeiro"] });
+    window.dispatchEvent(new Event("cufa_pedidos_updated"));
+    toast.success("Lançamento excluído com sucesso do banco de dados!");
   }
 
   return (
     <GestorShell
       title="Demonstrativo financeiro"
-      description="Receitas, despesas por categoria e resumo do mês, com previsto x realizado."
+      description="Resumo de receitas, despesas executadas e orçamento previsto por polo"
       actions={
-        <div className="flex items-center gap-2">
-          {/* Excel Icon-only Button (Requirement 4) */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
-            size="icon"
-            className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-600 hover:text-white"
-            onClick={handleExportExcel}
-            title="Baixar Relatório Excel (.xlsx)"
+            size="sm"
+            className="border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold"
+            onClick={() =>
+              exportProfessionalExcel(
+                {
+                  totalReceitas,
+                  totalDespesas,
+                  previstoTotal,
+                  saldoRealizado: totalReceitas - totalDespesas,
+                  variacao: previstoTotal - totalDespesas,
+                  dataInicio,
+                  dataFim,
+                },
+                receitas,
+                despesas,
+                poloItensPrevisto
+              )
+            }
+            title="Baixar Relatório Excel"
           >
-            <FileSpreadsheet className="size-4" />
+            <FileSpreadsheet className="mr-1.5 size-4 text-emerald-600" /> Excel
           </Button>
-          {/* PDF Button (Requirement 4) */}
           <Button
             variant="outline"
-            className="border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-600 hover:text-white font-bold"
-            onClick={handleExportPdf}
+            size="sm"
+            className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 font-bold"
+            onClick={() =>
+              generateProfessionalPdf(
+                {
+                  totalReceitas,
+                  totalDespesas,
+                  previstoTotal,
+                  saldoRealizado: totalReceitas - totalDespesas,
+                  variacao: previstoTotal - totalDespesas,
+                  dataInicio,
+                  dataFim,
+                },
+                receitas,
+                despesas,
+                poloItensPrevisto
+              )
+            }
             title="Baixar Relatório PDF"
           >
             <FileText className="mr-1.5 size-4" /> PDF
@@ -521,7 +442,7 @@ function FinanceiroPage() {
         </div>
       }
     >
-      {/* Centered Circle Loading Overlay (Anexo 1) */}
+      {/* Centered Circle Loading Overlay */}
       {isFilterLoading && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center z-50">
           <Loader2 className="size-12 animate-spin text-primary" />
@@ -529,7 +450,7 @@ function FinanceiroPage() {
         </div>
       )}
 
-      {/* Date Range De / Até and Polo Selection Filters (Anexo 1 & 5) */}
+      {/* Date Range De / Até and Polo Selection Filters */}
       <div className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:grid-cols-3">
         <div>
           <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1">
@@ -587,12 +508,26 @@ function FinanceiroPage() {
                       <span className="font-semibold text-foreground block">{String(l['descricao'])}</span>
                       <span className="text-xs text-muted-foreground">{String(l['categoria_nome'] || "Receita")}</span>
                     </div>
-                    <span className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <span className="whitespace-nowrap font-bold text-emerald-600 tabular-nums">{brl(l['valor'])}</span>
-                      <button type="button" className="text-destructive hover:opacity-80" onClick={() => mApagar.mutate(String(l['id']))}>
-                        <Trash2 className="size-4" />
-                      </button>
-                    </span>
+                      
+                      {/* Menu 3 pontinhos para Receita */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md">
+                            <MoreVertical className="size-4 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem onClick={() => handleEditLancamento(l)} className="cursor-pointer font-medium">
+                            <Pencil className="mr-2 size-3.5 text-primary" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteLancamento(l)} className="cursor-pointer font-medium text-destructive">
+                            <Trash2 className="mr-2 size-3.5 text-destructive" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))
               )}
@@ -600,7 +535,7 @@ function FinanceiroPage() {
             <Linha label="Total de receitas" valor={totalReceitas} forte />
           </section>
 
-          {/* 3. RESUMO FINANCEIRO (Fix Anexo 4: Despesas previstas orçamento) */}
+          {/* 3. RESUMO FINANCEIRO */}
           <section className="rounded-xl border border-border bg-card shadow-xs">
             <h2 className="border-b border-border bg-muted/40 px-4 py-3 text-sm font-bold uppercase tracking-wide">
               3. Resumo financeiro
@@ -625,7 +560,6 @@ function FinanceiroPage() {
 
             <div className="p-4 space-y-6">
               {(() => {
-                // Helper token matcher for strict launch-to-item allocation
                 const getTokens = (str: string) =>
                   str
                     .toLowerCase()
@@ -635,8 +569,8 @@ function FinanceiroPage() {
                     .split(/\s+/)
                     .filter((t) => t.length > 2 && !["dos", "das", "para", "com", "por", "que", "uma"].includes(t));
 
-                // Allocate each expense launch exclusively to its best matching budget item
                 const itemRealizadoMap: Record<string, number> = {};
+                const itemLaunchesMap: Record<string, Row[]> = {};
 
                 despesas.forEach((d) => {
                   const dDesc = String(d['descricao'] || d['item'] || "").toLowerCase();
@@ -669,7 +603,6 @@ function FinanceiroPage() {
                     const isComunItem = itemTokens.some((t) => t.includes("comunic") || t.includes("divulg"));
                     const isEventoItem = itemTokens.some((t) => t.includes("event") || t.includes("exam"));
 
-                    // Enforce category role guards to prevent cross-matching
                     if (isProfLaunch && !isProfItem) return;
                     if (isMonitLaunch && !isMonitItem) return;
                     if (isTatameLaunch && !isTatameItem) return;
@@ -698,15 +631,17 @@ function FinanceiroPage() {
 
                   if (bestMatchId) {
                     itemRealizadoMap[bestMatchId] = (itemRealizadoMap[bestMatchId] || 0) + dVal;
+                    if (!itemLaunchesMap[bestMatchId]) itemLaunchesMap[bestMatchId] = [];
+                    itemLaunchesMap[bestMatchId]!.push(d);
                   }
                 });
 
                 const poloItens = poloItensPrevisto.map((item) => ({
                   ...item,
                   realizado: itemRealizadoMap[item.id] || 0,
+                  launches: itemLaunchesMap[item.id] || [],
                 }));
 
-                // Group by category
                 const categoriasMap: Record<string, typeof poloItens> = {};
                 poloItens.forEach((item) => {
                   if (!categoriasMap[item.categoria]) {
@@ -715,7 +650,6 @@ function FinanceiroPage() {
                   categoriasMap[item.categoria]!.push(item);
                 });
 
-                // Add empty fallback if no detailed items
                 if (Object.keys(categoriasMap).length === 0) {
                   return (
                     <div className="text-center py-6 text-sm text-muted-foreground">
@@ -754,11 +688,15 @@ function FinanceiroPage() {
                               <th className="py-2.5 px-3 text-right">Previsto (R$)</th>
                               <th className="py-2.5 px-3 text-right">Realizado (R$)</th>
                               <th className="py-2.5 px-3 text-right">Variação (R$)</th>
+                              <th className="py-2.5 px-3 text-center w-12">Ação</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/60">
                             {catItens.map((item) => {
                               const variacao = item.previsto - item.realizado;
+                              const hasLaunches = item.launches.length > 0;
+                              const firstLaunch = item.launches[0];
+
                               return (
                                 <tr key={item.id} className="hover:bg-muted/20">
                                   <td className="py-2.5 px-3 font-bold text-foreground">{item.item}</td>
@@ -770,6 +708,31 @@ function FinanceiroPage() {
                                   <td className="py-2.5 px-3 text-right font-bold text-foreground">{brl(item.realizado)}</td>
                                   <td className={`py-2.5 px-3 text-right font-extrabold ${variacao >= 0 ? "text-emerald-600" : "text-destructive"}`}>
                                     {brl(variacao)}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center">
+                                    {hasLaunches && firstLaunch ? (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md">
+                                            <MoreVertical className="size-4 text-muted-foreground" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-44">
+                                          {item.launches.map((l, lIdx) => (
+                                            <div key={String(l['id'] || lIdx)}>
+                                              <DropdownMenuItem onClick={() => handleEditLancamento(l)} className="cursor-pointer font-medium text-xs">
+                                                <Pencil className="mr-2 size-3.5 text-primary" /> Editar ({brl(l['valor'])})
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleDeleteLancamento(l)} className="cursor-pointer font-medium text-xs text-destructive">
+                                                <Trash2 className="mr-2 size-3.5 text-destructive" /> Excluir ({brl(l['valor'])})
+                                              </DropdownMenuItem>
+                                            </div>
+                                          ))}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    ) : (
+                                      <span className="text-muted-foreground text-[10px]">—</span>
+                                    )}
                                   </td>
                                 </tr>
                               );
@@ -786,11 +749,13 @@ function FinanceiroPage() {
         </div>
       )}
 
-      {/* Modal Novo Lançamento com Descrição / Detalhe e Formatação BRL (Anexo 3 & 4) */}
+      {/* Modal Novo Lançamento / Edição */}
       <Dialog open={Boolean(form)} onOpenChange={(v) => !v && setForm(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Novo lançamento</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              {form?.id ? "Editar lançamento" : "Novo lançamento"}
+            </DialogTitle>
           </DialogHeader>
           {form ? (
             <form
@@ -816,73 +781,70 @@ function FinanceiroPage() {
                     <option value="receita">Receita</option>
                   </select>
                 </div>
-                {/* Formatação BRL no Input de Valor */}
+
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Valor (R$)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-sm font-bold text-muted-foreground">R$</span>
-                    <Input
-                      type="text"
-                      required
-                      value={valorDisplay}
-                      onChange={handleValorInputChange}
-                      className="pl-9 font-extrabold text-foreground"
-                    />
-                  </div>
+                  <Input
+                    type="text"
+                    required
+                    value={valorDisplay}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      const num = Number(raw) / 100;
+                      setValorDisplay(num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                      setForm({ ...form, valor: num });
+                    }}
+                    placeholder="0,00"
+                    className="h-10 font-bold tabular-nums"
+                  />
                 </div>
               </div>
 
-              {/* Campo Descrição / Detalhe (Anexo 3) */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">
-                  Descrição / Detalhe <span className="text-destructive">*</span>
-                </Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Descrição / Detalhe</Label>
                 <Input
                   required
-                  placeholder="Ex.: Aquisição de materiais para o projeto"
-                  value={String(form['descricao'] ?? "")}
+                  value={String(form['descricao'] || "")}
                   onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-                  className="font-medium"
+                  placeholder="Ex.: Compra de kimonos, Lanche das crianças, Repasse professor..."
+                  className="h-10 font-medium"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Categoria</Label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  value={String(form['categoria_id'] ?? "")}
-                  onChange={(e) => setForm({ ...form, categoria_id: e.target.value || null })}
-                >
-                  <option value="">Sem categoria</option>
-                  {categorias
-                    .filter((c) => c['tipo'] === form['tipo'])
-                    .map((c) => (
-                      <option key={String(c['id'])} value={String(c['id'])}>
-                        {String(c['nome'])}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Polo</Label>
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                    value={String(form['polo_id'] || "")}
+                    onChange={(e) => setForm({ ...form, polo_id: e.target.value })}
+                  >
+                    {polosList.map((p) => (
+                      <option key={String(p['id'])} value={String(p['id'])}>
+                        {String(p['nome'])}
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Competência (Mês/Ano)</Label>
+                  <Input
+                    type="month"
+                    value={String(form['competencia'] || "2026-08")}
+                    onChange={(e) => setForm({ ...form, competencia: e.target.value })}
+                    className="h-10 font-medium"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Polo</Label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  value={String(form['polo_id'] ?? "")}
-                  onChange={(e) => setForm({ ...form, polo_id: e.target.value || null })}
-                >
-                  <option value="">Geral (todos os polos)</option>
-                  {polosList.map((p: Row) => (
-                    <option key={String(p['id'])} value={String(p['id'])}>
-                      {String(p['nome'])}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <DialogFooter className="mt-2">
-                <Button type="submit" disabled={mSalvar.isPending} className="bg-brand-gradient font-bold text-white shadow-brand">
-                  {mSalvar.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null} Salvar Lançamento
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setForm(null)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-brand-gradient text-white font-bold shadow-brand" disabled={mSalvar.isPending}>
+                  {mSalvar.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                  {form?.id ? "Salvar Alterações" : "Confirmar Lançamento"}
                 </Button>
               </DialogFooter>
             </form>

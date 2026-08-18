@@ -14,7 +14,12 @@ import {
   Loader2,
   Menu,
   X,
-  RotateCcw,
+  Calculator,
+  Truck,
+  PieChart,
+  FolderArchive,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -22,21 +27,9 @@ import logo from "@/assets/cufa-z-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
-
-const nav = [
-  { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/gestor/polos", label: "Polos", icon: Building2 },
-  { to: "/gestor/atividades", label: "Atividades", icon: Layers },
-  { to: "/gestor/financeiro", label: "Financeiro", icon: Wallet },
-  { to: "/gestor/gestores", label: "Gestores", icon: UserCheck },
-  { to: "/gestor/pedidos", label: "Pedidos", icon: ShoppingCart },
-  { to: "/gestor/alunos", label: "Alunos", icon: Users },
-  { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
-  { to: "/gestor/diario-classe", label: "Diário de Classe", icon: BookOpen },
-] as { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[];
+import { fetchFornecedoresDB } from "@/lib/fornecedoresService";
 
 export function GestorShell({
   title,
@@ -60,6 +53,11 @@ export function GestorShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pendingPedidosCount, setPendingPedidosCount] = useState<number>(0);
+  const [pendingFornecedoresCount, setPendingFornecedoresCount] = useState<number>(0);
+
+  // Submenu toggle for Contabilidade
+  const isContabilidadeActive = pathname.startsWith("/gestor/contabilidade") || pathname === "/fornecedor/cadastro";
+  const [contabilidadeExpanded, setContabilidadeExpanded] = useState(true);
 
   useEffect(() => {
     function calcPending() {
@@ -69,17 +67,26 @@ export function GestorShell({
           const list = JSON.parse(stored);
           const pend = list.filter((p: any) => p.status === "pendente").length;
           setPendingPedidosCount(pend);
-          return;
+        } else {
+          setPendingPedidosCount(0);
         }
-      } catch {}
-      setPendingPedidosCount(0);
+      } catch {
+        setPendingPedidosCount(0);
+      }
+
+      fetchFornecedoresDB().then((forns) => {
+        const pendForns = forns.filter((f) => f.status === "pendente").length;
+        setPendingFornecedoresCount(pendForns);
+      });
     }
 
     calcPending();
     window.addEventListener("cufa_pedidos_updated", calcPending);
+    window.addEventListener("cufa_fornecedores_updated", calcPending);
     window.addEventListener("storage", calcPending);
     return () => {
       window.removeEventListener("cufa_pedidos_updated", calcPending);
+      window.removeEventListener("cufa_fornecedores_updated", calcPending);
       window.removeEventListener("storage", calcPending);
     };
   }, []);
@@ -99,6 +106,27 @@ export function GestorShell({
     } catch {}
     window.location.href = "/";
   }
+
+  const navBefore = [
+    { to: "/gestor", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { to: "/gestor/polos", label: "Polos", icon: Building2 },
+    { to: "/gestor/atividades", label: "Atividades", icon: Layers },
+    { to: "/gestor/financeiro", label: "Financeiro", icon: Wallet },
+  ];
+
+  const contabilidadeSubNav = [
+    { to: "/gestor/contabilidade/fornecedores", label: "Fornecedores", icon: Truck },
+    { to: "/gestor/contabilidade/centro-custo", label: "Centro de Custo", icon: PieChart },
+    { to: "/gestor/contabilidade/documentos", label: "Gestão de Documentos", icon: FolderArchive },
+  ];
+
+  const navAfter = [
+    { to: "/gestor/gestores", label: "Gestores", icon: UserCheck },
+    { to: "/gestor/pedidos", label: "Pedidos", icon: ShoppingCart },
+    { to: "/gestor/alunos", label: "Alunos", icon: Users },
+    { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
+    { to: "/gestor/diario-classe", label: "Diário de Classe", icon: BookOpen },
+  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans">
@@ -128,7 +156,7 @@ export function GestorShell({
         )}
       >
         <div>
-          {/* Header & Logo + User Info Directly Below (Anexo 1 & 2) */}
+          {/* Header & Logo + User Info */}
           <div className="p-5 border-b border-border/60 space-y-3">
             <Link to="/gestor" className="flex items-center gap-3">
               <img src={logo} alt="CUFA" className="h-10 w-auto object-contain" />
@@ -163,7 +191,108 @@ export function GestorShell({
 
           {/* Navigation Links */}
           <nav className="p-4 space-y-1">
-            {nav.map((n) => {
+            {navBefore.map((n) => {
+              const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
+              const indo = pendingTo === n.to || (pendingTo !== null && !n.exact && pendingTo.startsWith(n.to));
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to as "/gestor"}
+                  preload="intent"
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all",
+                    active || indo
+                      ? "bg-primary text-white shadow-brand"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  {indo ? (
+                    <Loader2 className="size-4 animate-spin shrink-0" />
+                  ) : (
+                    <n.icon className="size-4 shrink-0" />
+                  )}
+                  <span>{n.label}</span>
+                </Link>
+              );
+            })}
+
+            {/* Nova Seção: Contabilidade (Expandável entre Financeiro e Gestores) */}
+            <div className="pt-1 pb-1">
+              <div
+                onClick={() => setContabilidadeExpanded((prev) => !prev)}
+                className={cn(
+                  "flex items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer transition-all",
+                  isContabilidadeActive
+                    ? "bg-slate-900 text-white shadow-md"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Calculator className="size-4 shrink-0 text-amber-500" />
+                  <span>Contabilidade</span>
+                  {pendingFornecedoresCount > 0 && (
+                    <Badge className="bg-amber-500 hover:bg-amber-600 font-extrabold text-[10px] text-white px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                      {pendingFornecedoresCount}
+                    </Badge>
+                  )}
+                </div>
+                {contabilidadeExpanded ? (
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Submenu de Contabilidade */}
+              {contabilidadeExpanded && (
+                <div className="mt-1 ml-4 pl-3 border-l-2 border-primary/30 space-y-1">
+                  <Link
+                    to="/gestor/contabilidade"
+                    preload="intent"
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-extrabold transition-all",
+                      pathname === "/gestor/contabilidade"
+                        ? "bg-primary/20 text-primary border border-primary/30"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                  >
+                    <span>Visão Geral & KPIs</span>
+                  </Link>
+
+                  {contabilidadeSubNav.map((sub) => {
+                    const subActive = pathname.startsWith(sub.to);
+                    return (
+                      <Link
+                        key={sub.to}
+                        to={sub.to as "/gestor"}
+                        preload="intent"
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all",
+                          subActive
+                            ? "bg-primary/20 text-primary border border-primary/30 font-black"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <sub.icon className="size-3.5 shrink-0" />
+                          <span>{sub.label}</span>
+                        </div>
+                        {sub.label === "Fornecedores" && pendingFornecedoresCount > 0 && (
+                          <Badge className="bg-amber-500 font-bold text-[9px] text-white px-1.5 py-0.2 rounded-full">
+                            {pendingFornecedoresCount}
+                          </Badge>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {navAfter.map((n) => {
               const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
               const indo = pendingTo === n.to || (pendingTo !== null && !n.exact && pendingTo.startsWith(n.to));
               return (

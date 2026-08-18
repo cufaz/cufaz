@@ -776,6 +776,36 @@ function PedidosPage() {
               </div>
 
               <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Centro de Custo</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  defaultValue="cc-101"
+                >
+                  <option value="cc-101">CC-101 — Esporte & Inclusão</option>
+                  <option value="cc-102">CC-102 — Cultura & Arte Periférica</option>
+                  <option value="cc-103">CC-103 — Educação & Cidadania</option>
+                  <option value="cc-104">CC-104 — Administrativo & Operações</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Oficina / Atividade Relacionada</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  defaultValue="Jiu Jitsu"
+                >
+                  <option value="Jiu Jitsu">Jiu Jitsu</option>
+                  <option value="Basquete de Rua">Basquete de Rua</option>
+                  <option value="Karatê">Karatê</option>
+                  <option value="Futsal">Futsal</option>
+                  <option value="Capoeira">Capoeira</option>
+                  <option value="Corte e Costura">Corte e Costura</option>
+                  <option value="Aula de Inglês">Aula de Inglês</option>
+                  <option value="Geral / Administrativo">Geral / Administrativo</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Categoria do Custo</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
