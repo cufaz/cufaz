@@ -9,6 +9,7 @@ import {
   FileCheck,
   Upload,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   FileText,
   MapPin,
@@ -53,7 +54,29 @@ function FornecedorStatusPage() {
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader />
 
-      <main className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
+        {/* Top Back & Navigation Bar */}
+        <div className="flex items-center justify-between mb-8">
+          <Link to="/">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold text-xs gap-2 border-border bg-card text-foreground hover:bg-muted shadow-xs"
+            >
+              <ArrowLeft className="size-4 text-primary" /> Voltar à Página Inicial
+            </Button>
+          </Link>
+          <Link to="/fornecedor/cadastro">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="font-bold text-xs gap-1 text-primary hover:bg-primary/10"
+            >
+              Novo Cadastramento <ArrowRight className="size-3.5" />
+            </Button>
+          </Link>
+        </div>
+
         <div className="text-center space-y-2 mb-8">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 text-white px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-sm">
             <Search className="size-3.5 text-primary" /> Consulta Pública por CNPJ

@@ -13,6 +13,7 @@ import {
   CreditCard,
   FileText,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -61,7 +62,13 @@ function FornecedorCadastroPage() {
 
   const [atividadesTexto, setAtividadesTexto] = useState("");
   const [propostas, setPropostas] = useState<PropostaFormItem[]>([
-    { id: "1", titulo: "Proposta de Fornecimento Inicial", descricao: "", valor: 0, prazo: "15 dias" },
+    {
+      id: "1",
+      titulo: "Proposta Comercial Inicial",
+      descricao: "Descreva brevemente os produtos/serviços oferecidos e valores...",
+      valor: 0,
+      prazo: "15 dias",
+    },
   ]);
 
   // Step 1: Upload Cartão CNPJ with AI OCR Extraction
@@ -103,46 +110,40 @@ function FornecedorCadastroPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!cnpj.trim() || !razaoSocial.trim()) {
-      toast.error("CNPJ e Razão Social são obrigatórios.");
-      return;
-    }
-    if (!atividadesTexto.trim()) {
-      toast.error("Descreva o que você faz / fornece no campo de Área de Atuação.");
+    if (!cnpj || !razaoSocial || !email) {
+      toast.error("Preencha CNPJ, Razão Social e E-mail de contato.");
       return;
     }
 
     setSubmitting(true);
-
-    const created = await createFornecedorPublicDB(
-      {
-        cnpj,
-        razao_social: razaoSocial,
-        nome_fantasia: nomeFantasia,
-        endereco,
-        cidade,
-        uf,
-        cep,
-        email,
-        telefone,
-        responsavel,
-        cnae,
-        atividades_texto: atividadesTexto,
-        banco_nome: bancoNome,
-        banco_agencia: bancoAgencia,
-        banco_conta: bancoConta,
-        banco_pix: bancoPix,
-      },
-      propostas
-    );
-
-    setSubmitting(false);
-
-    if (created) {
+    try {
+      await createFornecedorPublicDB(
+        {
+          cnpj,
+          razao_social: razaoSocial,
+          nome_fantasia: nomeFantasia,
+          endereco,
+          cidade,
+          uf,
+          cep,
+          cnae,
+          email,
+          telefone,
+          responsavel,
+          atividades_texto: atividadesTexto,
+          banco_nome: bancoNome,
+          banco_agencia: bancoAgencia,
+          banco_conta: bancoConta,
+          banco_pix: bancoPix,
+        },
+        propostas.filter((p) => p.titulo.trim() !== "")
+      );
       setConcluido(true);
-      toast.success("Cadastro de fornecedor enviado com sucesso!");
-    } else {
+      toast.success("Cadastro de fornecedor realizado com sucesso!");
+    } catch {
       toast.error("Falha ao salvar fornecedor. Tente novamente.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -168,12 +169,16 @@ function FornecedorCadastroPage() {
             </div>
 
             <div className="mt-8 flex flex-col gap-3">
-              <Button asChild size="lg" className="bg-brand-gradient text-white font-bold shadow-brand">
-                <Link to="/fornecedor/status">Consultar Status do Cadastro</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/">Voltar ao Início</Link>
-              </Button>
+              <Link to="/fornecedor/status">
+                <Button size="lg" className="w-full bg-brand-gradient text-white font-bold shadow-brand">
+                  Consultar Status do Cadastro
+                </Button>
+              </Link>
+              <Link to="/">
+                <Button variant="outline" className="w-full font-bold">
+                  <ArrowLeft className="mr-1.5 size-4" /> Voltar ao Início
+                </Button>
+              </Link>
             </div>
           </div>
         </main>
@@ -185,7 +190,29 @@ function FornecedorCadastroPage() {
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        {/* Top Back & Navigation Bar */}
+        <div className="flex items-center justify-between mb-8">
+          <Link to="/">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold text-xs gap-2 border-border bg-card text-foreground hover:bg-muted shadow-xs"
+            >
+              <ArrowLeft className="size-4 text-primary" /> Voltar à Página Inicial
+            </Button>
+          </Link>
+          <Link to="/fornecedor/status">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="font-bold text-xs gap-1 text-primary hover:bg-primary/10"
+            >
+              Consultar Status <ArrowRight className="size-3.5" />
+            </Button>
+          </Link>
+        </div>
+
         <div className="text-center space-y-2 mb-8">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 text-white px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-sm">
             <Truck className="size-3.5 text-primary" /> Credenciamento Público de Fornecedores
