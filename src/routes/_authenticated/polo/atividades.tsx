@@ -417,10 +417,14 @@ export function PoloAtividadesPage() {
                 ? pendingForAtiv[pendingForAtiv.length - 1]
                 : approvedForAtiv;
 
-            // Fallback for Jiu Jitsu Turma 1 if pending request exists in system
-            if (!pMatch && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
+            // Fallback for Jiu Jitsu Turma 1 apenas se a solicitação padrão ainda não foi decidida
+            const defaultJaDecidida = currentList.some(
+              (s) => s && s.id === defaultSolicitacao.id && s.status !== "pendente",
+            );
+            if (!pMatch && !defaultJaDecidida && ativ.nome === "Jiu Jitsu" && ativ.turmaNome === "Turma 1") {
               pMatch = defaultSolicitacao;
             }
+
 
             return (
               <Card key={ativ.id} className="border-border shadow-xs flex flex-col justify-between">
