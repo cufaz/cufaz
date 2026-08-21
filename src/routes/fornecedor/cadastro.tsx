@@ -93,13 +93,19 @@ function FornecedorCadastroPage() {
     },
   ]);
 
-  // Step 1: Upload Cartão CNPJ with AI OCR Extraction
+  // Step 1: Upload Cartão CNPJ (PDF) with AI extraction
   async function handleFileUploadOcr(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Formato inválido. Envie o Cartão CNPJ em PDF.");
+      e.target.value = "";
+      return;
+    }
+
     setParsingOcr(true);
-    toast.info("Analisando Cartão CNPJ com IA (Lovable AI Gateway / OCR)...");
+    toast.info("Lendo o Cartão CNPJ...");
 
     try {
       const result = await parseCnpjCardOcr(file);
@@ -114,27 +120,35 @@ function FornecedorCadastroPage() {
       setCnaePrincipalDescricao(result.cnae_principal_descricao);
       setCnae(result.cnae);
 
-      if (result.cnae_secundarios && result.cnae_secundarios.length > 0) {
-        setCnaeSecundarios(
-          result.cnae_secundarios.map((item, idx) => ({
-            id: `sec-${idx}-${Date.now()}`,
-            codigo: item.codigo,
-            descricao: item.descricao,
-          }))
-        );
-      }
+      const extra = result as unknown as { email?: string; telefone?: string };
+      if (extra.email) setEmail(extra.email);
+      if (extra.telefone) setTelefone(extra.telefone);
+
+      setCnaeSecundarios(
+        (result.cnae_secundarios ?? []).map((item, idx) => ({
+          id: `sec-${idx}-${Date.now()}`,
+          codigo: item.codigo,
+          descricao: item.descricao,
+        }))
+      );
 
       setEndereco(result.endereco);
       setCidade(result.cidade);
       setUf(result.uf);
       setCep(result.cep);
-      toast.success("Cartão CNPJ analisado com sucesso! CNAE principal e atividades secundárias importadas.");
-    } catch {
-      toast.error("Erro na leitura automática. Preencha os campos manualmente.");
+      toast.success("Cartão CNPJ lido! Confira os campos preenchidos.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Não foi possível ler o cartão. Preencha os campos manualmente."
+      );
     } finally {
       setParsingOcr(false);
+      e.target.value = "";
     }
   }
+
 
   function addCnaeSecundarioRow() {
     setCnaeSecundarios((prev) => [
