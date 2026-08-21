@@ -293,17 +293,11 @@ function DashboardPage() {
     : percUtilizadoNum.toFixed(1) + "%";
 
   // Calculate real student enrollments and total household members (Pessoas Impactadas)
-  const alunosCadastrados: any[] = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_alunos_cadastrados");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  })();
+  const alunosCadastrados: any[] = alunosData ?? [];
 
   const totalMatriculadosReal = alunosCadastrados.length;
-  const totalPessoasImpactadas = alunosCadastrados.reduce((acc, a) => {
-    const qtd = Number(a.qtdPessoasResidencia || 0);
+  const totalPessoasImpactadas = alunosCadastrados.reduce((acc: number, a: any) => {
+    const qtd = Number(a.qtd_pessoas_residencia || 0);
     return acc + (qtd > 0 ? qtd : 1);
   }, 0);
 
