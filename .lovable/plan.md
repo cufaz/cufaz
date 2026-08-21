@@ -1,63 +1,52 @@
-# Sincronizar o Painel do Polo com o banco (fim dos dados fictícios)
+# Cartão CNPJ com leitura real + Lovable e publicado falando a mesma língua
 
 ## O que eu verifiquei agora
 
-- No banco: `cadastros_alunos` = 0 registros, `matriculas` = 0 registros.
-- As telas do polo (Dashboard, Alunos, Atividades) leem tudo de `localStorage`
-  (`cufa_alunos_cadastrados`, `cufa_alunos_polo`, `cufa_professores_solicitacoes`,
-  `cufa_compras_polo`) e têm listas de atividades/turmas escritas no código.
-- Turmas reais no banco: Jiu Jitsu 1 turma (80 vagas), Inglês 30, Natação 40,
-  Karatê 30, Basquete 25, Futsal 40, Corte e Costura 16 — diferente do que a tela mostra.
-
-Conclusão: os "2 alunos" do site publicado e os "2 alunos" diferentes no preview
-não são cache — são dados guardados no navegador de cada ambiente. Por isso
-"0 / 40" nunca conta matrícula e a Taxa de Frequência fica "—".
-Limpar cache não resolve; o que resolve é ler e gravar no banco.
+- `src/lib/fornecedoresService.ts` → `parseCnpjCardOcr()` **não lê o arquivo**: espera 1,2s e devolve
+  dados fixos ("FORNECEDOR DE TESTE LTDA", CNPJ 12.345.678/0001-99). Por isso o PDF real
+  (FAVELALLOG TRANSPORTE E LOGISTICA LTDA) não aparece nos campos.
+- O upload em `src/routes/fornecedor/cadastro.tsx` (linha 307) aceita `application/pdf,image/*`.
+- O Dashboard do Gestor (`src/routes/_authenticated/gestor/index.tsx`) mistura banco com
+  `localStorage` (`cufa_lancamentos_custom`, `cufa_compras_polo`, `cufa_deleted_lancamentos`,
+  `cufa_alunos_cadastrados`). Isso explica "R$ 500,00 / 0.2% / Turmas 0" no publicado e
+  "R$ 7.000,00 / 3.2% / Turmas 7" no Lovable: cada navegador tem seus próprios dados locais.
 
 ## Correções
 
-1. **Alunos do polo** — lista vem de `cadastros_alunos` + `matriculas` filtrando pelo polo
-   do responsável logado. Sem nomes, telefones, escolas ou responsáveis inventados:
-   campo vazio aparece como "Não informado".
-2. **Atividades e Turmas do Polo** — cards gerados de `atividades` + `turmas` do polo,
-   com "Beneficiários" = matrículas ativas contadas por turma/atividade / vagas reais.
-   Nada de turmas fixas no código.
-3. **Professor vinculado** — vem de `atividades.professor_id` / `professores_atividades`,
-   e as solicitações de vínculo passam a viver em tabela própria, não em `localStorage`,
-   para que aprovar/recusar valha em qualquer dispositivo.
-4. **Dashboard do Polo** — Alunos Matriculados, Atividades Ofertadas, Vagas e
-   Solicitações de Compra vindos do banco; a barra laranja passa a refletir o
-   % de vagas preenchidas (hoje está sempre cheia); "Presença" por oficina e
-   "Taxa de Frequência Média" calculadas das chamadas gravadas no banco, exibindo
-   "—" apenas quando realmente não houver chamada.
-5. **Chamadas** — gravadas em tabela (`chamadas` / `chamada_itens`) para que
-   frequência do aluno, do professor e do polo batam em todos os acessos.
-6. **Cache** — em vez de limpeza agendada, atualização em tempo real:
-   dados via TanStack Query com `refetchOnWindowFocus`, invalidação após cada
-   gravação e versionamento do build para descartar `localStorage` antigo uma vez.
+### 1. Leitura real do Cartão CNPJ (só PDF)
+- Upload passa a aceitar **apenas PDF** (`accept="application/pdf"`), com validação de tipo e
+  mensagem clara se enviarem imagem.
+- `parseCnpjCardOcr` deixa de ser simulada: o PDF vai para uma server function que envia o
+  arquivo à IA da plataforma e extrai, em JSON estruturado: CNPJ, razão social, nome fantasia,
+  data de abertura, porte, natureza jurídica, situação cadastral, CNAE principal (código +
+  descrição), CNAEs secundários (lista), logradouro/número/bairro, CEP, município, UF,
+  e-mail e telefone.
+- Os campos do formulário são preenchidos com o que veio do PDF; campo ausente fica vazio
+  (nada de valor fictício de exemplo).
+- Erros de leitura mostram aviso real ("não foi possível ler o cartão, preencha manualmente")
+  em vez de "analisado com sucesso".
+
+### 2. Publicado x Lovable com os mesmos números
+- Dashboard do Gestor passa a ler exclusivamente do banco: lançamentos, pedidos, turmas e alunos.
+- Remoção da leitura/gravação de `cufa_lancamentos_custom`, `cufa_compras_polo`,
+  `cufa_deleted_lancamentos` e `cufa_alunos_cadastrados` nessa tela; exclusão de lançamento
+  passa a apagar no banco.
+- Limpeza única do `localStorage` antigo no primeiro acesso após o deploy, para os dois
+  ambientes começarem iguais.
+- Após publicar, os cards (Valores utilizados, % orçamento, Turmas, Alunos) devem bater
+  entre preview e link público, em qualquer navegador.
 
 ## Técnico
 
-- Nova migration: `chamadas`, `chamada_itens`, `solicitacoes_professor` (todas com
-  GRANT + RLS por polo/gestor). `matriculas` passa a ser preenchida no cadastro/matrícula do aluno.
-- Leitura pública/autenticada via `createServerFn` com `requireSupabaseAuth`;
-  contagens agregadas por `turma_id` no servidor.
-- Remoção dos blocos `loadMergedPoloAlunosList`, `loadMergedPoloStudents`,
-  arrays fixos de atividades em `src/routes/_authenticated/polo/atividades.tsx`
-  e do `defaultSolicitacao` do Jiu Jitsu.
-- Rotina única de migração: ao primeiro acesso, o que estiver em `localStorage`
-  é descartado (não promovido), evitando ressuscitar dados fictícios.
+- Nova server function `parseCartaoCnpj` em `src/lib/fornecedores.functions.ts`: recebe o PDF em
+  base64, chama o gateway de IA (`google/gemini-3.7-flash`) com bloco `file` + saída estruturada
+  por schema Zod, e devolve o DTO já normalizado (CNPJ/CEP/telefone formatados).
+- `parseCnpjCardOcr` vira um wrapper que chama essa função; o mock e os `if (fileName.includes(...))`
+  são removidos.
+- Dashboard do gestor consome os dados via `gestao.functions.ts` + TanStack Query
+  (`refetchOnWindowFocus`), sem estado local persistido.
 
-## Prompt para o Antigravity
+## Observação
 
-Ao aprovar, eu devolvo no chat o prompt técnico completo (schema SQL, arquivos a
-alterar, contratos das server functions e critérios de aceite) com base neste plano.
-
-## Antes de tudo: erros de build pendentes
-
-O projeto está com erros de TypeScript que impedem a publicação e precisam ser
-corrigidos como primeiro passo da implementação:
-
-- `src/components/admin/GestorShell.tsx` (296-297): `navAfter` não tem a propriedade `exact`.
-- `src/routes/_authenticated/gestor/financeiro.tsx`: `poloId` opcional, acessos
-  `row['id']`, `.catch` em query do Supabase e tipagem incompleta da lista de polos.
+O "Cadastro público de fornecedor" continua sem senha, como já está hoje — só a origem dos
+dados muda.
