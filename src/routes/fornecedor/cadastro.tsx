@@ -312,13 +312,13 @@ function FornecedorCadastroPage() {
             </div>
 
             <p className="text-xs text-muted-foreground font-medium">
-              Faça upload do seu Cartão CNPJ (PDF ou Imagem). Nossa inteligência artificial extrairá Razão Social, CNPJ, Endereço e CNAE automaticamente.
+              Faça upload do seu Cartão CNPJ em PDF. Nossa inteligência artificial extrairá Razão Social, CNPJ, Endereço e CNAE automaticamente.
             </p>
 
             <div className="relative border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl bg-card p-6 text-center transition-colors">
               <input
                 type="file"
-                accept="application/pdf,image/*"
+                accept="application/pdf"
                 onChange={handleFileUploadOcr}
                 className="absolute inset-0 size-full opacity-0 cursor-pointer"
               />
@@ -331,7 +331,7 @@ function FornecedorCadastroPage() {
                 <div className="flex flex-col items-center py-2">
                   <Upload className="size-8 text-primary mb-2" />
                   <span className="text-sm font-bold text-foreground">Clique para selecionar ou arraste o Cartão CNPJ</span>
-                  <span className="text-xs text-muted-foreground mt-1">Arquivos em PDF, PNG ou JPG</span>
+                  <span className="text-xs text-muted-foreground mt-1">Somente arquivos em PDF</span>
                 </div>
               )}
             </div>
