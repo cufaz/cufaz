@@ -10,6 +10,7 @@ import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
 import { Kpi } from "@/components/admin/Kpi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brl } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/gestor/")({
   component: DashboardPage,
@@ -23,83 +24,6 @@ function DashboardPage() {
   const [dataInicio, setDataInicio] = useState("2026-08-01");
   const [dataFim, setDataFim] = useState("2026-08-31");
   const [isFiltering, setIsFiltering] = useState(false);
-
-  function getDeduplicatedLocalLancamentos(): any[] {
-    try {
-      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-      const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
-
-      const storedPedidos = localStorage.getItem("cufa_compras_polo");
-      const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
-      const approvedLanc = listPedidos
-        .filter((p: any) => p.status === "aprovado")
-        .map((p: any) => {
-          const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
-          const pIdCode = pNome.toLowerCase().includes("penha")
-            ? "penha"
-            : pNome.toLowerCase().includes("madureira")
-            ? "madureira"
-            : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
-            ? "paraisopolis"
-            : "polo-teste";
-          const valNum = Number(p.valor_total || p.valor || 0);
-
-          return {
-            id: `ped-aprov-${p.id}`,
-            polo_id: pIdCode,
-            polo_nome: pNome,
-            descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
-            valor: valNum,
-            tipo: "despesa",
-            natureza: "realizado",
-            categoria_id: p.categoria || "Materiais / consumo",
-            categoria_nome: p.categoria || "Materiais / consumo",
-            competencia: "2026-08-01",
-            created_at: p.dataSolicitacao || new Date().toISOString(),
-          };
-        });
-
-      const combined = [...listLanc, ...approvedLanc];
-      const result: any[] = [];
-      const seen = new Map<string, any>();
-
-      combined.forEach((item) => {
-        const descClean = String(item.descricao || item.item || "").trim().toLowerCase();
-        const poloClean = String(item.polo_id || item.polo_nome || "").trim().toLowerCase();
-        const key = `${descClean}_${poloClean}`;
-        const valNum = Number(item.valor || item.valor_total || 0);
-
-        if (!seen.has(key)) {
-          const entry = { ...item, valor: valNum };
-          seen.set(key, entry);
-          result.push(entry);
-        } else {
-          const existing = seen.get(key)!;
-          if (valNum > Number(existing['valor'] || 0)) {
-            existing['valor'] = valNum;
-          }
-        }
-      });
-
-      return result;
-    } catch {}
-    return [];
-  }
-
-  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<any[]>(getDeduplicatedLocalLancamentos);
-
-  useEffect(() => {
-    function syncDashboardLanc() {
-      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
-    }
-
-    window.addEventListener("cufa_pedidos_updated", syncDashboardLanc);
-    window.addEventListener("storage", syncDashboardLanc);
-    return () => {
-      window.removeEventListener("cufa_pedidos_updated", syncDashboardLanc);
-      window.removeEventListener("storage", syncDashboardLanc);
-    };
-  }, []);
 
   function triggerLoading(fn: () => void) {
     setIsFiltering(true);
@@ -115,6 +39,17 @@ function DashboardPage() {
   const { data: finData, isLoading: loadingFin } = useQuery({
     queryKey: ["financeiro-dashboard"],
     queryFn: () => fetchFinanceiro({ data: {} }),
+  });
+
+  const { data: alunosData } = useQuery({
+    queryKey: ["dashboard-cadastros-alunos"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cadastros_alunos")
+        .select("id, qtd_pessoas_residencia");
+      return data ?? [];
+    },
+    refetchOnWindowFocus: true,
   });
 
   if (loadingResumo || loadingFin || !resumoData) {
@@ -174,27 +109,14 @@ function DashboardPage() {
     return selectedPoloIds.includes(String(p.polo_id));
   });
 
-  const deletedLancamentosIds: string[] = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_deleted_lancamentos");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  })();
-
   const selectedPoloNames = activePolosAll
     .filter((p: any) => selectedPoloIds.includes(String(p.id)))
     .map((p: any) => String(p.nome).toLowerCase());
 
-  const serverLanc = finData?.lancamentos ?? [];
-  const combinedLanc = [
-    ...localCustomLancamentos,
-    ...serverLanc.filter((s: any) => !localCustomLancamentos.some((l) => String(l.id) === String(s.id))),
-  ];
+  const combinedLanc = finData?.lancamentos ?? [];
 
   // Filter Lancamentos by selected polos & date range & non-deleted
   const lancamentos = combinedLanc.filter((l: any) => {
-    if (deletedLancamentosIds.includes(String(l.id))) return false;
     const lPoloId = String(l.polo_id || "").toLowerCase();
     const lPoloNome = String(l.polo_nome || "").toLowerCase();
 
@@ -256,29 +178,7 @@ function DashboardPage() {
     });
   }
 
-  // Dynamic calculation of project duration (months) across configured activity dates
-  let duracaoProjetoMeses = 6;
-  try {
-    const periodosList = atividades.map((a: any) => {
-      const key = String(a.id || a.slug || a.nome);
-      const raw = localStorage.getItem(`cufa_periodos_${key}`);
-      if (raw) return JSON.parse(raw);
-      return null;
-    }).filter(Boolean);
-
-    if (periodosList.length > 0) {
-      const diffs = periodosList.map((p: any) => {
-        if (p.data_inicio_atividade && p.data_fim_atividade) {
-          const d1 = new Date(p.data_inicio_atividade);
-          const d2 = new Date(p.data_fim_atividade);
-          const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()) + 1;
-          return months > 0 ? months : 6;
-        }
-        return 6;
-      });
-      duracaoProjetoMeses = Math.max(...diffs, 6);
-    }
-  } catch {}
+  const duracaoProjetoMeses = 6;
 
   const custoTotalPrevisto = custoMensalPrevisto * duracaoProjetoMeses;
 
