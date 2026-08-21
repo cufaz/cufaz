@@ -125,65 +125,26 @@ export interface OcrCartaoCnpjResult {
   cnae: string;
 }
 
-// Simulated / AI Extractor for Cartão CNPJ PDF/Image Upload
+// Real AI extraction of the Cartão CNPJ (PDF only)
 export async function parseCnpjCardOcr(file: File): Promise<OcrCartaoCnpjResult> {
-  await new Promise((r) => setTimeout(r, 1200));
-
-  const fileName = file.name.toLowerCase();
-
-  let result: OcrCartaoCnpjResult = {
-    cnpj: "12.345.678/0001-99",
-    razao_social: "FORNECEDOR DE TESTE LTDA",
-    nome_fantasia: "SERVIÇOS PERIFÉRICOS CUFA",
-    data_abertura: "15/03/2018",
-    porte: "ME",
-    natureza_juridica: "206-2 - Sociedade Empresária Limitada",
-    situacao_cadastral: "ATIVA",
-    cnae_principal_codigo: "47.89-0-99",
-    cnae_principal_descricao: "Comércio varejista de outros produtos não especificados anteriormente",
-    cnae_secundarios: [
-      { codigo: "56.20-1-01", descricao: "Fornecimento de alimentos preparados para empresas" },
-      { codigo: "73.19-0-02", descricao: "Promotores de vendas" },
-      { codigo: "82.30-0-01", descricao: "Serviços de organização de feiras, congressos e festas" },
-    ],
-    endereco: "Avenida Brasil, nº 5000",
-    cidade: "Rio de Janeiro",
-    uf: "RJ",
-    cep: "21040-361",
-    cnae: "47.89-0-99 - Comércio varejista de outros produtos não especificados anteriormente",
-  };
-
-  if (fileName.includes("grafica") || fileName.includes("impressa")) {
-    result = {
-      ...result,
-      razao_social: "GRÁFICA E EDITORA FAVELA ARTES ME",
-      nome_fantasia: "FAVELA ARTES GRÁFICA",
-      cnae_principal_codigo: "18.13-0-01",
-      cnae_principal_descricao: "Impressão de material para uso publicitário",
-      cnae: "18.13-0-01 - Impressão de material para uso publicitário",
-      cnae_secundarios: [
-        { codigo: "18.13-0-99", descricao: "Impressão de material para outros usos" },
-        { codigo: "18.21-1-00", descricao: "Serviços de pré-impressão" },
-        { codigo: "58.11-6-00", descricao: "Edição de livros" },
-      ],
-    };
-  } else if (fileName.includes("costura") || fileName.includes("textil")) {
-    result = {
-      ...result,
-      razao_social: "TEXTIL E CONFECÇÕES MADUREIRA LTDA",
-      nome_fantasia: "MADUREIRA TECIDOS",
-      cnae_principal_codigo: "14.12-6-01",
-      cnae_principal_descricao: "Confecção de peças do vestuário, exceto roupas intimas",
-      cnae: "14.12-6-01 - Confecção de peças do vestuário",
-      cnae_secundarios: [
-        { codigo: "14.13-4-01", descricao: "Confecção de roupas profissionais" },
-        { codigo: "47.55-5-01", descricao: "Comércio varejista de tecidos" },
-      ],
-    };
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    throw new Error("Envie o Cartão CNPJ em PDF.");
   }
 
-  return result;
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  const base64 = btoa(binary);
+
+  const { parseCartaoCnpj } = await import("./fornecedores.functions");
+  const result = await parseCartaoCnpj({ data: { fileName: file.name, fileData: base64 } });
+  return result as OcrCartaoCnpjResult;
 }
+
 
 export async function fetchFornecedoresDB(filters?: {
   status?: string;
