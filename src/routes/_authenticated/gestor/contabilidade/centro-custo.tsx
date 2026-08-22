@@ -39,6 +39,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { brl } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchCentrosCustoDB,
   saveCentroCustoDB,
@@ -67,9 +68,18 @@ function CentroCustoPage() {
   }
 
   useEffect(() => {
-    loadData();
+    void loadData();
+    const channel = supabase
+      .channel("gestor-centros-custo-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "centros_custo" }, () => {
+        void loadData();
+      })
+      .subscribe();
     window.addEventListener("cufa_centros_custo_updated", loadData);
-    return () => window.removeEventListener("cufa_centros_custo_updated", loadData);
+    return () => {
+      window.removeEventListener("cufa_centros_custo_updated", loadData);
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   async function handleSave(e: React.FormEvent) {

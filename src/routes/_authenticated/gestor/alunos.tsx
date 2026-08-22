@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { calcIdade } from "@/lib/avatars";
 import { GestorShell } from "@/components/admin/GestorShell";
@@ -36,6 +37,7 @@ import {
 import { base64ToUint8Array } from "@/lib/zipHelper";
 import {
   fetchAlunosCadastro,
+  deleteAlunoCadastro,
   usePolosCadastrados,
   getAvatarLocal,
   type AlunoCadastro,
@@ -99,127 +101,7 @@ function GestorAlunosDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedAluno, setSelectedAluno] = useState<AlunoRecord | null>(null);
 
-  const [alunosList, setAlunosList] = useState<AlunoRecord[]>(() => {
-    return loadMergedAlunos();
-  });
-
-  function loadMergedAlunos(): AlunoRecord[] {
-    const list: AlunoRecord[] = [];
-    const seenEmails = new Set<string>();
-
-    try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((cad: any) => {
-            const cEmail = String(cad.email || "").toLowerCase();
-            const cNome = cad.nome || "Aluno";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
-
-            let userPolo = cad.polo || "Complexo da Penha";
-            let userMod = cad.modalidade || "Jiu Jitsu";
-            let userTurma = cad.turma || "Turma 1 - Tarde";
-
-            let totalInsc = 1;
-            let freqCalc = "100% Presença";
-
-            try {
-              const inscStored = localStorage.getItem(`cufa_aluno_inscricoes_${cEmail}`);
-              if (inscStored) {
-                const inscList = JSON.parse(inscStored);
-                if (Array.isArray(inscList) && inscList.length > 0) {
-                  const activeList = inscList.filter((i: any) => i.status === "ativa");
-                  totalInsc = Math.max(activeList.length, 1);
-                  const activeInsc = activeList[0] || inscList[0];
-                  if (activeInsc) {
-                    userPolo = activeInsc.poloNome || userPolo;
-                    userMod = activeInsc.atividadeNome || userMod;
-                    userTurma = activeInsc.turmaNome || userTurma;
-                  }
-                }
-              }
-            } catch {}
-
-            try {
-              const freqStored = localStorage.getItem(`cufa_aluno_frequencia_${cEmail}`);
-              if (freqStored) {
-                const freqList = JSON.parse(freqStored);
-                if (Array.isArray(freqList) && freqList.length > 0) {
-                  const pres = freqList.filter((f: any) => f.presente).length;
-                  freqCalc = `${Math.round((pres / freqList.length) * 100)}% Presença`;
-                }
-              }
-            } catch {}
-
-            if (cEmail && !seenEmails.has(cEmail)) {
-              seenEmails.add(cEmail);
-              list.push({
-                id: cad.id || `aluno-${Date.now()}`,
-                nome: cNome,
-                email: cEmail,
-                telefone: cad.telefone || "",
-                polo: userPolo,
-                modalidade: userMod,
-                turma: userTurma,
-                dataNasc: cad.dataNasc,
-                nomeEscola: cad.nomeEscola || "Não informada",
-                anoEscolar: cad.anoEscolar || "1º Ano - Ensino Fundamental",
-                turnoEscolar: cad.turnoEscolar || "Manhã",
-                qtdPessoasResidencia: cad.qtdPessoasResidencia || "1",
-                nomeResponsavel: cad.nomeResponsavel || "Responsável Legal",
-                cpfResponsavel: cad.cpfResponsavel || "",
-                telResponsavel: cad.telResponsavel || "",
-                docIdName: cad.docIdName,
-                docIdData: cad.docIdData,
-                docResName: cad.docResName,
-                docResData: cad.docResData,
-                foto: fUser || null,
-                dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
-                frequenciaGeral: freqCalc,
-                qtdAtividades: totalInsc,
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    // Also read cufa_alunos_polo
-    try {
-      const storedPolo = localStorage.getItem("cufa_alunos_polo");
-      if (storedPolo) {
-        const parsed = JSON.parse(storedPolo);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((pAluno: any) => {
-            const pEmail = String(pAluno.email || `${cleanStr(pAluno.nome)}@aluno.cufa.org`).toLowerCase();
-            if (!seenEmails.has(pEmail)) {
-              seenEmails.add(pEmail);
-              list.push({
-                id: pAluno.id || `aluno-polo-${Date.now()}`,
-                nome: pAluno.nome,
-                email: pEmail,
-                telefone: pAluno.telefone || "(21) 98765-4321",
-                polo: pAluno.polo || "Complexo da Penha",
-                modalidade: pAluno.oficina || "Jiu Jitsu",
-                turma: "Turma 1 - Tarde",
-                nomeEscola: "E.M. Paulo Freire",
-                anoEscolar: "1º Ano - Ensino Médio",
-                turnoEscolar: "Manhã",
-                qtdPessoasResidencia: "4",
-                nomeResponsavel: "Responsável Legal",
-                cpfResponsavel: "000.000.000-00",
-                telResponsavel: "(21) 98765-4321",
-                dataCriacao: "2026-08-16",
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    return list;
-  }
+  const [alunosList, setAlunosList] = useState<AlunoRecord[]>([]);
 
   const { polos: polosCadastrados } = usePolosCadastrados();
 
@@ -251,8 +133,8 @@ function GestorAlunosDashboardPage() {
         docResData: existente?.docResData ?? null,
         foto: r.avatar_url || getAvatarLocal(email) || existente?.foto || null,
         dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
-        frequenciaGeral: existente?.frequenciaGeral ?? "100%",
-        qtdAtividades: existente?.qtdAtividades ?? 1,
+        frequenciaGeral: existente?.frequenciaGeral ?? "—",
+        qtdAtividades: existente?.qtdAtividades ?? 0,
         hospitalEmergencia: existente?.hospitalEmergencia || (r as any).hospital_emergencia || "",
         cep: existente?.cep || (r as any).cep || "",
         endereco: existente?.endereco || (r as any).endereco || "",
@@ -274,12 +156,19 @@ function GestorAlunosDashboardPage() {
     let ativo = true;
 
     async function syncAlunos() {
-      const locais = loadMergedAlunos();
-      const remotos = await fetchAlunosCadastro();
-      if (ativo) setAlunosList(mergeBanco(locais, remotos));
+      try {
+        const remotos = await fetchAlunosCadastro();
+        if (ativo) setAlunosList(mergeBanco([], remotos));
+      } catch (error) {
+        if (ativo) toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
+      }
     }
 
     void syncAlunos();
+    const channel = supabase
+      .channel("gestor-alunos-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_alunos" }, syncAlunos)
+      .subscribe();
     window.addEventListener("cufa_alunos_updated", syncAlunos);
     window.addEventListener("cufa_perfil_foto_updated", syncAlunos);
     window.addEventListener("storage", syncAlunos);
@@ -288,6 +177,7 @@ function GestorAlunosDashboardPage() {
       window.removeEventListener("cufa_alunos_updated", syncAlunos);
       window.removeEventListener("cufa_perfil_foto_updated", syncAlunos);
       window.removeEventListener("storage", syncAlunos);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -350,23 +240,18 @@ DOCUMENTOS ANEXADOS:
     }, 1000);
   }
 
-  function handleDeleteAluno(id: string, nome: string) {
+  async function handleDeleteAluno(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do aluno ${nome}?`)) return;
-
-    const filtered = alunosList.filter((a) => a.id !== id);
-    setAlunosList(filtered);
-
     try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.nome) !== cleanStr(nome));
-        localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(upd));
-      }
+      const aluno = alunosList.find((item) => item.id === id);
+      if (!aluno) throw new Error("Cadastro não encontrado.");
+      await deleteAlunoCadastro(aluno.email);
+      setAlunosList((current) => current.filter((item) => item.id !== id));
       window.dispatchEvent(new Event("cufa_alunos_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o aluno.");
+    }
   }
 
   // Derived metrics for KPIs

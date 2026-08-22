@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -25,7 +25,8 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
-import { getQuadroPessoas } from "@/lib/gestao.functions";
+import { deleteCadastroPessoa, getQuadroPessoas } from "@/lib/gestao.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,22 +74,6 @@ function cleanStr(str: string = "") {
     .trim();
 }
 
-const defaultProfessoresBase: ProfessorRecord[] = [
-  {
-    id: "prof-santana",
-    nome: "Prof.ª Santana Silva",
-    email: "santana@cufa.com.br",
-    telefone: "(11) 94830-0321",
-    polo: "Complexo da Penha",
-    modalidade: "Jiu Jitsu",
-    turma: "Turma 1 - Tarde (14h - 16h)",
-    alunosCount: 0,
-    frequencia: 0,
-    status: "aprovado",
-    dataCriacao: "2026-08-14",
-  },
-];
-
 function ProfessoresDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroPolo, setFiltroPolo] = useState("todos");
@@ -96,117 +81,9 @@ function ProfessoresDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedProf, setSelectedProf] = useState<ProfessorRecord | null>(null);
 
-  // Read registered & candidate professors dynamically from local storage
-  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
-    return loadMergedProfessores();
-  });
-
-  function loadMergedProfessores(): ProfessorRecord[] {
-    const list: ProfessorRecord[] = [...defaultProfessoresBase];
-    const seenEmails = new Set(list.map((p) => p.email.toLowerCase()));
-
-    // Read candidacies
-    try {
-      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSolic) {
-        const parsed = JSON.parse(storedSolic);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((solic: any) => {
-            const pEmail = String(solic.email || "").toLowerCase();
-            const pNome = solic.professorNome || "Professor";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`);
-
-            if (pEmail && !seenEmails.has(pEmail)) {
-              seenEmails.add(pEmail);
-              list.unshift({
-                id: solic.id || `prof-solic-${Date.now()}`,
-                nome: pNome,
-                email: pEmail,
-                telefone: solic.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
-                polo: solic.poloNome || "Complexo da Penha",
-                modalidade: solic.atividadeNome || "Oficina Esportiva",
-                turma: solic.turmaNome || "Turma 1 - Tarde",
-                alunosCount: 0,
-                frequencia: 0,
-                status: solic.status === "aprovado" ? "aprovado" : "pendente",
-                foto: fUser || null,
-                dataCriacao: solic.dataSolicitacao || new Date().toISOString().slice(0, 10),
-                docIdName: solic.docIdName,
-                docResName: solic.docResName,
-                docFuncName: solic.docFuncName,
-              });
-            } else if (pEmail) {
-              // Update existing record if candidate matches email
-              const idx = list.findIndex((p) => p.email.toLowerCase() === pEmail);
-              if (idx !== -1 && list[idx]) {
-                const target = list[idx]!;
-                target.status = solic.status === "aprovado" ? "aprovado" : "pendente";
-                if (solic.poloNome) target.polo = solic.poloNome;
-                if (solic.atividadeNome) target.modalidade = solic.atividadeNome;
-                if (solic.turmaNome) target.turma = solic.turmaNome;
-                if (fUser) target.foto = fUser;
-              }
-            }
-          });
-        }
-      }
-    } catch {}
-
-    // Read registered accounts
-    try {
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((cad: any) => {
-            const cEmail = String(cad.email || "").toLowerCase();
-            const cNome = cad.professorNome || "Prof. Cadastrado";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
-
-            if (cEmail && !seenEmails.has(cEmail)) {
-              seenEmails.add(cEmail);
-              list.unshift({
-                id: cad.id || `prof-cad-${Date.now()}`,
-                nome: cNome,
-                email: cEmail,
-                telefone: cad.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
-                polo: "Complexo da Penha",
-                modalidade: "Jiu Jitsu",
-                turma: "Turma 1 - Tarde",
-                alunosCount: 0,
-                frequencia: 0,
-                status: "aprovado",
-                foto: fUser || null,
-                dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
-              });
-            } else if (cEmail) {
-              const idx = list.findIndex((p) => p.email.toLowerCase() === cEmail);
-              if (idx !== -1 && list[idx] && fUser) {
-                list[idx]!.foto = fUser;
-              }
-            }
-          });
-        }
-      }
-    } catch {}
-
-    return list;
-  }
-
-  useEffect(() => {
-    function syncProfessores() {
-      setProfessoresList(loadMergedProfessores());
-    }
-
-    window.addEventListener("cufa_professores_updated", syncProfessores);
-    window.addEventListener("cufa_perfil_foto_updated", syncProfessores);
-    window.addEventListener("storage", syncProfessores);
-    return () => {
-      window.removeEventListener("cufa_professores_updated", syncProfessores);
-      window.removeEventListener("cufa_perfil_foto_updated", syncProfessores);
-      window.removeEventListener("storage", syncProfessores);
-    };
-  }, []);
+  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>([]);
+  const queryClient = useQueryClient();
+  const apagarCadastro = useServerFn(deleteCadastroPessoa);
 
   // Hidrata a lista com os cadastros reais do banco (fotos, polo e modalidade oficiais)
   const fetchQuadro = useServerFn(getQuadroPessoas);
@@ -218,43 +95,29 @@ function ProfessoresDashboardPage() {
 
   useEffect(() => {
     const dbProfs = (quadro?.professores ?? []) as any[];
-    if (dbProfs.length === 0) return;
-    setProfessoresList((prev) => {
-      const lista = [...prev];
-      dbProfs.forEach((r) => {
+    setProfessoresList(
+      dbProfs.map((r) => {
         const email = String(r.email || "").toLowerCase();
-        if (!email) return;
-        const idx = lista.findIndex((p) => p.email.toLowerCase() === email);
-        if (idx >= 0) {
-          const atual = lista[idx]!;
-          lista[idx] = {
-            ...atual,
-            nome: r.nome || atual.nome,
-            telefone: r.telefone || atual.telefone,
-            polo: r.polo_nome || atual.polo,
-            modalidade: r.modalidade || atual.modalidade,
-            foto: r.avatar_url || atual.foto || null,
-          };
-        } else {
-          lista.unshift({
-            id: String(r.id),
-            nome: r.nome || "Professor",
-            email,
-            telefone: r.telefone || "—",
-            polo: r.polo_nome || "—",
-            modalidade: r.modalidade || "—",
-            turma: "—",
-            alunosCount: 0,
-            frequencia: 0,
-            status: r.status === "ativo" ? "aprovado" : "pendente",
-            foto: r.avatar_url || null,
-            dataCriacao: String(r.created_at || "").slice(0, 10),
-          });
-        }
-      });
-      return lista;
-    });
+        return {
+          id: String(r.id), nome: r.nome || "Professor", email,
+          telefone: r.telefone || "—", polo: r.polo_nome || "—",
+          modalidade: r.modalidade || "—", turma: "—", alunosCount: 0,
+          frequencia: 0, status: r.status === "ativo" ? "aprovado" : "pendente",
+          foto: r.avatar_url || null, dataCriacao: String(r.created_at || "").slice(0, 10),
+        } as ProfessorRecord;
+      }),
+    );
   }, [quadro]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("gestor-professores-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_professores" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["quadro-pessoas"] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   function handleDownloadZip(prof: ProfessorRecord) {
     setDownloadingZipId(prof.id);
@@ -276,31 +139,17 @@ function ProfessoresDashboardPage() {
     }, 1200);
   }
 
-  function handleDeleteProfessor(id: string, nome: string) {
+  async function handleDeleteProfessor(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do professor ${nome}?`)) return;
-
-    const filtered = professoresList.filter((p) => p.id !== id);
-    setProfessoresList(filtered);
-
     try {
-      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSolic) {
-        const parsed = JSON.parse(storedSolic);
-        const upd = parsed.filter((s: any) => s.id !== id && cleanStr(s.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(upd));
-      }
-
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(upd));
-      }
-
+      await apagarCadastro({ data: { id, tipo: "professor" } });
+      setProfessoresList((current) => current.filter((item) => item.id !== id));
+      await queryClient.invalidateQueries({ queryKey: ["quadro-pessoas"] });
       window.dispatchEvent(new Event("cufa_professores_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o professor.");
+    }
   }
 
   // Derived metrics for KPIs

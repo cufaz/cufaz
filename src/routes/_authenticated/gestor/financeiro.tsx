@@ -60,23 +60,6 @@ function FinanceiroPage() {
   const [form, setForm] = useState<Row | null>(null);
   const [valorDisplay, setValorDisplay] = useState("0,00");
   const [isFilterLoading, setIsFilterLoading] = useState(false);
-  const [centrosCusto, setCentrosCusto] = useState<Row[]>([]);
-
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const { data: ccs } = await supabase
-          .from("centros_custo" as any)
-          .select("id, codigo, nome")
-          .order("codigo", { ascending: true });
-        if (ativo) setCentrosCusto((ccs || []) as unknown as Row[]);
-      } catch {}
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
 
   const handleDataInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsFilterLoading(true);
@@ -126,6 +109,20 @@ function FinanceiroPage() {
 
   const polosList: Row[] = data?.polos ?? [];
   const categoriasList: Row[] = data?.categorias ?? [];
+  const centrosCusto: Row[] = data?.centrosCusto ?? [];
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("gestor-financeiro-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "lancamentos_financeiros" }, () => {
+        void qc.invalidateQueries({ queryKey: ["financeiro"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "centros_custo" }, () => {
+        void qc.invalidateQueries({ queryKey: ["financeiro"] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [qc]);
 
   const serverLancamentos: Row[] = data?.lancamentos ?? [];
   const itens: Row[] = data?.itens ?? [];
@@ -136,7 +133,7 @@ function FinanceiroPage() {
     categoria_nome: l['categorias_custo']?.['nome'] ?? "Geral",
   }));
 
-  const isAllSelected = selectedPoloIds.length === 0 || selectedPoloIds.length === polosList.length;
+  const isAllSelected = selectedPoloIds.length === 0;
 
   const selectedPoloNames = polosList
     .filter((p) => selectedPoloIds.includes(String(p['id'])))
@@ -171,7 +168,6 @@ function FinanceiroPage() {
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
   const dbCustomItems: Array<{ id: string; poloId: string; atividade: string; categoria: string; item: string; descricao: string; quantidade: string; previsto: number; realizado: number }> = [];
-  const atividadesList: Row[] = data?.atividades ?? [];
 
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
@@ -219,6 +215,7 @@ function FinanceiroPage() {
       competencia: String(l['competencia'] || dataInicio.slice(0, 7)),
       polo_id: l['polo_id'] || selectedPoloIds[0] || null,
       categoria_id: l['categoria_id'] || null,
+      centro_custo_id: l['centro_custo_id'] || null,
     });
   }
 
