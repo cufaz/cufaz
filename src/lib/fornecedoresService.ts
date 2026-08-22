@@ -423,20 +423,6 @@ function getDefaultInitialFornecedores(): FornecedorDB[] {
   return [];
 }
 
-function saveLocalFornecedor(f: FornecedorDB, propostas: any[]) {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
-    const id = `f-${Date.now()}`;
-    const entry = { ...f, id, created_at: new Date().toISOString().slice(0, 10) };
-    list.unshift(entry);
-    localStorage.setItem("cufa_fornecedores_list", JSON.stringify(list));
-
-    if (propostas && propostas.length > 0) {
-      localStorage.setItem(`cufa_fornecedor_propostas_${id}`, JSON.stringify(propostas));
-    }
-  } catch {}
-}
 
 function updateLocalFornecedorStatus(id: string, updatePayload: any) {
   try {
