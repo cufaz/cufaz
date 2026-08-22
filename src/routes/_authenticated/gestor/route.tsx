@@ -5,16 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/gestor")({
   ssr: false,
   beforeLoad: async () => {
-    if (typeof window !== "undefined") {
-      const localUser = localStorage.getItem("cufa_logged_user");
-      if (localUser) {
-        return { user: { id: "local-gestor", email: localUser } };
-      }
-    }
-
     try {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) return { user: data.user };
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) throw redirect({ to: "/auth", replace: true });
+
+      const { data: isGestor, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "gestor",
+      });
+
+      if (roleError || !isGestor) throw redirect({ to: "/auth", replace: true });
+      return { user: data.user };
     } catch {}
 
     throw redirect({ to: "/auth", replace: true });
