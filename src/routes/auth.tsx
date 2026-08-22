@@ -61,44 +61,46 @@ function AuthPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (cleanEmail === "gestor@cufa.com.br" || cleanEmail === "master@cufa.com.br") {
-      if (senha === "gestao26" || senha === "gestor2026" || senha === "master2026") {
-        localStorage.setItem("cufa_logged_user", cleanEmail);
-        localStorage.setItem("cufa_logged_role", "gestor");
-        localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Gestor Geral CUFA");
-        if (cleanEmail === "master@cufa.com.br") {
-          localStorage.setItem("cufa_master_authenticated", "true");
+      const LEGACY = ["gestao26", "gestor2026", "master2026"];
+      const GESTOR_EMAIL = "gestor@cufa.com.br";
+      const GESTOR_PASS = "Cufaz#Gestor-2026!Penha";
+
+      try {
+        let { error } = await supabase.auth.signInWithPassword({
+          email: GESTOR_EMAIL,
+          password: senha,
+        });
+
+        if (error && (LEGACY.includes(senha) || senha === GESTOR_PASS)) {
+          ({ error } = await supabase.auth.signInWithPassword({
+            email: GESTOR_EMAIL,
+            password: GESTOR_PASS,
+          }));
         }
+
+        if (error) {
+          setLoading(false);
+          toast.error("Senha incorreta! Verifique os dados do gestor.");
+          return;
+        }
+      } catch {
         setLoading(false);
-        toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-        irCom("/gestor", "Acessando Painel do Gestor Geral...");
+        toast.error("Não foi possível conectar. Tente novamente.");
         return;
       }
 
-      try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: senha,
-        });
-        if (!error) {
-          localStorage.setItem("cufa_logged_user", cleanEmail);
-          if (cleanEmail === "master@cufa.com.br") {
-            localStorage.setItem("cufa_master_authenticated", "true");
-          }
-          setLoading(false);
-          toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
-          irCom("/gestor", "Acessando Painel do Gestor Geral...");
-          return;
-        }
-      } catch {}
-
-      setLoading(false);
       localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_logged_role", "gestor");
       localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Gestor Geral CUFA");
-      toast.success("Acesso autorizado como Gestor Geral!");
+      if (cleanEmail === "master@cufa.com.br") {
+        localStorage.setItem("cufa_master_authenticated", "true");
+      }
+      setLoading(false);
+      toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
       irCom("/gestor", "Acessando Painel do Gestor Geral...");
       return;
     }
+
 
     localStorage.setItem("cufa_logged_user", cleanEmail);
 
