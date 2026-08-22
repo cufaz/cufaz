@@ -2,21 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertGestor, assertGestorWrite, unwrap, competenciaAtual, db } from "./gestao.server";
 
-const defaultPolos = [
-  { id: "penha", nome: "Complexo da Penha", slug: "penha", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ricardo Brito", ativo: true, orcamento_mensal: 109017.99 },
-  { id: "madureira", nome: "Viaduto de Madureira", slug: "madureira", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ana Paula Silva", ativo: true, orcamento_mensal: 64800.00 },
-  { id: "paraisopolis", nome: "Paraisópolis", slug: "paraisopolis", cidade: "São Paulo", estado: "SP", gestor_nome: "Carlos Eduardo", ativo: true, orcamento_mensal: 45000.00 },
-];
 
-const defaultAtividades = [
-  { id: "1", polo_id: "penha", nome: "Jiu Jitsu", instrutor: "Prof.ª Santana Silva", vagas: 80, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t1", nome: "Turma 1 - Tarde", vagas: 40 }, { id: "t2", nome: "Turma 2 - Tarde", vagas: 40 }] },
-  { id: "2", polo_id: "penha", nome: "Aula de Inglês", instrutor: "", vagas: 30, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t3", nome: "Turma 1 - Tarde", vagas: 30 }] },
-  { id: "3", polo_id: "penha", nome: "Natação", instrutor: "", vagas: 40, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t4", nome: "Turma 1 - Tarde", vagas: 40 }] },
-  { id: "4", polo_id: "madureira", nome: "Corte e Costura", instrutor: "", vagas: 16, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t5", nome: "Turma 1 - Tarde", vagas: 16 }] },
-  { id: "5", polo_id: "madureira", nome: "Futsal", instrutor: "", vagas: 40, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t6", nome: "Turma 1 - Tarde", vagas: 20 }, { id: "t7", nome: "Turma 2 - Tarde", vagas: 20 }] },
-  { id: "6", polo_id: "madureira", nome: "Basquete", instrutor: "", vagas: 25, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t8", nome: "Turma 1 - Tarde", vagas: 25 }] },
-  { id: "7", polo_id: "paraisopolis", nome: "Karatê", instrutor: "", vagas: 30, ativo: true, polos: { nome: "Paraisópolis", slug: "paraisopolis" }, turmas: [{ id: "t9", nome: "Turma 1 - Tarde", vagas: 15 }, { id: "t10", nome: "Turma 2 - Tarde", vagas: 15 }] },
-];
+
 
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
