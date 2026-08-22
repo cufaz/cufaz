@@ -54,46 +54,50 @@ export function LoginDialog({
     }
 
     if (cleanEmail === "gestor@cufa.com.br" || cleanEmail === "master@cufa.com.br") {
-      if (cleanSenha === "gestao26" || cleanSenha === "gestor2026" || cleanSenha === "master2026") {
-        localStorage.setItem("cufa_logged_user", cleanEmail);
-        localStorage.setItem("cufa_logged_role", "gestor");
-        localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Gestor Geral CUFA");
-        if (cleanEmail === "master@cufa.com.br") {
-          localStorage.setItem("cufa_master_authenticated", "true");
-        }
-        toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
-        onOpenChange(false);
-        triggerAuthRedirect("/gestor", "Acessando Painel do Gestor Geral...");
-        return;
-      }
+      const LEGACY = ["gestao26", "gestor2026", "master2026"];
+      const GESTOR_EMAIL = "gestor@cufa.com.br";
+      const GESTOR_PASS = "Cufaz#Gestor-2026!Penha";
 
       setLoading(true);
       try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: senha,
+        let { error } = await supabase.auth.signInWithPassword({
+          email: GESTOR_EMAIL,
+          password: cleanSenha,
         });
-        if (!error) {
-          localStorage.setItem("cufa_logged_user", cleanEmail);
-          localStorage.setItem("cufa_logged_role", "gestor");
-          localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Gestor Geral CUFA");
-          toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
-          onOpenChange(false);
-          triggerAuthRedirect("/gestor", "Acessando Painel do Gestor Geral...");
+
+        if (error && (LEGACY.includes(cleanSenha) || cleanSenha === GESTOR_PASS)) {
+          ({ error } = await supabase.auth.signInWithPassword({
+            email: GESTOR_EMAIL,
+            password: GESTOR_PASS,
+          }));
+        }
+
+        if (error) {
           setLoading(false);
+          toast.error("Senha incorreta!", {
+            description: "Verifique a senha do gestor e tente novamente.",
+          });
           return;
         }
-      } catch {}
+      } catch {
+        setLoading(false);
+        toast.error("Não foi possível conectar. Tente novamente.");
+        return;
+      }
       setLoading(false);
 
       localStorage.setItem("cufa_logged_user", cleanEmail);
       localStorage.setItem("cufa_logged_role", "gestor");
       localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Gestor Geral CUFA");
-      toast.success("Login autorizado como Gestor Geral!");
+      if (cleanEmail === "master@cufa.com.br") {
+        localStorage.setItem("cufa_master_authenticated", "true");
+      }
+      toast.success("Login autorizado! Bem-vindo, Gestor Geral.");
       onOpenChange(false);
       triggerAuthRedirect("/gestor", "Acessando Painel do Gestor Geral...");
       return;
     }
+
 
     // Check registered list of responsáveis de polo.
     let list: any[] = [];
