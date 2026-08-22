@@ -6,9 +6,9 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60_000,
+        staleTime: 0,
         gcTime: 30 * 60_000,
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
         retry: 1,
         placeholderData: (prev: unknown) => prev,
       },

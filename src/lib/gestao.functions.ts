@@ -175,6 +175,9 @@ export const getOrcamentoAtividade = createServerFn({ method: "POST" })
     const categorias = unwrap(
       await db(supabase).from("categorias_custo").select("*").order("ordem"),
     );
+    const centrosCusto = unwrap(
+      await db(supabase).from("centros_custo").select("id, codigo, nome, ativo").order("codigo"),
+    );
     return { itens, categorias };
   });
 
@@ -254,6 +257,7 @@ export const getFinanceiro = createServerFn({ method: "POST" })
       competencia,
       polos: polos ?? [],
       categorias: categorias ?? [],
+      centrosCusto: centrosCusto ?? [],
       atividades: atividades ?? [],
       itens: itens ?? [],
       lancamentos: lancamentos ?? [],
@@ -491,6 +495,19 @@ export const getQuadroPessoas = createServerFn({ method: "GET" })
       polos: polos ?? [],
       atividades: atividades ?? [],
     };
+  });
+
+export const deleteCadastroPessoa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; tipo: "aluno" | "professor" }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    assertGestorWrite(userId);
+    await assertGestor(supabase, userId);
+    const tabela = data.tipo === "aluno" ? "cadastros_alunos" : "cadastros_professores";
+    const { error } = await db(supabase).from(tabela).delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /* ------------------------------------------------------------------ */

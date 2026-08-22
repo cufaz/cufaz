@@ -13,18 +13,12 @@ export interface CentroCustoDB {
 }
 
 export async function fetchCentrosCustoDB(): Promise<CentroCustoDB[]> {
-  try {
-    const { data, error } = await supabase
-      .from("centros_custo" as any)
-      .select("*")
-      .order("codigo", { ascending: true });
-
-    if (!error && data && data.length > 0) {
-      return (data || []) as unknown as CentroCustoDB[];
-    }
-  } catch {}
-
-  return loadLocalCentrosCusto();
+  const { data, error } = await supabase
+    .from("centros_custo" as any)
+    .select("*")
+    .order("codigo", { ascending: true });
+  if (error) throw new Error(`Não foi possível carregar os centros de custo: ${error.message}`);
+  return (data || []) as unknown as CentroCustoDB[];
 }
 
 export async function saveCentroCustoDB(cc: Partial<CentroCustoDB>): Promise<CentroCustoDB | null> {
@@ -38,76 +32,18 @@ export async function saveCentroCustoDB(cc: Partial<CentroCustoDB>): Promise<Cen
     ativo: cc.ativo ?? true,
   };
 
-  try {
-    if (cc.id) {
-      const { data, error } = await supabase
-        .from("centros_custo" as any)
-        .update(payload as any)
-        .eq("id", cc.id)
-        .select("*")
-        .single();
-      if (!error && data) {
-        window.dispatchEvent(new Event("cufa_centros_custo_updated"));
-        return data as unknown as CentroCustoDB;
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("centros_custo" as any)
-        .insert(payload as any)
-        .select("*")
-        .single();
-      if (!error && data) {
-        window.dispatchEvent(new Event("cufa_centros_custo_updated"));
-        return data as unknown as CentroCustoDB;
-      }
-    }
-  } catch {}
-
-  saveLocalCentroCusto(payload, cc.id);
+  const query = cc.id
+    ? supabase.from("centros_custo" as any).update(payload as any).eq("id", cc.id)
+    : supabase.from("centros_custo" as any).insert(payload as any);
+  const { data, error } = await query.select("*").single();
+  if (error || !data) throw new Error(error?.message || "Não foi possível salvar o centro de custo.");
   window.dispatchEvent(new Event("cufa_centros_custo_updated"));
-  return { ...payload, id: cc.id || `cc-${Date.now()}` } as CentroCustoDB;
+  return data as unknown as CentroCustoDB;
 }
 
 export async function deleteCentroCustoDB(id: string): Promise<boolean> {
-  try {
-    await supabase.from("centros_custo" as any).delete().eq("id", id);
-  } catch {}
-
-  deleteLocalCentroCusto(id);
+  const { error } = await supabase.from("centros_custo" as any).delete().eq("id", id);
+  if (error) throw new Error(`Não foi possível excluir o centro de custo: ${error.message}`);
   window.dispatchEvent(new Event("cufa_centros_custo_updated"));
   return true;
-}
-
-// Local Storage Fallback Helpers
-function loadLocalCentrosCusto(): CentroCustoDB[] {
-  try {
-    const stored = localStorage.getItem("cufa_centros_custo");
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}
-
-function getDefaultInitialCentrosCusto(): CentroCustoDB[] {
-  return [];
-}
-
-function saveLocalCentroCusto(payload: any, id?: string) {
-  try {
-    let list = loadLocalCentrosCusto();
-    if (id) {
-      const idx = list.findIndex((c) => c.id === id);
-      if (idx !== -1 && list[idx]) list[idx] = { ...list[idx], ...payload };
-    } else {
-      list.push({ ...payload, id: `cc-${Date.now()}` });
-    }
-    localStorage.setItem("cufa_centros_custo", JSON.stringify(list));
-  } catch {}
-}
-
-function deleteLocalCentroCusto(id: string) {
-  try {
-    let list = loadLocalCentrosCusto();
-    list = list.filter((c) => c.id !== id);
-    localStorage.setItem("cufa_centros_custo", JSON.stringify(list));
-  } catch {}
 }
