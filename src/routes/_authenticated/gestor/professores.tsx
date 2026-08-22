@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { zipSync, strToU8 } from "fflate";
@@ -23,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
+import { getQuadroPessoas } from "@/lib/gestao.functions";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -204,6 +207,54 @@ function ProfessoresDashboardPage() {
       window.removeEventListener("storage", syncProfessores);
     };
   }, []);
+
+  // Hidrata a lista com os cadastros reais do banco (fotos, polo e modalidade oficiais)
+  const fetchQuadro = useServerFn(getQuadroPessoas);
+  const { data: quadro } = useQuery({
+    queryKey: ["quadro-pessoas"],
+    queryFn: () => fetchQuadro({}),
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    const dbProfs = (quadro?.professores ?? []) as any[];
+    if (dbProfs.length === 0) return;
+    setProfessoresList((prev) => {
+      const lista = [...prev];
+      dbProfs.forEach((r) => {
+        const email = String(r.email || "").toLowerCase();
+        if (!email) return;
+        const idx = lista.findIndex((p) => p.email.toLowerCase() === email);
+        if (idx >= 0) {
+          const atual = lista[idx]!;
+          lista[idx] = {
+            ...atual,
+            nome: r.nome || atual.nome,
+            telefone: r.telefone || atual.telefone,
+            polo: r.polo_nome || atual.polo,
+            modalidade: r.modalidade || atual.modalidade,
+            foto: r.avatar_url || atual.foto || null,
+          };
+        } else {
+          lista.unshift({
+            id: String(r.id),
+            nome: r.nome || "Professor",
+            email,
+            telefone: r.telefone || "—",
+            polo: r.polo_nome || "—",
+            modalidade: r.modalidade || "—",
+            turma: "—",
+            alunosCount: 0,
+            frequencia: 0,
+            status: r.status === "ativo" ? "aprovado" : "pendente",
+            foto: r.avatar_url || null,
+            dataCriacao: String(r.created_at || "").slice(0, 10),
+          });
+        }
+      });
+      return lista;
+    });
+  }, [quadro]);
 
   function handleDownloadZip(prof: ProfessorRecord) {
     setDownloadingZipId(prof.id);
