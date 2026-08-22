@@ -20,6 +20,10 @@ export type Database = {
           beneficiarios_projetados: number
           created_at: string
           custo_mensal: number
+          data_fim_atividade: string | null
+          data_fim_matricula: string | null
+          data_inicio_atividade: string | null
+          data_inicio_matricula: string | null
           descricao: string | null
           dias: string | null
           id: string
@@ -28,6 +32,7 @@ export type Database = {
           perfil_tematico: string | null
           polo_id: string
           professor_id: string | null
+          rascunho: boolean
           slug: string
           updated_at: string
           vagas: number
@@ -37,6 +42,10 @@ export type Database = {
           beneficiarios_projetados?: number
           created_at?: string
           custo_mensal?: number
+          data_fim_atividade?: string | null
+          data_fim_matricula?: string | null
+          data_inicio_atividade?: string | null
+          data_inicio_matricula?: string | null
           descricao?: string | null
           dias?: string | null
           id?: string
@@ -45,6 +54,7 @@ export type Database = {
           perfil_tematico?: string | null
           polo_id: string
           professor_id?: string | null
+          rascunho?: boolean
           slug: string
           updated_at?: string
           vagas?: number
@@ -54,6 +64,10 @@ export type Database = {
           beneficiarios_projetados?: number
           created_at?: string
           custo_mensal?: number
+          data_fim_atividade?: string | null
+          data_fim_matricula?: string | null
+          data_inicio_atividade?: string | null
+          data_inicio_matricula?: string | null
           descricao?: string | null
           dias?: string | null
           id?: string
@@ -62,6 +76,7 @@ export type Database = {
           perfil_tematico?: string | null
           polo_id?: string
           professor_id?: string | null
+          rascunho?: boolean
           slug?: string
           updated_at?: string
           vagas?: number
@@ -139,11 +154,14 @@ export type Database = {
         Row: {
           ano_escolar: string | null
           avatar_url: string | null
+          bairro: string | null
+          cidade: string | null
           cpf_responsavel: string | null
           created_at: string
           data_nasc: string | null
           email: string
           id: string
+          modalidade: string | null
           nome: string
           nome_escola: string | null
           nome_responsavel: string | null
@@ -151,17 +169,22 @@ export type Database = {
           qtd_pessoas_residencia: number
           tel_responsavel: string | null
           telefone: string | null
+          turma_nome: string | null
           turno_escolar: string | null
+          uf: string | null
           updated_at: string
         }
         Insert: {
           ano_escolar?: string | null
           avatar_url?: string | null
+          bairro?: string | null
+          cidade?: string | null
           cpf_responsavel?: string | null
           created_at?: string
           data_nasc?: string | null
           email: string
           id?: string
+          modalidade?: string | null
           nome?: string
           nome_escola?: string | null
           nome_responsavel?: string | null
@@ -169,17 +192,22 @@ export type Database = {
           qtd_pessoas_residencia?: number
           tel_responsavel?: string | null
           telefone?: string | null
+          turma_nome?: string | null
           turno_escolar?: string | null
+          uf?: string | null
           updated_at?: string
         }
         Update: {
           ano_escolar?: string | null
           avatar_url?: string | null
+          bairro?: string | null
+          cidade?: string | null
           cpf_responsavel?: string | null
           created_at?: string
           data_nasc?: string | null
           email?: string
           id?: string
+          modalidade?: string | null
           nome?: string
           nome_escola?: string | null
           nome_responsavel?: string | null
@@ -187,7 +215,9 @@ export type Database = {
           qtd_pessoas_residencia?: number
           tel_responsavel?: string | null
           telefone?: string | null
+          turma_nome?: string | null
           turno_escolar?: string | null
+          uf?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -544,6 +574,7 @@ export type Database = {
           orcamento_mensal: number
           perfil_tematico: string | null
           ponto_focal: string | null
+          rascunho: boolean
           slug: string
           uf: string
           updated_at: string
@@ -562,6 +593,7 @@ export type Database = {
           orcamento_mensal?: number
           perfil_tematico?: string | null
           ponto_focal?: string | null
+          rascunho?: boolean
           slug: string
           uf: string
           updated_at?: string
@@ -580,6 +612,7 @@ export type Database = {
           orcamento_mensal?: number
           perfil_tematico?: string | null
           ponto_focal?: string | null
+          rascunho?: boolean
           slug?: string
           uf?: string
           updated_at?: string
