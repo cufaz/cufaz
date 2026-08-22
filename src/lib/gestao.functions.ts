@@ -465,3 +465,119 @@ export const listProfessores = createServerFn({ method: "GET" })
     );
     return { professores, vinculos, avaliacoes };
   });
+
+/* ------------------------------------------------------------------ */
+/* Quadro de professores e alunos — dados reais do banco               */
+/* ------------------------------------------------------------------ */
+
+export const getQuadroPessoas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }: { context: any }) => {
+    const { supabase, userId } = context || {};
+    await assertGestor(supabase, userId);
+    const alunos = unwrap(
+      await db(supabase).from("cadastros_alunos").select("*").order("created_at", { ascending: false }),
+    );
+    const professores = unwrap(
+      await db(supabase)
+        .from("cadastros_professores")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    );
+    const polos = unwrap(await db(supabase).from("polos").select("id, nome, cidade, uf"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("id, nome, polo_id, vagas"));
+    return {
+      alunos: alunos ?? [],
+      professores: professores ?? [],
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+    };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Relatórios de impacto                                               */
+/* ------------------------------------------------------------------ */
+
+export const getRelatorios = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }: { context: any }) => {
+    const { supabase, userId } = context || {};
+    await assertGestor(supabase, userId);
+    const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("*"));
+    const turmas = unwrap(await db(supabase).from("turmas").select("id, nome, vagas, atividade_id"));
+    const alunos = unwrap(await db(supabase).from("cadastros_alunos").select("*"));
+    const professores = unwrap(await db(supabase).from("cadastros_professores").select("*"));
+    const lancamentos = unwrap(
+      await db(supabase).from("lancamentos_financeiros").select("id, tipo, valor, competencia, polo_id, categoria_id"),
+    );
+    const categorias = unwrap(await db(supabase).from("categorias_custo").select("id, nome"));
+    const itens = unwrap(
+      await db(supabase).from("itens_orcamento").select("id, custo_mensal, categoria_id, atividade_id"),
+    );
+    const pedidos = unwrap(
+      await db(supabase).from("pedidos_compra").select("id, status, valor_total, polo_id, competencia"),
+    );
+    return {
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+      turmas: turmas ?? [],
+      alunos: alunos ?? [],
+      professores: professores ?? [],
+      lancamentos: lancamentos ?? [],
+      categorias: categorias ?? [],
+      itens: itens ?? [],
+      pedidos: pedidos ?? [],
+    };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Dados de acesso — gestor consulta/redefine senha de um usuário      */
+/* ------------------------------------------------------------------ */
+
+export const getAcessoUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { email: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertGestor(supabase, userId);
+    const email = String(data.email || "").toLowerCase().trim();
+    if (!email) return { existe: false, email: "", ultimoAcesso: null, criadoEm: null };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = (list?.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
+    if (!user) return { existe: false, email, ultimoAcesso: null, criadoEm: null };
+    return {
+      existe: true,
+      email,
+      ultimoAcesso: user.last_sign_in_at ?? null,
+      criadoEm: user.created_at ?? null,
+    };
+  });
+
+export const redefinirSenhaUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { email: string; senha: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    assertGestorWrite(userId);
+    await assertGestor(supabase, userId);
+    const email = String(data.email || "").toLowerCase().trim();
+    const senha = String(data.senha || "");
+    if (senha.length < 6) throw new Error("A senha precisa ter ao menos 6 caracteres.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = (list?.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
+    if (user) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password: senha });
+      if (error) throw new Error(error.message);
+      return { ok: true, criado: false };
+    }
+    const { error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: senha,
+      email_confirm: true,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, criado: true };
+  });
