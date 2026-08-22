@@ -38,8 +38,31 @@ export function MasterAdminDialog({
     { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
   ]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+    void supabase.auth.getUser().then(async ({ data, error }) => {
+      if (!active || error || !data.user) {
+        if (active) setAuthenticated(false);
+        return;
+      }
+
+      const { data: isGestor } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "gestor",
+      });
+      if (active) setAuthenticated(Boolean(isGestor));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   useEffect(() => {
+    if (!open || !authenticated) return;
+
     function syncMasterGestores() {
       try {
         const stored = localStorage.getItem("cufa_gestores_lista");
@@ -91,8 +114,6 @@ export function MasterAdminDialog({
       }
     }
 
-    // Hidratação inicial no cliente (evita ler localStorage durante o SSR)
-    setAuthenticated(localStorage.getItem("cufa_master_authenticated") === "true");
     syncMasterGestores();
     syncMasterProfessores();
     syncMasterAlunos();
@@ -116,7 +137,7 @@ export function MasterAdminDialog({
       window.removeEventListener("storage", syncMasterAlunos);
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [authenticated, open]);
 
   const [alunosData, setAlunosData] = useState<any[]>([]);
   const [professoresData, setProfessoresData] = useState<any[]>([]);
