@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   LayoutDashboard,
   Building2,
   Layers,
@@ -133,6 +134,7 @@ export function GestorShell({
     { to: "/gestor/alunos", label: "Alunos", icon: Users },
     { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
     { to: "/gestor/diario-classe", label: "Diário de Classe", icon: BookOpen },
+    { to: "/gestor/relatorios", label: "Relatórios", icon: BarChart3 },
   ];
 
   return (

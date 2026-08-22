@@ -2,21 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertGestor, assertGestorWrite, unwrap, competenciaAtual, db } from "./gestao.server";
 
-const defaultPolos = [
-  { id: "penha", nome: "Complexo da Penha", slug: "penha", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ricardo Brito", ativo: true, orcamento_mensal: 109017.99 },
-  { id: "madureira", nome: "Viaduto de Madureira", slug: "madureira", cidade: "Rio de Janeiro", estado: "RJ", gestor_nome: "Ana Paula Silva", ativo: true, orcamento_mensal: 64800.00 },
-  { id: "paraisopolis", nome: "Paraisópolis", slug: "paraisopolis", cidade: "São Paulo", estado: "SP", gestor_nome: "Carlos Eduardo", ativo: true, orcamento_mensal: 45000.00 },
-];
 
-const defaultAtividades = [
-  { id: "1", polo_id: "penha", nome: "Jiu Jitsu", instrutor: "Prof.ª Santana Silva", vagas: 80, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t1", nome: "Turma 1 - Tarde", vagas: 40 }, { id: "t2", nome: "Turma 2 - Tarde", vagas: 40 }] },
-  { id: "2", polo_id: "penha", nome: "Aula de Inglês", instrutor: "", vagas: 30, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t3", nome: "Turma 1 - Tarde", vagas: 30 }] },
-  { id: "3", polo_id: "penha", nome: "Natação", instrutor: "", vagas: 40, ativo: true, polos: { nome: "Complexo da Penha", slug: "penha" }, turmas: [{ id: "t4", nome: "Turma 1 - Tarde", vagas: 40 }] },
-  { id: "4", polo_id: "madureira", nome: "Corte e Costura", instrutor: "", vagas: 16, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t5", nome: "Turma 1 - Tarde", vagas: 16 }] },
-  { id: "5", polo_id: "madureira", nome: "Futsal", instrutor: "", vagas: 40, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t6", nome: "Turma 1 - Tarde", vagas: 20 }, { id: "t7", nome: "Turma 2 - Tarde", vagas: 20 }] },
-  { id: "6", polo_id: "madureira", nome: "Basquete", instrutor: "", vagas: 25, ativo: true, polos: { nome: "Viaduto de Madureira", slug: "madureira" }, turmas: [{ id: "t8", nome: "Turma 1 - Tarde", vagas: 25 }] },
-  { id: "7", polo_id: "paraisopolis", nome: "Karatê", instrutor: "", vagas: 30, ativo: true, polos: { nome: "Paraisópolis", slug: "paraisopolis" }, turmas: [{ id: "t9", nome: "Turma 1 - Tarde", vagas: 15 }, { id: "t10", nome: "Turma 2 - Tarde", vagas: 15 }] },
-];
+
 
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -49,25 +36,18 @@ export const getResumoGestor = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
-      const atividades = unwrap(await db(supabase).from("atividades").select("*").order("nome"));
-      const turmas = unwrap(await db(supabase).from("turmas").select("id, atividade_id, vagas"));
-      const matriculas = unwrap(await db(supabase).from("matriculas").select("id, turma_id, status"));
-      const pedidos = unwrap(await db(supabase).from("pedidos_compra").select("id, status, valor_total"));
-
-      if (polos && polos.length > 0) {
-        return { polos, atividades: atividades ?? [], turmas: turmas ?? [], matriculas: matriculas ?? [], pedidos: pedidos ?? [] };
-      }
-    } catch {}
-
+    await assertGestor(supabase, userId);
+    const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("*").order("nome"));
+    const turmas = unwrap(await db(supabase).from("turmas").select("id, atividade_id, vagas"));
+    const matriculas = unwrap(await db(supabase).from("matriculas").select("id, turma_id, status"));
+    const pedidos = unwrap(await db(supabase).from("pedidos_compra").select("id, status, valor_total, polo_id"));
     return {
-      polos: defaultPolos,
-      atividades: defaultAtividades,
-      turmas: [],
-      matriculas: [],
-      pedidos: [],
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+      turmas: turmas ?? [],
+      matriculas: matriculas ?? [],
+      pedidos: pedidos ?? [],
     };
   });
 
@@ -75,12 +55,8 @@ export const listPolos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const res = unwrap(await db(supabase).from("polos").select("*").order("nome"));
-      if (res && res.length > 0) return res;
-    } catch {}
-    return defaultPolos;
+    await assertGestor(supabase, userId);
+    return unwrap(await db(supabase).from("polos").select("*").order("nome")) ?? [];
   });
 
 export const savePolo = createServerFn({ method: "POST" })
@@ -114,25 +90,17 @@ export const listAtividades = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const atividades = unwrap(
-        await db(supabase)
-          .from("atividades")
-          .select("*, polos(nome, slug), turmas(*)")
-          .order("nome"),
-      );
-      const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
-      if (atividades && atividades.length > 0) {
-        return { atividades, polos: polos ?? [] };
-      }
-    } catch {}
-
-    return {
-      atividades: defaultAtividades,
-      polos: defaultPolos,
-    };
+    await assertGestor(supabase, userId);
+    const atividades = unwrap(
+      await db(supabase)
+        .from("atividades")
+        .select("*, polos(nome, slug), turmas(*)")
+        .order("nome"),
+    );
+    const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
+    return { atividades: atividades ?? [], polos: polos ?? [] };
   });
+
 
 export const saveAtividade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -240,100 +208,55 @@ export const deleteItemOrcamento = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-const defaultCategoriasFinanceiro = [
-  { id: "cat-1", nome: "Materiais esportivos e equipamentos", tipo: "despesa", ordem: 1 },
-  { id: "cat-2", nome: "Insumos, lanche e apoio operacional", tipo: "despesa", ordem: 2 },
-  { id: "cat-3", nome: "Uniformes e vestuário", tipo: "despesa", ordem: 3 },
-  { id: "cat-4", nome: "Infraestrutura, manutenção e limpeza", tipo: "despesa", ordem: 4 },
-  { id: "cat-5", nome: "Material didático e apostilas", tipo: "despesa", ordem: 5 },
-  { id: "cat-6", nome: "Recursos Humanos / Equipe Operacional", tipo: "despesa", ordem: 6 },
-  { id: "cat-7", nome: "Materiais / consumo", tipo: "despesa", ordem: 7 },
-  { id: "cat-8", nome: "Pessoal", tipo: "despesa", ordem: 8 },
-  { id: "cat-9", nome: "Comunicação", tipo: "despesa", ordem: 9 },
-  { id: "cat-10", nome: "Encargos", tipo: "despesa", ordem: 10 },
-];
-
-const defaultPolosFinanceiro = [
-  { id: "penha", nome: "Complexo da Penha", slug: "penha" },
-  { id: "madureira", nome: "Viaduto de Madureira", slug: "madureira" },
-  { id: "paraisopolis", nome: "Paraisópolis", slug: "paraisopolis" },
-];
-
-const defaultLancamentos = [
-  {
-    id: "11111111-1111-4111-a111-111111111111",
-    polo_id: "penha",
-    descricao: "Materiais de Consumo e Apoio Operacional",
-    valor: 500.00,
-    tipo: "despesa",
-    natureza: "realizado",
-    categoria_id: "cat-7",
-    categoria_nome: "Materiais / consumo",
-    competencia: "2026-08-01",
-    created_at: "2026-08-10",
-  },
-];
-
 export const getFinanceiro = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { competencia?: string; poloId?: string }) => input)
+  .inputValidator(
+    (input: { competencia?: string; poloId?: string; desde?: string; ate?: string }) => input,
+  )
   .handler(async ({ context, data }: { context: any; data: any }) => {
     const { supabase, userId } = context || {};
+    await assertGestor(supabase, userId);
     const competencia = data?.competencia ?? competenciaAtual();
 
-    try {
-      await assertGestor(supabase, userId);
-      const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
-      const categorias = unwrap(
-        await db(supabase).from("categorias_custo").select("*").order("ordem"),
-      );
+    const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
+    const categorias = unwrap(
+      await db(supabase).from("categorias_custo").select("*").order("ordem"),
+    );
 
-      let atividadesQuery = db(supabase).from("atividades").select("id, nome, polo_id");
-      if (data?.poloId) atividadesQuery = atividadesQuery.eq("polo_id", data.poloId);
-      const atividades = unwrap(await atividadesQuery);
-      const ids = (atividades ?? []).map((a: { id: string }) => a.id);
+    let atividadesQuery = db(supabase).from("atividades").select("id, nome, polo_id");
+    if (data?.poloId) atividadesQuery = atividadesQuery.eq("polo_id", data.poloId);
+    const atividades = unwrap(await atividadesQuery);
+    const ids = (atividades ?? []).map((a: { id: string }) => a.id);
 
-      const itens = ids.length
-        ? unwrap(
-            await db(supabase)
-              .from("itens_orcamento")
-              .select("id, item, custo_mensal, categoria_id, atividade_id")
-              .in("atividade_id", ids),
-          )
-        : [];
+    const itens = ids.length
+      ? unwrap(
+          await db(supabase)
+            .from("itens_orcamento")
+            .select("id, item, descricao, quantidade, custo_mensal, categoria_id, atividade_id")
+            .in("atividade_id", ids),
+        )
+      : [];
 
-      let lancQuery = db(supabase)
-        .from("lancamentos_financeiros")
-        .select("*")
-        .eq("competencia", competencia);
-      if (data?.poloId) lancQuery = lancQuery.eq("polo_id", data.poloId);
-      const lancamentos = unwrap(await lancQuery);
-
-      if (polos && polos.length > 0) {
-        return {
-          competencia,
-          polos,
-          categorias: categorias ?? defaultCategoriasFinanceiro,
-          atividades: atividades ?? [],
-          itens: itens ?? [],
-          lancamentos: lancamentos && lancamentos.length > 0 ? lancamentos : defaultLancamentos,
-        };
-      }
-    } catch {}
-
-    const filteredLancamentos = data?.poloId
-      ? defaultLancamentos.filter((l) => l.polo_id === data.poloId)
-      : defaultLancamentos;
+    let lancQuery = db(supabase).from("lancamentos_financeiros").select("*");
+    if (data?.desde || data?.ate) {
+      if (data?.desde) lancQuery = lancQuery.gte("competencia", data.desde);
+      if (data?.ate) lancQuery = lancQuery.lte("competencia", data.ate);
+    } else {
+      lancQuery = lancQuery.eq("competencia", competencia);
+    }
+    if (data?.poloId) lancQuery = lancQuery.eq("polo_id", data.poloId);
+    const lancamentos = unwrap(await lancQuery);
 
     return {
       competencia,
-      polos: defaultPolosFinanceiro,
-      categorias: defaultCategoriasFinanceiro,
-      atividades: defaultAtividades,
-      itens: [],
-      lancamentos: filteredLancamentos,
+      polos: polos ?? [],
+      categorias: categorias ?? [],
+      atividades: atividades ?? [],
+      itens: itens ?? [],
+      lancamentos: lancamentos ?? [],
     };
   });
+
 
 export const saveLancamento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -541,4 +464,120 @@ export const listProfessores = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
     );
     return { professores, vinculos, avaliacoes };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Quadro de professores e alunos — dados reais do banco               */
+/* ------------------------------------------------------------------ */
+
+export const getQuadroPessoas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }: { context: any }) => {
+    const { supabase, userId } = context || {};
+    await assertGestor(supabase, userId);
+    const alunos = unwrap(
+      await db(supabase).from("cadastros_alunos").select("*").order("created_at", { ascending: false }),
+    );
+    const professores = unwrap(
+      await db(supabase)
+        .from("cadastros_professores")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    );
+    const polos = unwrap(await db(supabase).from("polos").select("id, nome, cidade, uf"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("id, nome, polo_id, vagas"));
+    return {
+      alunos: alunos ?? [],
+      professores: professores ?? [],
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+    };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Relatórios de impacto                                               */
+/* ------------------------------------------------------------------ */
+
+export const getRelatorios = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }: { context: any }) => {
+    const { supabase, userId } = context || {};
+    await assertGestor(supabase, userId);
+    const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("*"));
+    const turmas = unwrap(await db(supabase).from("turmas").select("id, nome, vagas, atividade_id"));
+    const alunos = unwrap(await db(supabase).from("cadastros_alunos").select("*"));
+    const professores = unwrap(await db(supabase).from("cadastros_professores").select("*"));
+    const lancamentos = unwrap(
+      await db(supabase).from("lancamentos_financeiros").select("id, tipo, valor, competencia, polo_id, categoria_id"),
+    );
+    const categorias = unwrap(await db(supabase).from("categorias_custo").select("id, nome"));
+    const itens = unwrap(
+      await db(supabase).from("itens_orcamento").select("id, custo_mensal, categoria_id, atividade_id"),
+    );
+    const pedidos = unwrap(
+      await db(supabase).from("pedidos_compra").select("id, status, valor_total, polo_id, competencia"),
+    );
+    return {
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+      turmas: turmas ?? [],
+      alunos: alunos ?? [],
+      professores: professores ?? [],
+      lancamentos: lancamentos ?? [],
+      categorias: categorias ?? [],
+      itens: itens ?? [],
+      pedidos: pedidos ?? [],
+    };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Dados de acesso — gestor consulta/redefine senha de um usuário      */
+/* ------------------------------------------------------------------ */
+
+export const getAcessoUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { email: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertGestor(supabase, userId);
+    const email = String(data.email || "").toLowerCase().trim();
+    if (!email) return { existe: false, email: "", ultimoAcesso: null, criadoEm: null };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = (list?.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
+    if (!user) return { existe: false, email, ultimoAcesso: null, criadoEm: null };
+    return {
+      existe: true,
+      email,
+      ultimoAcesso: user.last_sign_in_at ?? null,
+      criadoEm: user.created_at ?? null,
+    };
+  });
+
+export const redefinirSenhaUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { email: string; senha: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    assertGestorWrite(userId);
+    await assertGestor(supabase, userId);
+    const email = String(data.email || "").toLowerCase().trim();
+    const senha = String(data.senha || "");
+    if (senha.length < 6) throw new Error("A senha precisa ter ao menos 6 caracteres.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = (list?.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
+    if (user) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password: senha });
+      if (error) throw new Error(error.message);
+      return { ok: true, criado: false };
+    }
+    const { error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: senha,
+      email_confirm: true,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, criado: true };
   });
