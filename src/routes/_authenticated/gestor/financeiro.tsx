@@ -133,7 +133,7 @@ function FinanceiroPage() {
     categoria_nome: l['categorias_custo']?.['nome'] ?? "Geral",
   }));
 
-  const isAllSelected = selectedPoloIds.length === 0 || selectedPoloIds.length === polosList.length;
+  const isAllSelected = selectedPoloIds.length === 0;
 
   const selectedPoloNames = polosList
     .filter((p) => selectedPoloIds.includes(String(p['id'])))
@@ -168,7 +168,6 @@ function FinanceiroPage() {
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
   const dbCustomItems: Array<{ id: string; poloId: string; atividade: string; categoria: string; item: string; descricao: string; quantidade: string; previsto: number; realizado: number }> = [];
-  const atividadesList: Row[] = data?.atividades ?? [];
 
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");

@@ -175,12 +175,6 @@ export const getOrcamentoAtividade = createServerFn({ method: "POST" })
     const categorias = unwrap(
       await db(supabase).from("categorias_custo").select("*").order("ordem"),
     );
-    const centrosCusto = unwrap(
-      await db(supabase).from("centros_custo").select("*").order("codigo"),
-    );
-    const centrosCusto = unwrap(
-      await db(supabase).from("centros_custo").select("id, codigo, nome, ativo").order("codigo"),
-    );
     return { itens, categorias };
   });
 
@@ -227,6 +221,9 @@ export const getFinanceiro = createServerFn({ method: "POST" })
     const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
     const categorias = unwrap(
       await db(supabase).from("categorias_custo").select("*").order("ordem"),
+    );
+    const centrosCusto = unwrap(
+      await db(supabase).from("centros_custo").select("id, codigo, nome, setor, ativo").order("codigo"),
     );
 
     let atividadesQuery = db(supabase).from("atividades").select("id, nome, polo_id");
