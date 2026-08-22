@@ -846,6 +846,30 @@ function FinanceiroPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Categoria</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(form['categoria_id'] || "")}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const cat = categoriasList.find((c) => String(c['id']) === id);
+                    setForm({
+                      ...form,
+                      categoria_id: id || null,
+                      categoria_nome: cat ? String(cat['nome']) : null,
+                    });
+                  }}
+                >
+                  <option value="">Sem categoria</option>
+                  {categoriasList.map((c) => (
+                    <option key={String(c['id'])} value={String(c['id'])}>
+                      {String(c['nome'])}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => setForm(null)}>
                   Cancelar
