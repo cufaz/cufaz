@@ -1,0 +1,10 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cadastros_alunos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cadastros_professores TO authenticated;
+GRANT INSERT ON TABLE public.cadastros_alunos TO anon;
+GRANT INSERT ON TABLE public.cadastros_professores TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cadastros_alunos TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.cadastros_professores TO service_role;
+GRANT SELECT ON TABLE public.profiles TO authenticated;
+GRANT SELECT ON TABLE public.user_roles TO authenticated;
+GRANT ALL ON TABLE public.profiles TO service_role;
+GRANT ALL ON TABLE public.user_roles TO service_role;
