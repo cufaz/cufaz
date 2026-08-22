@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
+import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -746,6 +747,8 @@ function ProfessoresDashboardPage() {
                   })()}
                 </div>
               </div>
+
+              <AcessoUsuarioCard email={selectedProf.email} />
 
               {/* Botão de Fechar */}
               <div className="flex justify-end pt-2 border-t border-border">
