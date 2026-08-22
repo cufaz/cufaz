@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -25,7 +25,8 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
-import { getQuadroPessoas } from "@/lib/gestao.functions";
+import { deleteCadastroPessoa, getQuadroPessoas } from "@/lib/gestao.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,9 +98,9 @@ function ProfessoresDashboardPage() {
   const [selectedProf, setSelectedProf] = useState<ProfessorRecord | null>(null);
 
   // Read registered & candidate professors dynamically from local storage
-  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
-    return loadMergedProfessores();
-  });
+  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>([]);
+  const queryClient = useQueryClient();
+  const apagarCadastro = useServerFn(deleteCadastroPessoa);
 
   function loadMergedProfessores(): ProfessorRecord[] {
     const list: ProfessorRecord[] = [...defaultProfessoresBase];
@@ -193,21 +194,6 @@ function ProfessoresDashboardPage() {
     return list;
   }
 
-  useEffect(() => {
-    function syncProfessores() {
-      setProfessoresList(loadMergedProfessores());
-    }
-
-    window.addEventListener("cufa_professores_updated", syncProfessores);
-    window.addEventListener("cufa_perfil_foto_updated", syncProfessores);
-    window.addEventListener("storage", syncProfessores);
-    return () => {
-      window.removeEventListener("cufa_professores_updated", syncProfessores);
-      window.removeEventListener("cufa_perfil_foto_updated", syncProfessores);
-      window.removeEventListener("storage", syncProfessores);
-    };
-  }, []);
-
   // Hidrata a lista com os cadastros reais do banco (fotos, polo e modalidade oficiais)
   const fetchQuadro = useServerFn(getQuadroPessoas);
   const { data: quadro } = useQuery({
@@ -218,43 +204,29 @@ function ProfessoresDashboardPage() {
 
   useEffect(() => {
     const dbProfs = (quadro?.professores ?? []) as any[];
-    if (dbProfs.length === 0) return;
-    setProfessoresList((prev) => {
-      const lista = [...prev];
-      dbProfs.forEach((r) => {
+    setProfessoresList(
+      dbProfs.map((r) => {
         const email = String(r.email || "").toLowerCase();
-        if (!email) return;
-        const idx = lista.findIndex((p) => p.email.toLowerCase() === email);
-        if (idx >= 0) {
-          const atual = lista[idx]!;
-          lista[idx] = {
-            ...atual,
-            nome: r.nome || atual.nome,
-            telefone: r.telefone || atual.telefone,
-            polo: r.polo_nome || atual.polo,
-            modalidade: r.modalidade || atual.modalidade,
-            foto: r.avatar_url || atual.foto || null,
-          };
-        } else {
-          lista.unshift({
-            id: String(r.id),
-            nome: r.nome || "Professor",
-            email,
-            telefone: r.telefone || "—",
-            polo: r.polo_nome || "—",
-            modalidade: r.modalidade || "—",
-            turma: "—",
-            alunosCount: 0,
-            frequencia: 0,
-            status: r.status === "ativo" ? "aprovado" : "pendente",
-            foto: r.avatar_url || null,
-            dataCriacao: String(r.created_at || "").slice(0, 10),
-          });
-        }
-      });
-      return lista;
-    });
+        return {
+          id: String(r.id), nome: r.nome || "Professor", email,
+          telefone: r.telefone || "—", polo: r.polo_nome || "—",
+          modalidade: r.modalidade || "—", turma: "—", alunosCount: 0,
+          frequencia: 0, status: r.status === "ativo" ? "aprovado" : "pendente",
+          foto: r.avatar_url || null, dataCriacao: String(r.created_at || "").slice(0, 10),
+        } as ProfessorRecord;
+      }),
+    );
   }, [quadro]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("gestor-professores-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_professores" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["quadro-pessoas"] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   function handleDownloadZip(prof: ProfessorRecord) {
     setDownloadingZipId(prof.id);
@@ -276,31 +248,17 @@ function ProfessoresDashboardPage() {
     }, 1200);
   }
 
-  function handleDeleteProfessor(id: string, nome: string) {
+  async function handleDeleteProfessor(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do professor ${nome}?`)) return;
-
-    const filtered = professoresList.filter((p) => p.id !== id);
-    setProfessoresList(filtered);
-
     try {
-      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSolic) {
-        const parsed = JSON.parse(storedSolic);
-        const upd = parsed.filter((s: any) => s.id !== id && cleanStr(s.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(upd));
-      }
-
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(upd));
-      }
-
+      await apagarCadastro({ data: { id, tipo: "professor" } });
+      setProfessoresList((current) => current.filter((item) => item.id !== id));
+      await queryClient.invalidateQueries({ queryKey: ["quadro-pessoas"] });
       window.dispatchEvent(new Event("cufa_professores_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o professor.");
+    }
   }
 
   // Derived metrics for KPIs

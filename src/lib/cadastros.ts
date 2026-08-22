@@ -125,7 +125,8 @@ export async function fetchAlunosCadastro(): Promise<AlunoCadastro[]> {
     .from("cadastros_alunos")
     .select("*")
     .order("created_at", { ascending: false });
-  if (error || !data) return [];
+  if (error) throw new Error(`Não foi possível carregar os alunos: ${error.message}`);
+  if (!data) return [];
   return data as unknown as AlunoCadastro[];
 }
 
@@ -134,14 +135,17 @@ export async function fetchProfessoresCadastro(): Promise<ProfessorCadastro[]> {
     .from("cadastros_professores")
     .select("*")
     .order("created_at", { ascending: false });
-  if (error || !data) return [];
+  if (error) throw new Error(`Não foi possível carregar os professores: ${error.message}`);
+  if (!data) return [];
   return data as unknown as ProfessorCadastro[];
 }
 
 export async function deleteAlunoCadastro(email: string) {
-  await supabase.from("cadastros_alunos").delete().eq("email", email.toLowerCase());
+  const { error } = await supabase.from("cadastros_alunos").delete().eq("email", email.toLowerCase());
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteProfessorCadastro(email: string) {
-  await supabase.from("cadastros_professores").delete().eq("email", email.toLowerCase());
+  const { error } = await supabase.from("cadastros_professores").delete().eq("email", email.toLowerCase());
+  if (error) throw new Error(error.message);
 }

@@ -36,6 +36,7 @@ import {
 import { base64ToUint8Array } from "@/lib/zipHelper";
 import {
   fetchAlunosCadastro,
+  deleteAlunoCadastro,
   usePolosCadastrados,
   getAvatarLocal,
   type AlunoCadastro,
@@ -99,9 +100,7 @@ function GestorAlunosDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedAluno, setSelectedAluno] = useState<AlunoRecord | null>(null);
 
-  const [alunosList, setAlunosList] = useState<AlunoRecord[]>(() => {
-    return loadMergedAlunos();
-  });
+  const [alunosList, setAlunosList] = useState<AlunoRecord[]>([]);
 
   function loadMergedAlunos(): AlunoRecord[] {
     const list: AlunoRecord[] = [];
@@ -251,8 +250,8 @@ function GestorAlunosDashboardPage() {
         docResData: existente?.docResData ?? null,
         foto: r.avatar_url || getAvatarLocal(email) || existente?.foto || null,
         dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
-        frequenciaGeral: existente?.frequenciaGeral ?? "100%",
-        qtdAtividades: existente?.qtdAtividades ?? 1,
+        frequenciaGeral: existente?.frequenciaGeral ?? "—",
+        qtdAtividades: existente?.qtdAtividades ?? 0,
         hospitalEmergencia: existente?.hospitalEmergencia || (r as any).hospital_emergencia || "",
         cep: existente?.cep || (r as any).cep || "",
         endereco: existente?.endereco || (r as any).endereco || "",
@@ -274,12 +273,19 @@ function GestorAlunosDashboardPage() {
     let ativo = true;
 
     async function syncAlunos() {
-      const locais = loadMergedAlunos();
-      const remotos = await fetchAlunosCadastro();
-      if (ativo) setAlunosList(mergeBanco(locais, remotos));
+      try {
+        const remotos = await fetchAlunosCadastro();
+        if (ativo) setAlunosList(mergeBanco([], remotos));
+      } catch (error) {
+        if (ativo) toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
+      }
     }
 
     void syncAlunos();
+    const channel = supabase
+      .channel("gestor-alunos-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_alunos" }, syncAlunos)
+      .subscribe();
     window.addEventListener("cufa_alunos_updated", syncAlunos);
     window.addEventListener("cufa_perfil_foto_updated", syncAlunos);
     window.addEventListener("storage", syncAlunos);
@@ -288,6 +294,7 @@ function GestorAlunosDashboardPage() {
       window.removeEventListener("cufa_alunos_updated", syncAlunos);
       window.removeEventListener("cufa_perfil_foto_updated", syncAlunos);
       window.removeEventListener("storage", syncAlunos);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -350,23 +357,18 @@ DOCUMENTOS ANEXADOS:
     }, 1000);
   }
 
-  function handleDeleteAluno(id: string, nome: string) {
+  async function handleDeleteAluno(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do aluno ${nome}?`)) return;
-
-    const filtered = alunosList.filter((a) => a.id !== id);
-    setAlunosList(filtered);
-
     try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.nome) !== cleanStr(nome));
-        localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(upd));
-      }
+      const aluno = alunosList.find((item) => item.id === id);
+      if (!aluno) throw new Error("Cadastro não encontrado.");
+      await deleteAlunoCadastro(aluno.email);
+      setAlunosList((current) => current.filter((item) => item.id !== id));
       window.dispatchEvent(new Event("cufa_alunos_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o aluno.");
+    }
   }
 
   // Derived metrics for KPIs

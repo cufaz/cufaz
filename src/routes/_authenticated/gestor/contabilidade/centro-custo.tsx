@@ -39,6 +39,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { brl } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchCentrosCustoDB,
   saveCentroCustoDB,
