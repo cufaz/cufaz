@@ -36,25 +36,18 @@ export const getResumoGestor = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
-      const atividades = unwrap(await db(supabase).from("atividades").select("*").order("nome"));
-      const turmas = unwrap(await db(supabase).from("turmas").select("id, atividade_id, vagas"));
-      const matriculas = unwrap(await db(supabase).from("matriculas").select("id, turma_id, status"));
-      const pedidos = unwrap(await db(supabase).from("pedidos_compra").select("id, status, valor_total"));
-
-      if (polos && polos.length > 0) {
-        return { polos, atividades: atividades ?? [], turmas: turmas ?? [], matriculas: matriculas ?? [], pedidos: pedidos ?? [] };
-      }
-    } catch {}
-
+    await assertGestor(supabase, userId);
+    const polos = unwrap(await db(supabase).from("polos").select("*").order("nome"));
+    const atividades = unwrap(await db(supabase).from("atividades").select("*").order("nome"));
+    const turmas = unwrap(await db(supabase).from("turmas").select("id, atividade_id, vagas"));
+    const matriculas = unwrap(await db(supabase).from("matriculas").select("id, turma_id, status"));
+    const pedidos = unwrap(await db(supabase).from("pedidos_compra").select("id, status, valor_total, polo_id"));
     return {
-      polos: defaultPolos,
-      atividades: defaultAtividades,
-      turmas: [],
-      matriculas: [],
-      pedidos: [],
+      polos: polos ?? [],
+      atividades: atividades ?? [],
+      turmas: turmas ?? [],
+      matriculas: matriculas ?? [],
+      pedidos: pedidos ?? [],
     };
   });
 
@@ -62,12 +55,8 @@ export const listPolos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const res = unwrap(await db(supabase).from("polos").select("*").order("nome"));
-      if (res && res.length > 0) return res;
-    } catch {}
-    return defaultPolos;
+    await assertGestor(supabase, userId);
+    return unwrap(await db(supabase).from("polos").select("*").order("nome")) ?? [];
   });
 
 export const savePolo = createServerFn({ method: "POST" })
@@ -101,25 +90,17 @@ export const listAtividades = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }: { context: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const atividades = unwrap(
-        await db(supabase)
-          .from("atividades")
-          .select("*, polos(nome, slug), turmas(*)")
-          .order("nome"),
-      );
-      const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
-      if (atividades && atividades.length > 0) {
-        return { atividades, polos: polos ?? [] };
-      }
-    } catch {}
-
-    return {
-      atividades: defaultAtividades,
-      polos: defaultPolos,
-    };
+    await assertGestor(supabase, userId);
+    const atividades = unwrap(
+      await db(supabase)
+        .from("atividades")
+        .select("*, polos(nome, slug), turmas(*)")
+        .order("nome"),
+    );
+    const polos = unwrap(await db(supabase).from("polos").select("id, nome").order("nome"));
+    return { atividades: atividades ?? [], polos: polos ?? [] };
   });
+
 
 export const saveAtividade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
