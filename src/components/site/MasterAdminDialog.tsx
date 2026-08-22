@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/cufa-z-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  deleteAlunoCadastro,
+  deleteProfessorCadastro,
+  fetchAlunosCadastro,
+  fetchProfessoresCadastro,
+} from "@/lib/cadastros";
 
 export function MasterAdminDialog({
   open,
@@ -52,12 +59,36 @@ export function MasterAdminDialog({
       } catch {}
     }
 
-    function syncMasterProfessores() {
-      setProfessoresData(loadMasterProfessores());
+    async function syncMasterProfessores() {
+      try {
+        const list = await fetchProfessoresCadastro();
+        setProfessoresData(list.map((p) => ({
+          id: p.id || p.email,
+          nome: p.nome,
+          email: p.email,
+          senha: "Protegida",
+          disciplina: p.modalidade || "—",
+          polo: p.polo_nome || "—",
+        })));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível carregar os professores.");
+      }
     }
 
-    function syncMasterAlunos() {
-      setAlunosData(loadMasterAlunos());
+    async function syncMasterAlunos() {
+      try {
+        const list = await fetchAlunosCadastro();
+        setAlunosData(list.map((a) => ({
+          id: a.id || a.email,
+          nome: a.nome,
+          email: a.email,
+          senha: "Protegida",
+          polo: a.polo_nome || "—",
+          atividade: "—",
+        })));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
+      }
     }
 
     // Hidratação inicial no cliente (evita ler localStorage durante o SSR)
@@ -71,6 +102,11 @@ export function MasterAdminDialog({
     window.addEventListener("cufa_alunos_updated", syncMasterAlunos);
     window.addEventListener("storage", syncMasterProfessores);
     window.addEventListener("storage", syncMasterAlunos);
+    const channel = supabase
+      .channel("master-cadastros-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_alunos" }, syncMasterAlunos)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_professores" }, syncMasterProfessores)
+      .subscribe();
 
     return () => {
       window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
@@ -78,6 +114,7 @@ export function MasterAdminDialog({
       window.removeEventListener("cufa_alunos_updated", syncMasterAlunos);
       window.removeEventListener("storage", syncMasterProfessores);
       window.removeEventListener("storage", syncMasterAlunos);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -273,18 +310,28 @@ export function MasterAdminDialog({
   const [professoresData, setProfessoresData] = useState<any[]>([]);
 
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (email.trim().toLowerCase() === "master@cufa.com.br" && senha === "cufamaster2026") {
+    const normalizedEmail = email.trim().toLowerCase();
+    const signInEmail = normalizedEmail === "master@cufa.com.br" ? "gestor@cufa.com.br" : normalizedEmail;
+    const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password: senha });
+    if (!error && data.user) {
+      const { data: isGestor, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "gestor",
+      });
+      if (roleError || !isGestor) {
+        await supabase.auth.signOut();
+        toast.error("Este usuário não possui acesso administrativo.");
+        return;
+      }
       setAuthenticated(true);
       localStorage.setItem("cufa_master_authenticated", "true");
       toast.success("Acesso Master Admin Autorizado!", {
         description: "Bem-vindo ao Portal de Controle de Acessos da CUFA.",
       });
     } else {
-      toast.error("Credenciais Master incorretas", {
-        description: "E-mail: master@cufa.com.br | Senha: cufamaster2026",
-      });
+      toast.error("Credenciais administrativas incorretas.");
     }
   }
 
@@ -543,17 +590,16 @@ export function MasterAdminDialog({
                                   size="icon"
                                   variant="ghost"
                                   className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (confirm(`Deseja excluir definitivamente o aluno ${a.nome}?`)) {
-                                      setAlunosData((prev) => prev.filter((item) => item.id !== a.id));
                                       try {
-                                        const stored = localStorage.getItem("cufa_alunos_polo");
-                                        if (stored) {
-                                          const list = JSON.parse(stored).filter((item: any) => item.id !== a.id);
-                                          localStorage.setItem("cufa_alunos_polo", JSON.stringify(list));
-                                        }
-                                      } catch {}
-                                      toast.success(`Aluno ${a.nome} excluído definitivamente.`);
+                                        await deleteAlunoCadastro(a.email);
+                                        setAlunosData((prev) => prev.filter((item) => item.id !== a.id));
+                                        window.dispatchEvent(new Event("cufa_alunos_updated"));
+                                        toast.success(`Aluno ${a.nome} excluído definitivamente.`);
+                                      } catch (error) {
+                                        toast.error(error instanceof Error ? error.message : "Não foi possível excluir o aluno.");
+                                      }
                                     }
                                   }}
                                   title="Excluir Aluno"
@@ -609,23 +655,16 @@ export function MasterAdminDialog({
                                   size="icon"
                                   variant="ghost"
                                   className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (confirm(`Deseja excluir definitivamente o professor ${p.nome}?`)) {
-                                      setProfessoresData((prev) => prev.filter((item) => item.id !== p.id));
                                       try {
-                                        const storedC = localStorage.getItem("cufa_professores_cadastrados");
-                                        if (storedC) {
-                                          const listC = JSON.parse(storedC).filter((item: any) => item.id !== p.id && item.email !== p.email);
-                                          localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listC));
-                                        }
-                                        const storedS = localStorage.getItem("cufa_professores_solicitacoes");
-                                        if (storedS) {
-                                          const listS = JSON.parse(storedS).filter((item: any) => item.email !== p.email);
-                                          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(listS));
-                                        }
+                                        await deleteProfessorCadastro(p.email);
+                                        setProfessoresData((prev) => prev.filter((item) => item.id !== p.id));
                                         window.dispatchEvent(new Event("cufa_professores_updated"));
-                                      } catch {}
-                                      toast.success(`Professor ${p.nome} excluído definitivamente.`);
+                                        toast.success(`Professor ${p.nome} excluído definitivamente.`);
+                                      } catch (error) {
+                                        toast.error(error instanceof Error ? error.message : "Não foi possível excluir o professor.");
+                                      }
                                     }
                                   }}
                                   title="Excluir Professor"

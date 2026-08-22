@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { calcIdade } from "@/lib/avatars";
 import { GestorShell } from "@/components/admin/GestorShell";

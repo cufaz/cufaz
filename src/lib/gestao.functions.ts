@@ -176,6 +176,9 @@ export const getOrcamentoAtividade = createServerFn({ method: "POST" })
       await db(supabase).from("categorias_custo").select("*").order("ordem"),
     );
     const centrosCusto = unwrap(
+      await db(supabase).from("centros_custo").select("*").order("codigo"),
+    );
+    const centrosCusto = unwrap(
       await db(supabase).from("centros_custo").select("id, codigo, nome, ativo").order("codigo"),
     );
     return { itens, categorias };
@@ -235,7 +238,7 @@ export const getFinanceiro = createServerFn({ method: "POST" })
       ? unwrap(
           await db(supabase)
             .from("itens_orcamento")
-            .select("id, item, descricao, quantidade, custo_mensal, categoria_id, atividade_id")
+            .select("id, item, descricao, quantidade, custo_mensal, categoria_id, atividade_id, categorias_custo(nome), atividades(nome, polo_id, polos(nome))")
             .in("atividade_id", ids),
         )
       : [];
