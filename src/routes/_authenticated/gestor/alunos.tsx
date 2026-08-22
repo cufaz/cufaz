@@ -18,6 +18,8 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
+import { calcIdade } from "@/lib/avatars";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -648,7 +650,7 @@ DOCUMENTOS ANEXADOS:
 
       {/* Modal de Análise Detalhada do Aluno */}
       <Dialog open={!!selectedAluno} onOpenChange={(v) => !v && setSelectedAluno(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedAluno && (
             <>
               <DialogHeader className="text-left">
@@ -674,6 +676,14 @@ DOCUMENTOS ANEXADOS:
                   <div>
                     <h4 className="font-extrabold text-sm text-foreground">{selectedAluno.nome}</h4>
                     <p className="text-xs font-bold text-primary">{selectedAluno.modalidade} — {selectedAluno.turma}</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {calcIdade(selectedAluno.dataNasc) !== null
+                        ? `${calcIdade(selectedAluno.dataNasc)} anos`
+                        : "Idade não informada"}
+                      {selectedAluno.dataNasc && selectedAluno.dataNasc !== "—"
+                        ? ` · Nascimento: ${selectedAluno.dataNasc}`
+                        : ""}
+                    </p>
                     <Badge variant="outline" className="mt-1 text-[10px] border-primary/30 text-foreground font-semibold">
                       {selectedAluno.polo}
                     </Badge>
@@ -714,6 +724,8 @@ DOCUMENTOS ANEXADOS:
                     <p>📄 Termo de Autorização Assinado: <strong className={selectedAluno.termoAutorizacaoName ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>{selectedAluno.termoAutorizacaoName || "Pendente de Anexo"}</strong></p>
                   </div>
                 </div>
+
+                <AcessoUsuarioCard email={selectedAluno.email} />
 
                 <div className="pt-2 flex justify-end">
                   <Button
