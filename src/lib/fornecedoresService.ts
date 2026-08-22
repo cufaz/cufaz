@@ -179,7 +179,8 @@ export async function fetchFornecedoresDB(filters?: {
   }
 
   if (filters?.categoria && filters.categoria !== "todas") {
-    list = list.filter((f) => f.categorias?.includes(filters.categoria));
+    const categoria = filters.categoria;
+    list = list.filter((f) => f.categorias?.includes(categoria));
   }
 
   return list;
@@ -217,14 +218,6 @@ export async function fetchFornecedorByCnpjDB(cnpj: string): Promise<{
       };
     }
   } catch {}
-
-  // Fallback to local storage
-  const localF = loadLocalFornecedores().find((f) => f.cnpj.replace(/\D/g, "") === cleanCnpj);
-  if (localF) {
-    const propostas = loadLocalPropostas(localF.id!);
-    const documentos = loadLocalDocumentos(localF.id!);
-    return { fornecedor: localF, propostas, documentos };
-  }
 
   return { fornecedor: null, propostas: [], documentos: [] };
 }
@@ -384,18 +377,3 @@ export async function updateFornecedorStatusDB(
   return true;
 }
 
-function loadLocalPropostas(fornecedorId: string): FornecedorPropostaDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_propostas_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}
-
-function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_documentos_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}
