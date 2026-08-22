@@ -755,17 +755,27 @@ function FornecedorCadastroPage() {
 
                     <div className="space-y-1">
                       <Label className="text-[11px] font-bold text-muted-foreground uppercase">Valor Estimado (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={p.valor || ""}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setPropostas((prev) => prev.map((item) => (item.id === p.id ? { ...item, valor: val } : item)));
-                        }}
-                        placeholder="0,00"
-                        className="h-9 font-bold text-xs"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-2 text-xs font-bold text-muted-foreground">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={Number(p.valor || 0).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            const val = raw ? Number(raw) / 100 : 0;
+                            setPropostas((prev) =>
+                              prev.map((item) => (item.id === p.id ? { ...item, valor: val } : item)),
+                            );
+                          }}
+                          placeholder="0,00"
+                          className="h-9 pl-8 font-bold text-xs tabular-nums"
+                        />
+                      </div>
+
                     </div>
                   </div>
                 </div>
