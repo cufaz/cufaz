@@ -68,14 +68,19 @@ function FornecedoresGestorPage() {
 
   async function loadFornecedores() {
     setLoading(true);
-    const data = await fetchFornecedoresDB({
-      status: filtroStatus,
-      search: busca,
-      categoria: filtroCategoria,
-      uf: filtroUf,
-    });
-    setFornecedores(data);
-    setLoading(false);
+    try {
+      const data = await fetchFornecedoresDB({
+        status: filtroStatus,
+        search: busca,
+        categoria: filtroCategoria,
+        uf: filtroUf,
+      });
+      setFornecedores(data);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar os fornecedores.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

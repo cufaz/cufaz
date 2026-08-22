@@ -27,7 +27,6 @@ import {
 import { brl } from "@/lib/format";
 import { exportProfessionalExcel } from "@/components/admin/utils";
 import { generateProfessionalPdf } from "@/components/admin/exportPdf";
-import { itensOrcamentoOFICIAIS } from "@/components/admin/dataDetalhada";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/gestor/financeiro")({
@@ -79,16 +78,6 @@ function FinanceiroPage() {
     };
   }, []);
 
-  // Deleted launches tracked in state & local storage
-  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_deleted_lancamentos");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
   const handleDataInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsFilterLoading(true);
     setDataInicio(e.target.value);
@@ -110,8 +99,9 @@ function FinanceiroPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["financeiro", dataInicio, dataFim, selectedPoloIds],
     queryFn: () => {
-      const dataPayload: { competencia?: string; poloId?: string } = {
-        competencia: dataInicio.slice(0, 7),
+      const dataPayload: { desde: string; ate: string; poloId?: string } = {
+        desde: dataInicio,
+        ate: dataFim,
       };
       if (selectedPoloIds.length === 1 && selectedPoloIds[0]) {
         dataPayload.poloId = selectedPoloIds[0];
@@ -121,27 +111,11 @@ function FinanceiroPage() {
   });
 
   const mSalvar = useMutation({
-    mutationFn: async (payload: Row) => {
-      const resp = await salvar({ data: payload });
-      try {
-        const stored = localStorage.getItem("cufa_lancamentos_custom");
-        let list: any[] = stored ? JSON.parse(stored) : [];
-        if (payload['id']) {
-          const idx = list.findIndex((l) => String(l['id']) === String(payload['id']));
-          if (idx !== -1) list[idx] = { ...list[idx], ...payload, ...resp };
-          else list.unshift({ ...payload, ...resp });
-        } else {
-          list.unshift({ ...payload, ...resp, id: `local-${Date.now()}` });
-        }
-        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(list));
-      } catch {}
-      return resp;
-    },
+    mutationFn: (payload: Row) => salvar({ data: payload }),
     onSuccess: () => {
       toast.success("Lançamento salvo com sucesso!");
       setForm(null);
       setValorDisplay("0,00");
-      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
       window.dispatchEvent(new Event("cufa_pedidos_updated"));
       qc.invalidateQueries({ queryKey: ["financeiro"] });
     },
@@ -156,87 +130,11 @@ function FinanceiroPage() {
   const serverLancamentos: Row[] = data?.lancamentos ?? [];
   const itens: Row[] = data?.itens ?? [];
 
-  function getDeduplicatedLocalLancamentos(): Row[] {
-    try {
-      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-      const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
-
-      const storedPedidos = localStorage.getItem("cufa_compras_polo");
-      const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
-      const approvedLanc = listPedidos
-        .filter((p: any) => p.status === "aprovado")
-        .map((p: any) => {
-          const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
-          const pIdCode = pNome.toLowerCase().includes("penha")
-            ? "penha"
-            : pNome.toLowerCase().includes("madureira")
-            ? "madureira"
-            : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
-            ? "paraisopolis"
-            : "penha";
-          const valNum = Number(p.valor_total || p.valor || 0);
-
-          return {
-            id: `ped-aprov-${p.id}`,
-            polo_id: pIdCode,
-            polo_nome: pNome,
-            descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
-            valor: valNum,
-            tipo: "despesa",
-            natureza: "realizado",
-            categoria_id: p.categoria || "Materiais / consumo",
-            categoria_nome: p.categoria || "Materiais / consumo",
-            competencia: "2026-08-01",
-            created_at: p.dataSolicitacao || new Date().toISOString(),
-          };
-        });
-
-      const combined = [...listLanc, ...approvedLanc];
-      const result: Row[] = [];
-      const seen = new Map<string, Row>();
-
-      combined.forEach((item) => {
-        const descClean = String(item.descricao || item.item || "").trim().toLowerCase();
-        const poloClean = String(item.polo_id || item.polo_nome || "").trim().toLowerCase();
-        const key = `${descClean}_${poloClean}`;
-        const valNum = Number(item.valor || item.valor_total || 0);
-
-        if (!seen.has(key)) {
-          const entry = { ...item, valor: valNum };
-          seen.set(key, entry);
-          result.push(entry);
-        } else {
-          const existing = seen.get(key)!;
-          if (valNum > Number(existing['valor'] || 0)) {
-            existing['valor'] = valNum;
-          }
-        }
-      });
-
-      return result;
-    } catch {}
-    return [];
-  }
-
-  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<Row[]>(getDeduplicatedLocalLancamentos);
-
-  useEffect(() => {
-    function syncLocalLancamentos() {
-      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
-    }
-
-    window.addEventListener("cufa_pedidos_updated", syncLocalLancamentos);
-    window.addEventListener("storage", syncLocalLancamentos);
-    return () => {
-      window.removeEventListener("cufa_pedidos_updated", syncLocalLancamentos);
-      window.removeEventListener("storage", syncLocalLancamentos);
-    };
-  }, []);
-
-  const lancamentos: Row[] = [
-    ...localCustomLancamentos,
-    ...serverLancamentos.filter((s) => !localCustomLancamentos.some((l) => String(l['id']) === String(s['id']))),
-  ];
+  const lancamentos: Row[] = serverLancamentos.map((l) => ({
+    ...l,
+    polo_nome: l['polos']?.['nome'] ?? "",
+    categoria_nome: l['categorias_custo']?.['nome'] ?? "Geral",
+  }));
 
   const isAllSelected = selectedPoloIds.length === 0 || selectedPoloIds.length === polosList.length;
 
@@ -246,7 +144,6 @@ function FinanceiroPage() {
 
   // Filter lancamentos by polo & date with flexible matching
   const lancamentosFiltrados = lancamentos.filter((l) => {
-    if (deletedIds.includes(String(l['id']))) return false;
     const lPoloId = String(l['polo_id'] || "").toLowerCase();
     const lPoloNome = String(l['polo_nome'] || "").toLowerCase();
 
@@ -273,37 +170,13 @@ function FinanceiroPage() {
   const totalReceitas = receitas.reduce((s, l) => s + Number(l['valor']), 0);
   const totalDespesas = despesas.reduce((s, l) => s + Number(l['valor']), 0);
 
-  // 1. Official Preset Items for Penha, Madureira, Paraisópolis
-  const presetItems = itensOrcamentoOFICIAIS.filter((item) => {
-    if (isAllSelected) return true;
-    if (selectedPoloIds.includes(item.poloId)) return true;
-    return selectedPoloNames.some((pName) => {
-      if (pName.includes("penha") && item.poloId === "penha") return true;
-      if (pName.includes("madureira") && item.poloId === "madureira") return true;
-      if ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && item.poloId === "paraisopolis") return true;
-      return false;
-    });
-  });
-
-  const isOfficialAtiv = (name: string) => {
-    const n = name.toLowerCase();
-    return ["jiu", "basq", "futs", "karat", "ingl", "nata", "corte", "vôl", "vol", "tatame", "kimono", "lanche", "professor", "monitor"].some((k) => n.includes(k));
-  };
-
-  // 2. Custom Database Budget Items
-  const dbCustomItems: typeof itensOrcamentoOFICIAIS = [];
+  const dbCustomItems: Array<{ id: string; poloId: string; atividade: string; categoria: string; item: string; descricao: string; quantidade: string; previsto: number; realizado: number }> = [];
   const atividadesList: Row[] = data?.atividades ?? [];
 
   itens.forEach((i: Row) => {
     const itemPoloId = String(i['polo_id'] || i['atividades']?.['polo_id'] || "");
     const itemPoloNome = String(i['polos']?.['nome'] || i['atividades']?.['polos']?.['nome'] || "").toLowerCase();
     const ativNome = String(i['atividades']?.['nome'] || i['atividade_nome'] || i['item'] || "");
-
-    if (isOfficialAtiv(ativNome)) return;
-    if (i['is_preset'] || String(i['id']).startsWith("preset-")) return;
-
-    const itemClean = String(i['item'] || "").toLowerCase();
-    if (presetItems.some((p) => p.item.toLowerCase().includes(itemClean) || itemClean.includes(p.item.toLowerCase()))) return;
 
     const matchPolo =
       isAllSelected ||
@@ -331,8 +204,7 @@ function FinanceiroPage() {
     }
   });
 
-  // Combine official preset items + custom DB items
-  const poloItensPrevisto = [...presetItems, ...dbCustomItems];
+  const poloItensPrevisto = dbCustomItems;
   const previstoTotal = poloItensPrevisto.reduce((acc, i) => acc + i.previsto, 0);
 
   // Edit action: pre-fill modal
@@ -359,34 +231,20 @@ function FinanceiroPage() {
       return;
     }
 
-    const updatedDeleted = [...deletedIds, idStr];
-    setDeletedIds(updatedDeleted);
     try {
-      localStorage.setItem("cufa_deleted_lancamentos", JSON.stringify(updatedDeleted));
-
-      const storedCustom = localStorage.getItem("cufa_lancamentos_custom");
-      if (storedCustom) {
-        const parsed = JSON.parse(storedCustom);
-        const filtered = parsed.filter((item: any) => String(item.id) !== idStr);
-        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(filtered));
-      }
-    } catch {}
-
-    setLocalCustomLancamentos((prev) => prev.filter((item) => String(item['id']) !== idStr));
-
-    try {
-      await apagar({ data: { id: idStr } }).catch(() => {});
+      await apagar({ data: { id: idStr } });
 
       if (l['pedido_id'] || idStr.startsWith("ped-aprov-")) {
         const realPedId = l['pedido_id'] || idStr.replace("ped-aprov-", "");
         const { error: delErr } = await supabase.from("pedidos_compra").delete().eq("id", realPedId);
         if (delErr) console.warn("Delete order error:", delErr.message);
       }
-    } catch {}
-
-    qc.invalidateQueries({ queryKey: ["financeiro"] });
-    window.dispatchEvent(new Event("cufa_pedidos_updated"));
-    toast.success("Lançamento excluído com sucesso do banco de dados!");
+      await qc.invalidateQueries({ queryKey: ["financeiro"] });
+      window.dispatchEvent(new Event("cufa_pedidos_updated"));
+      toast.success("Lançamento excluído com sucesso!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o lançamento.");
+    }
   }
 
   return (

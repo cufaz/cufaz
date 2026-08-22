@@ -237,7 +237,10 @@ export const getFinanceiro = createServerFn({ method: "POST" })
         )
       : [];
 
-    let lancQuery = db(supabase).from("lancamentos_financeiros").select("*");
+    let lancQuery = db(supabase)
+      .from("lancamentos_financeiros")
+      .select("*, polos(nome), categorias_custo(nome), centros_custo(codigo, nome)")
+      .order("competencia", { ascending: false });
     if (data?.desde || data?.ate) {
       if (data?.desde) lancQuery = lancQuery.gte("competencia", data.desde);
       if (data?.ate) lancQuery = lancQuery.lte("competencia", data.ate);
@@ -263,25 +266,23 @@ export const saveLancamento = createServerFn({ method: "POST" })
   .inputValidator((input: Record<string, unknown>) => input)
   .handler(async ({ context, data }: { context: any; data: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const { id, ...values } = data as { id?: string } & Record<string, unknown>;
-      if (id) {
-        const up = unwrap(
-          await db(supabase)
-            .from("lancamentos_financeiros")
-            .update(values)
-            .eq("id", id)
-            .select()
-            .maybeSingle(),
-        );
-        if (up) return up;
-      }
-      return unwrap(
-        await db(supabase).from("lancamentos_financeiros").insert(values).select().single(),
+    await assertGestor(supabase, userId);
+    const { id, ...values } = data as { id?: string } & Record<string, unknown>;
+    if (id) {
+      const up = unwrap(
+        await db(supabase)
+          .from("lancamentos_financeiros")
+          .update(values)
+          .eq("id", id)
+          .select()
+          .maybeSingle(),
       );
-    } catch {}
-    return { ok: true, ...data };
+      if (!up) throw new Error("Lançamento não encontrado.");
+      return up;
+    }
+    return unwrap(
+      await db(supabase).from("lancamentos_financeiros").insert(values).select().single(),
+    );
   });
 
 export const deleteLancamento = createServerFn({ method: "POST" })
@@ -289,13 +290,11 @@ export const deleteLancamento = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ context, data }: { context: any; data: any }) => {
     const { supabase, userId } = context || {};
-    try {
-      await assertGestor(supabase, userId);
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id);
-      if (isUuid) {
-        await db(supabase).from("lancamentos_financeiros").delete().eq("id", data.id);
-      }
-    } catch {}
+    await assertGestor(supabase, userId);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id);
+    if (!isUuid) throw new Error("Identificador de lançamento inválido.");
+    const { error } = await db(supabase).from("lancamentos_financeiros").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
