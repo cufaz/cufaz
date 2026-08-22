@@ -134,6 +134,8 @@ function FinanceiroPage() {
   });
 
   const polosList: Row[] = data?.polos ?? [];
+  const categoriasList: Row[] = data?.categorias ?? [];
+
   const serverLancamentos: Row[] = data?.lancamentos ?? [];
   const itens: Row[] = data?.itens ?? [];
 
