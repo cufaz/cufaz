@@ -152,44 +152,38 @@ export async function fetchFornecedoresDB(filters?: {
   categoria?: string;
   uf?: string;
 }): Promise<FornecedorDB[]> {
-  try {
-    let query = supabase.from("fornecedores" as any).select("*");
+  let query = supabase.from("fornecedores" as any).select("*");
 
-    if (filters?.status && filters.status !== "todos") {
-      query = query.eq("status", filters.status);
-    }
-    if (filters?.uf && filters.uf !== "todos") {
-      query = query.eq("uf", filters.uf.toUpperCase());
-    }
-
-    const { data, error } = await query.order("created_at", { ascending: false });
-
-    if (error || !data) {
-      return [];
-    }
-
-    let list = (data || []) as unknown as FornecedorDB[];
-
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      list = list.filter(
-        (f) =>
-          f.razao_social?.toLowerCase().includes(q) ||
-          f.cnpj?.includes(q) ||
-          f.nome_fantasia?.toLowerCase().includes(q) ||
-          f.responsavel?.toLowerCase().includes(q)
-      );
-    }
-
-    if (filters?.categoria && filters.categoria !== "todas") {
-      list = list.filter((f) => f.categorias?.includes(filters.categoria!));
-    }
-
-    return list;
-  } catch (err) {
-    console.error("fetchFornecedoresDB error:", err);
-    return [];
+  if (filters?.status && filters.status !== "todos") {
+    query = query.eq("status", filters.status);
   }
+  if (filters?.uf && filters.uf !== "todos") {
+    query = query.eq("uf", filters.uf.toUpperCase());
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Não foi possível carregar os fornecedores: ${error.message}`);
+
+  let list = (data || []) as unknown as FornecedorDB[];
+
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    list = list.filter(
+      (f) =>
+        f.razao_social?.toLowerCase().includes(q) ||
+        f.cnpj?.includes(q) ||
+        f.nome_fantasia?.toLowerCase().includes(q) ||
+        f.responsavel?.toLowerCase().includes(q)
+    );
+  }
+
+  if (filters?.categoria && filters.categoria !== "todas") {
+    const categoria = filters.categoria;
+    list = list.filter((f) => f.categorias?.includes(categoria));
+  }
+
+  return list;
 }
 
 export async function fetchFornecedorByCnpjDB(cnpj: string): Promise<{
@@ -224,14 +218,6 @@ export async function fetchFornecedorByCnpjDB(cnpj: string): Promise<{
       };
     }
   } catch {}
-
-  // Fallback to local storage
-  const localF = loadLocalFornecedores().find((f) => f.cnpj.replace(/\D/g, "") === cleanCnpj);
-  if (localF) {
-    const propostas = loadLocalPropostas(localF.id!);
-    const documentos = loadLocalDocumentos(localF.id!);
-    return { fornecedor: localF, propostas, documentos };
-  }
 
   return { fornecedor: null, propostas: [], documentos: [] };
 }
@@ -382,72 +368,12 @@ export async function updateFornecedorStatusDB(
     decidido_por: "Gestor CUFA",
   };
 
-  try {
-    const { error } = await supabase
-      .from("fornecedores" as any)
-      .update(updatePayload as any)
-      .eq("id", id);
-
-    if (!error) {
-      window.dispatchEvent(new Event("cufa_fornecedores_updated"));
-      return true;
-    }
-  } catch {}
-
-  // Update local storage
-  updateLocalFornecedorStatus(id, updatePayload);
+  const { error } = await supabase
+    .from("fornecedores" as any)
+    .update(updatePayload as any)
+    .eq("id", id);
+  if (error) throw new Error(`Não foi possível atualizar o fornecedor: ${error.message}`);
   window.dispatchEvent(new Event("cufa_fornecedores_updated"));
   return true;
 }
 
-// Local Storage Fallback Helpers
-function loadLocalFornecedores(filters?: { status?: string; uf?: string }): FornecedorDB[] {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    if (!stored) return getDefaultInitialFornecedores();
-
-    let list: FornecedorDB[] = JSON.parse(stored);
-    if (filters?.status && filters.status !== "todos") {
-      list = list.filter((f) => f.status === filters.status);
-    }
-    if (filters?.uf && filters.uf !== "todos") {
-      list = list.filter((f) => f.uf === filters.uf);
-    }
-    return list;
-  } catch {
-    return getDefaultInitialFornecedores();
-  }
-}
-
-function getDefaultInitialFornecedores(): FornecedorDB[] {
-  return [];
-}
-
-
-function updateLocalFornecedorStatus(id: string, updatePayload: any) {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
-    const idx = list.findIndex((f) => f.id === id);
-    if (idx !== -1 && list[idx]) {
-      list[idx] = { ...list[idx], ...updatePayload };
-      localStorage.setItem("cufa_fornecedores_list", JSON.stringify(list));
-    }
-  } catch {}
-}
-
-function loadLocalPropostas(fornecedorId: string): FornecedorPropostaDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_propostas_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}
-
-function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_documentos_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}

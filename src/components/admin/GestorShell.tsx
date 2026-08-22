@@ -75,10 +75,12 @@ export function GestorShell({
         setPendingPedidosCount(0);
       }
 
-      fetchFornecedoresDB().then((forns) => {
-        const pendForns = forns.filter((f) => f.status === "pendente").length;
-        setPendingFornecedoresCount(pendForns);
-      });
+      fetchFornecedoresDB()
+        .then((forns) => {
+          const pendForns = forns.filter((f) => f.status === "pendente").length;
+          setPendingFornecedoresCount(pendForns);
+        })
+        .catch(() => setPendingFornecedoresCount(0));
     }
 
     calcPending();
