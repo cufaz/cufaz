@@ -249,7 +249,7 @@ function GestorAlunosDashboardPage() {
         docIdData: existente?.docIdData ?? null,
         docResName: existente?.docResName ?? null,
         docResData: existente?.docResData ?? null,
-        foto: getAvatarLocal(email) || r.avatar_url || existente?.foto || null,
+        foto: r.avatar_url || getAvatarLocal(email) || existente?.foto || null,
         dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
         frequenciaGeral: existente?.frequenciaGeral ?? "100%",
         qtdAtividades: existente?.qtdAtividades ?? 1,
