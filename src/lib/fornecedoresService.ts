@@ -236,15 +236,67 @@ export async function fetchFornecedorByCnpjDB(cnpj: string): Promise<{
   return { fornecedor: null, propostas: [], documentos: [] };
 }
 
+// ---- Storage helpers (bucket privado "documentos") ----
+export async function uploadDocumentoArquivo(file: File, pasta: string): Promise<string | null> {
+  try {
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${pasta}/${Date.now()}-${safeName}`;
+    const { error } = await supabase.storage.from("documentos").upload(path, file, {
+      upsert: false,
+      contentType: file.type || "application/pdf",
+    });
+    if (error) {
+      console.warn("Falha no upload do documento:", error.message);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    console.warn("Falha no upload do documento:", err);
+    return null;
+  }
+}
+
+export async function getDocumentoUrl(path: string): Promise<string | null> {
+  if (!path || path === "#") return null;
+  if (path.startsWith("http")) return path;
+  try {
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 60 * 10);
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function abrirDocumento(path: string): Promise<boolean> {
+  const url = await getDocumentoUrl(path);
+  if (!url) return false;
+  window.open(url, "_blank", "noopener");
+  return true;
+}
+
 export async function createFornecedorPublicDB(
   payload: Partial<FornecedorDB>,
-  propostasInput: any[]
+  propostasInput: any[],
+  cartaoCnpjFile?: File | null
 ): Promise<FornecedorDB | null> {
   const categorias = categorizeAtuacaoText(payload.atividades_texto || "");
+
+  let cartaoPath = payload.cartao_cnpj_url || null;
+  if (cartaoCnpjFile) {
+    cartaoPath = (await uploadDocumentoArquivo(cartaoCnpjFile, "fornecedores")) || cartaoPath;
+  }
+
   const newFornecedor: FornecedorDB = {
     cnpj: payload.cnpj || "",
     razao_social: payload.razao_social || "",
     nome_fantasia: payload.nome_fantasia || "",
+    data_abertura: payload.data_abertura || null,
+    porte: payload.porte || null,
+    natureza_juridica: payload.natureza_juridica || null,
+    situacao_cadastral: payload.situacao_cadastral || null,
+    cnae_principal_codigo: payload.cnae_principal_codigo || null,
+    cnae_principal_descricao: payload.cnae_principal_descricao || null,
+    cnae_secundarios: payload.cnae_secundarios || [],
     endereco: payload.endereco || "",
     cidade: payload.cidade || "Rio de Janeiro",
     uf: payload.uf || "RJ",
@@ -255,7 +307,7 @@ export async function createFornecedorPublicDB(
     cnae: payload.cnae || "",
     atividades_texto: payload.atividades_texto || "",
     categorias,
-    cartao_cnpj_url: payload.cartao_cnpj_url || null,
+    cartao_cnpj_url: cartaoPath,
     banco_nome: payload.banco_nome || "",
     banco_agencia: payload.banco_agencia || "",
     banco_conta: payload.banco_conta || "",
@@ -263,39 +315,54 @@ export async function createFornecedorPublicDB(
     status: "pendente",
   };
 
-  try {
-    const { data, error } = await supabase
-      .from("fornecedores" as any)
-      .insert(newFornecedor as any)
-      .select("*")
-      .single();
+  const { data, error } = await supabase
+    .from("fornecedores" as any)
+    .insert(newFornecedor as any)
+    .select("*")
+    .single();
 
-    if (data && !error) {
-      const f = data as unknown as FornecedorDB;
-      if (propostasInput && propostasInput.length > 0) {
-        const propPayloads = propostasInput.map((p) => ({
-          fornecedor_id: f.id!,
-          titulo: p.titulo || "Proposta Comercial",
-          descricao: p.descricao || "",
-          valor: Number(p.valor || 0),
-          prazo: p.prazo || "15 dias",
-          arquivo_url: p.arquivo_url || null,
-          status: "pendente",
-        }));
-        await supabase.from("fornecedor_propostas" as any).insert(propPayloads as any);
-      }
-      window.dispatchEvent(new Event("cufa_fornecedores_updated"));
-      return f;
-    }
-  } catch (err) {
-    console.warn("Public insert into fornecedores DB failed:", err);
+  if (error || !data) {
+    console.error("Erro ao cadastrar fornecedor:", error);
+    throw new Error(error?.message || "Não foi possível salvar o cadastro do fornecedor.");
   }
 
-  // Local fallback save
-  saveLocalFornecedor(newFornecedor, propostasInput);
+  const f = data as unknown as FornecedorDB;
+
+  if (propostasInput && propostasInput.length > 0) {
+    const propPayloads = propostasInput.map((p) => ({
+      fornecedor_id: f.id!,
+      titulo: p.titulo || "Proposta Comercial",
+      descricao: p.descricao || "",
+      valor: Number(p.valor || 0),
+      prazo: p.prazo || "15 dias",
+      arquivo_url: p.arquivo_url || null,
+      status: "pendente",
+    }));
+    await supabase.from("fornecedor_propostas" as any).insert(propPayloads as any);
+  }
+
+  if (cartaoPath && cartaoCnpjFile) {
+    const docPayload = {
+      tipo: "Cartão CNPJ",
+      nome: cartaoCnpjFile.name,
+      url: cartaoPath,
+    };
+    await supabase
+      .from("fornecedor_documentos" as any)
+      .insert({ fornecedor_id: f.id!, ...docPayload } as any);
+    await supabase.from("documentos_gestao" as any).insert({
+      setor: "fornecedor",
+      entidade_id: f.id!,
+      entidade_nome: f.razao_social,
+      ...docPayload,
+    } as any);
+  }
+
   window.dispatchEvent(new Event("cufa_fornecedores_updated"));
-  return newFornecedor;
+  window.dispatchEvent(new Event("cufa_documentos_updated"));
+  return f;
 }
+
 
 export async function updateFornecedorStatusDB(
   id: string,
