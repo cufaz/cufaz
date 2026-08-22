@@ -37,6 +37,7 @@ import {
   deleteDocumentoGestaoDB,
   DocumentoGestaoDB,
 } from "@/lib/documentosService";
+import { abrirDocumento } from "@/lib/fornecedoresService";
 
 export const Route = createFileRoute("/_authenticated/gestor/contabilidade/documentos")({
   component: DocumentosGestaoPage,
@@ -255,7 +256,10 @@ function DocumentosGestaoPage() {
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => toast.info(`Iniciando download assinado do arquivo "${doc.nome}"...`)}
+                                          onClick={async () => {
+                                            const ok = await abrirDocumento(doc.url);
+                                            if (!ok) toast.error(`Não foi possível abrir o arquivo "${doc.nome}".`);
+                                          }}
                                           className="h-7 text-xs font-bold gap-1"
                                         >
                                           <Download className="size-3.5" /> Baixar

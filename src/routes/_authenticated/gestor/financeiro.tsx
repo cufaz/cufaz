@@ -61,6 +61,23 @@ function FinanceiroPage() {
   const [form, setForm] = useState<Row | null>(null);
   const [valorDisplay, setValorDisplay] = useState("0,00");
   const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [centrosCusto, setCentrosCusto] = useState<Row[]>([]);
+
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const { data: ccs } = await supabase
+          .from("centros_custo" as any)
+          .select("id, codigo, nome")
+          .order("codigo", { ascending: true });
+        if (ativo) setCentrosCusto((ccs || []) as unknown as Row[]);
+      } catch {}
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Deleted launches tracked in state & local storage
   const [deletedIds, setDeletedIds] = useState<string[]>(() => {
@@ -439,9 +456,10 @@ function FinanceiroPage() {
                 natureza: "realizado",
                 descricao: "",
                 valor: 0,
-                competencia: dataInicio.slice(0, 7),
+                competencia: dataInicio,
                 polo_id: selectedPoloIds[0] || null,
                 categoria_id: null,
+                centro_custo_id: null,
               });
             }}
           >
@@ -836,10 +854,13 @@ function FinanceiroPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Competência (Mês/Ano)</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Data do Lançamento</Label>
                   <Input
-                    type="month"
-                    value={String(form['competencia'] || "2026-08")}
+                    type="date"
+                    value={(() => {
+                      const c = String(form['competencia'] || dataInicio);
+                      return c.length === 7 ? `${c}-01` : c.slice(0, 10);
+                    })()}
                     onChange={(e) => setForm({ ...form, competencia: e.target.value })}
                     className="h-10 font-medium"
                   />
@@ -868,6 +889,27 @@ function FinanceiroPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Centro de Custo</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(form['centro_custo_id'] || "")}
+                  onChange={(e) => setForm({ ...form, centro_custo_id: e.target.value || null })}
+                >
+                  <option value="">Sem centro de custo</option>
+                  {centrosCusto.map((cc) => (
+                    <option key={String(cc['id'])} value={String(cc['id'])}>
+                      {String(cc['codigo'])} — {String(cc['nome'])}
+                    </option>
+                  ))}
+                </select>
+                {centrosCusto.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Nenhum centro de custo cadastrado em Contabilidade › Centro de Custo.
+                  </p>
+                )}
               </div>
 
               <DialogFooter className="pt-2">

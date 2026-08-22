@@ -44,6 +44,7 @@ interface CnaeFormItem {
 
 function FornecedorCadastroPage() {
   const [parsingOcr, setParsingOcr] = useState(false);
+  const [cartaoFile, setCartaoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [concluido, setConcluido] = useState(false);
 
@@ -136,6 +137,7 @@ function FornecedorCadastroPage() {
       setCidade(result.cidade);
       setUf(result.uf);
       setCep(result.cep);
+      setCartaoFile(file);
       toast.success("Cartão CNPJ lido! Confira os campos preenchidos.");
     } catch (err) {
       toast.error(
@@ -210,12 +212,17 @@ function FornecedorCadastroPage() {
           banco_conta: bancoConta,
           banco_pix: bancoPix,
         },
-        propostas.filter((p) => p.titulo.trim() !== "")
+        propostas.filter((p) => p.titulo.trim() !== ""),
+        cartaoFile
       );
       setConcluido(true);
       toast.success("Cadastro de fornecedor realizado com sucesso!");
-    } catch {
-      toast.error("Falha ao salvar fornecedor. Tente novamente.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Falha ao salvar fornecedor. Tente novamente."
+      );
     } finally {
       setSubmitting(false);
     }

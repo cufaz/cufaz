@@ -349,15 +349,28 @@ function CentroCustoPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Orçamento Mensal (R$) *</Label>
-                <Input
-                  required
-                  type="number"
-                  step="100"
-                  value={modalForm.orcamento_mensal || 0}
-                  onChange={(e) => setModalForm({ ...modalForm, orcamento_mensal: Number(e.target.value) })}
-                  className="h-10 font-black tabular-nums text-base"
-                />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    required
+                    type="text"
+                    inputMode="numeric"
+                    value={Number(modalForm.orcamento_mensal || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setModalForm({ ...modalForm, orcamento_mensal: Number(raw) / 100 });
+                    }}
+                    placeholder="0,00"
+                    className="h-10 pl-10 font-black tabular-nums text-base"
+                  />
+                </div>
               </div>
+
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Descrição</Label>

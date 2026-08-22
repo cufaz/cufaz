@@ -285,6 +285,268 @@ export type Database = {
         }
         Relationships: []
       }
+      centros_custo: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          orcamento_mensal: number
+          responsavel: string | null
+          setor: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          orcamento_mensal?: number
+          responsavel?: string | null
+          setor?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          orcamento_mensal?: number
+          responsavel?: string | null
+          setor?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      documentos_gestao: {
+        Row: {
+          created_at: string
+          entidade_id: string
+          entidade_nome: string
+          id: string
+          nome: string
+          setor: string
+          tipo: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          entidade_id?: string
+          entidade_nome?: string
+          id?: string
+          nome?: string
+          setor?: string
+          tipo?: string
+          url?: string
+        }
+        Update: {
+          created_at?: string
+          entidade_id?: string
+          entidade_nome?: string
+          id?: string
+          nome?: string
+          setor?: string
+          tipo?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      fornecedor_documentos: {
+        Row: {
+          created_at: string
+          fornecedor_id: string
+          id: string
+          nome: string
+          tipo: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          fornecedor_id: string
+          id?: string
+          nome?: string
+          tipo?: string
+          url?: string
+        }
+        Update: {
+          created_at?: string
+          fornecedor_id?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_documentos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedor_propostas: {
+        Row: {
+          arquivo_url: string | null
+          created_at: string
+          descricao: string | null
+          fornecedor_id: string
+          id: string
+          prazo: string | null
+          status: string
+          titulo: string
+          valor: number
+        }
+        Insert: {
+          arquivo_url?: string | null
+          created_at?: string
+          descricao?: string | null
+          fornecedor_id: string
+          id?: string
+          prazo?: string | null
+          status?: string
+          titulo?: string
+          valor?: number
+        }
+        Update: {
+          arquivo_url?: string | null
+          created_at?: string
+          descricao?: string | null
+          fornecedor_id?: string
+          id?: string
+          prazo?: string | null
+          status?: string
+          titulo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_propostas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedores: {
+        Row: {
+          atividades_texto: string | null
+          banco_agencia: string | null
+          banco_conta: string | null
+          banco_nome: string | null
+          banco_pix: string | null
+          cartao_cnpj_url: string | null
+          categorias: string[]
+          cep: string | null
+          cidade: string | null
+          cnae: string | null
+          cnae_principal_codigo: string | null
+          cnae_principal_descricao: string | null
+          cnae_secundarios: Json
+          cnpj: string
+          codigo_tributacao: string | null
+          created_at: string
+          data_abertura: string | null
+          decidido_em: string | null
+          decidido_por: string | null
+          email: string | null
+          endereco: string | null
+          id: string
+          natureza_juridica: string | null
+          nome_fantasia: string | null
+          observacao_gestor: string | null
+          porte: string | null
+          razao_social: string
+          responsavel: string | null
+          situacao_cadastral: string | null
+          status: string
+          telefone: string | null
+          texto_nota_fiscal: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          atividades_texto?: string | null
+          banco_agencia?: string | null
+          banco_conta?: string | null
+          banco_nome?: string | null
+          banco_pix?: string | null
+          cartao_cnpj_url?: string | null
+          categorias?: string[]
+          cep?: string | null
+          cidade?: string | null
+          cnae?: string | null
+          cnae_principal_codigo?: string | null
+          cnae_principal_descricao?: string | null
+          cnae_secundarios?: Json
+          cnpj: string
+          codigo_tributacao?: string | null
+          created_at?: string
+          data_abertura?: string | null
+          decidido_em?: string | null
+          decidido_por?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          natureza_juridica?: string | null
+          nome_fantasia?: string | null
+          observacao_gestor?: string | null
+          porte?: string | null
+          razao_social?: string
+          responsavel?: string | null
+          situacao_cadastral?: string | null
+          status?: string
+          telefone?: string | null
+          texto_nota_fiscal?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          atividades_texto?: string | null
+          banco_agencia?: string | null
+          banco_conta?: string | null
+          banco_nome?: string | null
+          banco_pix?: string | null
+          cartao_cnpj_url?: string | null
+          categorias?: string[]
+          cep?: string | null
+          cidade?: string | null
+          cnae?: string | null
+          cnae_principal_codigo?: string | null
+          cnae_principal_descricao?: string | null
+          cnae_secundarios?: Json
+          cnpj?: string
+          codigo_tributacao?: string | null
+          created_at?: string
+          data_abertura?: string | null
+          decidido_em?: string | null
+          decidido_por?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          natureza_juridica?: string | null
+          nome_fantasia?: string | null
+          observacao_gestor?: string | null
+          porte?: string | null
+          razao_social?: string
+          responsavel?: string | null
+          situacao_cadastral?: string | null
+          status?: string
+          telefone?: string | null
+          texto_nota_fiscal?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       itens_orcamento: {
         Row: {
           atividade_id: string
@@ -340,6 +602,7 @@ export type Database = {
         Row: {
           atividade_id: string | null
           categoria_id: string | null
+          centro_custo_id: string | null
           competencia: string
           created_at: string
           descricao: string
@@ -354,6 +617,7 @@ export type Database = {
         Insert: {
           atividade_id?: string | null
           categoria_id?: string | null
+          centro_custo_id?: string | null
           competencia?: string
           created_at?: string
           descricao: string
@@ -368,6 +632,7 @@ export type Database = {
         Update: {
           atividade_id?: string | null
           categoria_id?: string | null
+          centro_custo_id?: string | null
           competencia?: string
           created_at?: string
           descricao?: string
@@ -392,6 +657,13 @@ export type Database = {
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "categorias_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_financeiros_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "centros_custo"
             referencedColumns: ["id"]
           },
           {
@@ -462,6 +734,7 @@ export type Database = {
         Row: {
           atividade_id: string | null
           categoria_id: string | null
+          centro_custo_id: string | null
           competencia: string
           created_at: string
           decidido_em: string | null
@@ -483,6 +756,7 @@ export type Database = {
         Insert: {
           atividade_id?: string | null
           categoria_id?: string | null
+          centro_custo_id?: string | null
           competencia?: string
           created_at?: string
           decidido_em?: string | null
@@ -504,6 +778,7 @@ export type Database = {
         Update: {
           atividade_id?: string | null
           categoria_id?: string | null
+          centro_custo_id?: string | null
           competencia?: string
           created_at?: string
           decidido_em?: string | null
@@ -535,6 +810,13 @@ export type Database = {
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "categorias_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "centros_custo"
             referencedColumns: ["id"]
           },
           {
