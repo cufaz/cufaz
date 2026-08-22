@@ -190,13 +190,27 @@ export function generateProfessionalPdf({
   doc.setTextColor(249, 115, 22);
   doc.text("3. ITENS DE CUSTO E PROVISÕES DA ATIVIDADE", 14, nextY2);
 
-  const itemRows = poloItensPrevisto.map((item) => [
+  const itensOrdenados = [...poloItensPrevisto].sort((a, b) =>
+    a.categoria === b.categoria
+      ? a.atividade.localeCompare(b.atividade)
+      : a.categoria.localeCompare(b.categoria),
+  );
+
+  const itemRows = itensOrdenados.map((item) => [
     item.atividade,
     item.categoria,
     item.item,
     String(item.quantidade || "1").match(/\d+/)?.[0] ?? "1",
     formatBRL(item.previsto),
   ]);
+
+  // Índices onde começa um novo bloco de categoria (para traçar a linha divisória)
+  const inicioCategoria = new Set<number>();
+  itensOrdenados.forEach((item, idx) => {
+    if (idx > 0 && item.categoria !== itensOrdenados[idx - 1]!.categoria) {
+      inicioCategoria.add(idx);
+    }
+  });
 
   autoTable(doc, {
     startY: nextY2 + 3,
@@ -212,7 +226,17 @@ export function generateProfessionalPdf({
       3: { cellWidth: 34 },
       4: { cellWidth: 26, halign: "right", fontStyle: "bold" },
     },
+    didDrawCell: (hook: any) => {
+      if (hook.section !== "body" || hook.column.index !== 0) return;
+      if (!inicioCategoria.has(hook.row.index)) return;
+      doc.setDrawColor(249, 115, 22);
+      doc.setLineWidth(0.5);
+      doc.line(hook.table.settings.margin.left, hook.cell.y, 196, hook.cell.y);
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(226, 232, 240);
+    },
   });
+
 
   // Footer Page Numbering
   const pageCount = (doc as any).internal.getNumberOfPages();
