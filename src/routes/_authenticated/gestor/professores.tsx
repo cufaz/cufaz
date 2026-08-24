@@ -128,6 +128,9 @@ function ProfessoresDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedProf, setSelectedProf] = useState<ProfessorRecord | null>(null);
 
+  const queryClient = useQueryClient();
+  const apagarCadastro = useServerFn(deleteCadastroPessoa);
+
   // Read registered & candidate professors dynamically from local storage & Supabase
   const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
     return loadMergedProfessores();
