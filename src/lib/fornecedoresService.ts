@@ -430,3 +430,68 @@ export async function updateFornecedorStatusDB(
   return true;
 }
 
+export function loadLocalFornecedores(filters?: {
+  status?: string;
+  search?: string;
+  categoria?: string;
+  uf?: string;
+}): FornecedorDB[] {
+  let list: FornecedorDB[] = [];
+  try {
+    const stored = localStorage.getItem("cufa_fornecedores_list");
+    if (stored) list = JSON.parse(stored);
+  } catch {}
+
+  if (filters?.status && filters.status !== "todos") {
+    list = list.filter((f: FornecedorDB) => f.status === filters.status);
+  }
+  if (filters?.uf && filters.uf !== "todos") {
+    const u = filters.uf.toUpperCase();
+    list = list.filter((f: FornecedorDB) => f.uf === u);
+  }
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    list = list.filter(
+      (f: FornecedorDB) =>
+        f.razao_social?.toLowerCase().includes(q) ||
+        f.cnpj?.includes(q) ||
+        f.nome_fantasia?.toLowerCase().includes(q) ||
+        f.responsavel?.toLowerCase().includes(q)
+    );
+  }
+  if (filters?.categoria && filters.categoria !== "todas") {
+    list = list.filter((f: FornecedorDB) => f.categorias?.includes(filters.categoria!));
+  }
+  return list;
+}
+
+export function loadLocalPropostas(fornecedorId: string): FornecedorPropostaDB[] {
+  try {
+    const stored = localStorage.getItem(`cufa_fornecedor_propostas_${fornecedorId}`);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+export function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
+  try {
+    const stored = localStorage.getItem(`cufa_fornecedor_documentos_${fornecedorId}`);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+export function saveLocalFornecedor(fornecedor: FornecedorDB, propostasInput: any[] = []) {
+  try {
+    const current = loadLocalFornecedores();
+    const cleanCnpj = (fornecedor.cnpj || "").replace(/\D/g, "");
+    const filtered = current.filter((f: FornecedorDB) => (f.cnpj || "").replace(/\D/g, "") !== cleanCnpj);
+    const updated = [fornecedor, ...filtered];
+    localStorage.setItem("cufa_fornecedores_list", JSON.stringify(updated));
+
+    if (fornecedor.id && propostasInput.length > 0) {
+      localStorage.setItem(`cufa_fornecedor_propostas_${fornecedor.id}`, JSON.stringify(propostasInput));
+    }
+  } catch {}
+}
+
