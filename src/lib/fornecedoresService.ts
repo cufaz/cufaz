@@ -384,10 +384,11 @@ export async function createFornecedorPublicDB(
           nome: cartaoCnpjFile.name,
           url: cartaoPath,
         };
-        await supabase
-          .from("fornecedor_documentos" as any)
-          .insert({ fornecedor_id: f.id!, ...docPayload } as any)
-          .catch(() => {});
+        try {
+          await supabase
+            .from("fornecedor_documentos" as any)
+            .insert({ fornecedor_id: f.id!, ...docPayload } as any);
+        } catch {}
       }
       saveLocalFornecedor(f, propostasInput);
       window.dispatchEvent(new Event("cufa_fornecedores_updated"));
