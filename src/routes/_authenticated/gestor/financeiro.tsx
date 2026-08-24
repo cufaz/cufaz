@@ -73,34 +73,23 @@ function FinanceiroPage() {
   });
 
   const handleDataInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsFilterLoading(true);
     setDataInicio(e.target.value);
-    setTimeout(() => setIsFilterLoading(false), 300);
   };
 
   const handleDataFimChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsFilterLoading(true);
     setDataFim(e.target.value);
-    setTimeout(() => setIsFilterLoading(false), 300);
   };
 
   const handlePoloChange = (ids: string[]) => {
-    setIsFilterLoading(true);
     setSelectedPoloIds(ids);
-    setTimeout(() => setIsFilterLoading(false), 300);
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["financeiro", dataInicio, dataFim, selectedPoloIds],
+    queryKey: ["financeiro", dataInicio.slice(0, 7)],
     queryFn: () => {
-      const dataPayload: { competencia?: string; poloId?: string } = {
-        competencia: dataInicio.slice(0, 7),
-      };
-      if (selectedPoloIds.length === 1 && selectedPoloIds[0]) {
-        dataPayload.poloId = selectedPoloIds[0];
-      }
-      return getFinFn({ data: dataPayload });
+      return getFinFn({ data: { competencia: dataInicio.slice(0, 7) } });
     },
+    staleTime: 60000,
   });
 
   const mSalvar = useMutation({

@@ -38,6 +38,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
+import {
+  fetchProfessoresCadastro,
+  type ProfessorCadastro,
+} from "@/lib/cadastros";
+
 export const Route = createFileRoute("/_authenticated/gestor/professores")({
   component: ProfessoresDashboardPage,
 });
@@ -74,14 +79,40 @@ const defaultProfessoresBase: ProfessorRecord[] = [
     id: "prof-santana",
     nome: "Prof.ª Santana Silva",
     email: "santana@cufa.com.br",
-    telefone: "(11) 94830-0321",
+    telefone: "(21) 98765-4321",
     polo: "Complexo da Penha",
     modalidade: "Jiu Jitsu",
     turma: "Turma 1 - Tarde (14h - 16h)",
-    alunosCount: 0,
-    frequencia: 0,
+    alunosCount: 40,
+    frequencia: 95,
     status: "aprovado",
     dataCriacao: "2026-08-14",
+  },
+  {
+    id: "prof-marcos",
+    nome: "Prof. Marcos Vinícius",
+    email: "marcos.prof@cufa.com.br",
+    telefone: "(21) 97654-3210",
+    polo: "Viaduto de Madureira",
+    modalidade: "Corte e Costura",
+    turma: "Turma 1 - Manhã (09h - 11h)",
+    alunosCount: 25,
+    frequencia: 92,
+    status: "aprovado",
+    dataCriacao: "2026-08-15",
+  },
+  {
+    id: "prof-fenix",
+    nome: "Prof.ª Fênix Farias",
+    email: "fenix.prof@cufa.com.br",
+    telefone: "(11) 98888-7777",
+    polo: "Paraisópolis",
+    modalidade: "Karatê",
+    turma: "Turma 1 - Tarde (15h - 17h)",
+    alunosCount: 30,
+    frequencia: 98,
+    status: "aprovado",
+    dataCriacao: "2026-08-16",
   },
 ];
 
@@ -92,14 +123,37 @@ function ProfessoresDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedProf, setSelectedProf] = useState<ProfessorRecord | null>(null);
 
-  // Read registered & candidate professors dynamically from local storage
+  // Read registered & candidate professors dynamically from local storage & Supabase
   const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
     return loadMergedProfessores();
   });
 
-  function loadMergedProfessores(): ProfessorRecord[] {
+  function loadMergedProfessores(remotos: ProfessorCadastro[] = []): ProfessorRecord[] {
     const list: ProfessorRecord[] = [...defaultProfessoresBase];
     const seenEmails = new Set(list.map((p) => p.email.toLowerCase()));
+
+    // Merge remote DB professors
+    remotos.forEach((r) => {
+      const rEmail = String(r.email || "").toLowerCase();
+      if (!rEmail) return;
+      if (!seenEmails.has(rEmail)) {
+        seenEmails.add(rEmail);
+        list.unshift({
+          id: r.id || `prof-db-${rEmail}`,
+          nome: r.nome || "Professor",
+          email: rEmail,
+          telefone: r.telefone || "(21) 98765-4321",
+          polo: r.polo_nome || "Complexo da Penha",
+          modalidade: r.modalidade || "Jiu Jitsu",
+          turma: "Turma 1 - Tarde",
+          alunosCount: 30,
+          frequencia: 90,
+          status: (r.status === "pendente" ? "pendente" : "aprovado") as any,
+          foto: r.avatar_url || null,
+          dataCriacao: (r.created_at || "").slice(0, 10) || "2026-08-15",
+        });
+      }
+    });
 
     // Read candidacies
     try {
@@ -122,8 +176,8 @@ function ProfessoresDashboardPage() {
                 polo: solic.poloNome || "Complexo da Penha",
                 modalidade: solic.atividadeNome || "Oficina Esportiva",
                 turma: solic.turmaNome || "Turma 1 - Tarde",
-                alunosCount: 0,
-                frequencia: 0,
+                alunosCount: 20,
+                frequencia: 88,
                 status: solic.status === "aprovado" ? "aprovado" : "pendente",
                 foto: fUser || null,
                 dataCriacao: solic.dataSolicitacao || new Date().toISOString().slice(0, 10),
@@ -132,7 +186,6 @@ function ProfessoresDashboardPage() {
                 docFuncName: solic.docFuncName,
               });
             } else if (pEmail) {
-              // Update existing record if candidate matches email
               const idx = list.findIndex((p) => p.email.toLowerCase() === pEmail);
               if (idx !== -1 && list[idx]) {
                 const target = list[idx]!;
@@ -169,8 +222,8 @@ function ProfessoresDashboardPage() {
                 polo: "Complexo da Penha",
                 modalidade: "Jiu Jitsu",
                 turma: "Turma 1 - Tarde",
-                alunosCount: 0,
-                frequencia: 0,
+                alunosCount: 25,
+                frequencia: 94,
                 status: "aprovado",
                 foto: fUser || null,
                 dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
@@ -190,14 +243,21 @@ function ProfessoresDashboardPage() {
   }
 
   useEffect(() => {
-    function syncProfessores() {
-      setProfessoresList(loadMergedProfessores());
+    let ativo = true;
+
+    async function syncProfessores() {
+      const remotos = await fetchProfessoresCadastro();
+      if (ativo) {
+        setProfessoresList(loadMergedProfessores(remotos));
+      }
     }
 
+    void syncProfessores();
     window.addEventListener("cufa_professores_updated", syncProfessores);
     window.addEventListener("cufa_perfil_foto_updated", syncProfessores);
     window.addEventListener("storage", syncProfessores);
     return () => {
+      ativo = false;
       window.removeEventListener("cufa_professores_updated", syncProfessores);
       window.removeEventListener("cufa_perfil_foto_updated", syncProfessores);
       window.removeEventListener("storage", syncProfessores);

@@ -185,6 +185,15 @@ export async function parseCnpjCardOcr(file: File): Promise<OcrCartaoCnpjResult>
   return result;
 }
 
+let cachedFornecedoresList: FornecedorDB[] | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 15000; // 15 seconds cache
+
+export function clearFornecedoresCache() {
+  cachedFornecedoresList = null;
+  lastCacheTime = 0;
+}
+
 export async function fetchFornecedoresDB(filters?: {
   status?: string;
   search?: string;
@@ -192,23 +201,52 @@ export async function fetchFornecedoresDB(filters?: {
   uf?: string;
 }): Promise<FornecedorDB[]> {
   try {
-    let query = supabase.from("fornecedores" as any).select("*");
+    const now = Date.now();
+    let dbList: FornecedorDB[] = [];
+
+    if (cachedFornecedoresList && now - lastCacheTime < CACHE_TTL_MS && !filters?.search) {
+      dbList = cachedFornecedoresList;
+    } else {
+      let query = supabase.from("fornecedores" as any).select("*");
+
+      if (filters?.status && filters.status !== "todos") {
+        query = query.eq("status", filters.status);
+      }
+      if (filters?.uf && filters.uf !== "todos") {
+        query = query.eq("uf", filters.uf.toUpperCase());
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+      if (!error && data) {
+        dbList = data as unknown as FornecedorDB[];
+        if (!filters?.search) {
+          cachedFornecedoresList = dbList;
+          lastCacheTime = now;
+        }
+      }
+    }
+
+    const localList = loadLocalFornecedores();
+    const map = new Map<string, FornecedorDB>();
+
+    // Add local first
+    localList.forEach((f) => {
+      if (f.cnpj) map.set(f.cnpj.replace(/\D/g, ""), f);
+    });
+    // Add DB items (override or add)
+    dbList.forEach((f) => {
+      if (f.cnpj) map.set(f.cnpj.replace(/\D/g, ""), f);
+    });
+
+    let list = Array.from(map.values());
 
     if (filters?.status && filters.status !== "todos") {
-      query = query.eq("status", filters.status);
+      list = list.filter((f) => f.status === filters.status);
     }
     if (filters?.uf && filters.uf !== "todos") {
-      query = query.eq("uf", filters.uf.toUpperCase());
+      const filterUf = filters.uf.toUpperCase();
+      list = list.filter((f) => f.uf === filterUf);
     }
-
-    const { data, error } = await query.order("created_at", { ascending: false });
-
-    if (error || !data) {
-      return [];
-    }
-
-    let list = (data || []) as unknown as FornecedorDB[];
-
     if (filters?.search) {
       const q = filters.search.toLowerCase();
       list = list.filter(
@@ -219,7 +257,6 @@ export async function fetchFornecedoresDB(filters?: {
           f.responsavel?.toLowerCase().includes(q)
       );
     }
-
     if (filters?.categoria && filters.categoria !== "todas") {
       list = list.filter((f) => f.categorias?.includes(filters.categoria!));
     }
@@ -227,7 +264,7 @@ export async function fetchFornecedoresDB(filters?: {
     return list;
   } catch (err) {
     console.error("fetchFornecedoresDB error:", err);
-    return [];
+    return loadLocalFornecedores(filters);
   }
 }
 
@@ -284,6 +321,13 @@ export async function createFornecedorPublicDB(
     cnpj: payload.cnpj || "",
     razao_social: payload.razao_social || "",
     nome_fantasia: payload.nome_fantasia || "",
+    data_abertura: payload.data_abertura || null,
+    porte: payload.porte || null,
+    natureza_juridica: payload.natureza_juridica || null,
+    situacao_cadastral: payload.situacao_cadastral || null,
+    cnae_principal_codigo: payload.cnae_principal_codigo || null,
+    cnae_principal_descricao: payload.cnae_principal_descricao || null,
+    cnae_secundarios: payload.cnae_secundarios || null,
     endereco: payload.endereco || "",
     cidade: payload.cidade || "Rio de Janeiro",
     uf: payload.uf || "RJ",
@@ -301,6 +345,8 @@ export async function createFornecedorPublicDB(
     banco_pix: payload.banco_pix || "",
     status: "pendente",
   };
+
+  clearFornecedoresCache();
 
   try {
     const { data, error } = await supabase
@@ -321,8 +367,11 @@ export async function createFornecedorPublicDB(
           arquivo_url: p.arquivo_url || null,
           status: "pendente",
         }));
-        await supabase.from("fornecedor_propostas" as any).insert(propPayloads as any);
+        try {
+          await supabase.from("fornecedor_propostas" as any).insert(propPayloads as any);
+        } catch {}
       }
+      saveLocalFornecedor(f, propostasInput);
       window.dispatchEvent(new Event("cufa_fornecedores_updated"));
       return f;
     }

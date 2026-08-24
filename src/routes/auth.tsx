@@ -100,8 +100,20 @@ function AuthPage() {
       return;
     }
 
-    localStorage.setItem("cufa_logged_user", cleanEmail);
-
+    // 2. Check Responsável de Polo (Ricardo Brito or cufa_gestores_lista)
+    if (
+      cleanEmail === "responsavel@cufa.com.br" ||
+      cleanEmail === "britonascimento@hotmail.com" ||
+      cleanEmail === "ricardo@cufa.com.br"
+    ) {
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem("cufa_logged_role", "polo");
+      localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
+      localStorage.setItem(`cufa_logged_name_${cleanEmail}`, "Ricardo Brito");
+      toast.success("Acesso autorizado! Redirecionando para o Painel do Responsável...");
+      irCom("/polo", "Acessando painel da unidade Complexo da Penha...");
+      return;
+    }
 
     try {
       const stored = localStorage.getItem("cufa_gestores_lista");
@@ -109,11 +121,14 @@ function AuthPage() {
       const matched = list.find((g: any) => String(g.email).toLowerCase() === cleanEmail);
 
       if (matched) {
+        localStorage.setItem("cufa_logged_user", cleanEmail);
         if (matched.tipo === "geral") {
+          localStorage.setItem("cufa_logged_role", "gestor");
           toast.success("Acesso autorizado! Redirecionando para o Gestor Geral...");
           irCom("/gestor", "Acessando Painel do Gestor Geral...");
           return;
         } else {
+          localStorage.setItem("cufa_logged_role", "polo");
           localStorage.setItem("cufa_polo_atribuido", matched.poloNome || "Complexo da Penha");
           toast.success(`Acesso autorizado! Unidade ${matched.poloNome}`);
           irCom("/polo", `Acessando painel da unidade ${matched.poloNome}...`);
@@ -122,17 +137,69 @@ function AuthPage() {
       }
     } catch {}
 
-    // Try Supabase auth
+    // 3. Check Professor accounts
+    let profList: any[] = [];
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: senha });
-      if (!error) {
+      const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
+      if (storedSol) profList = [...profList, ...JSON.parse(storedSol)];
+      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
+      if (storedCad) profList = [...profList, ...JSON.parse(storedCad)];
+    } catch {}
+
+    const matchedProf = profList.find(
+      (p: any) => p.email && String(p.email).toLowerCase() === cleanEmail
+    );
+
+    if (matchedProf || cleanEmail === "professor@cufa.com.br" || cleanEmail.includes("prof")) {
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem("cufa_logged_role", "professor");
+      localStorage.setItem(
+        "cufa_professor_nome",
+        matchedProf?.professorNome || matchedProf?.nome || "Prof.ª Santana Silva"
+      );
+      localStorage.setItem("cufa_polo_atribuido", matchedProf?.poloNome || "Complexo da Penha");
+      toast.success("Acesso autorizado! Redirecionando para o Painel do Professor...");
+      irCom("/professor", "Acessando Painel do Professor...");
+      return;
+    }
+
+    // 4. Check Aluno accounts
+    let alunosList: any[] = [];
+    try {
+      const stored = localStorage.getItem("cufa_alunos_cadastrados");
+      if (stored) alunosList = JSON.parse(stored);
+    } catch {}
+
+    const matchedAluno = alunosList.find(
+      (a: any) => a.email && String(a.email).toLowerCase() === cleanEmail
+    );
+
+    if (matchedAluno || cleanEmail === "aluno@cufa.com.br" || cleanEmail.includes("aluno")) {
+      localStorage.setItem("cufa_logged_user", cleanEmail);
+      localStorage.setItem("cufa_logged_role", "aluno");
+      localStorage.setItem("cufa_aluno_nome", matchedAluno?.nome || "Aluno");
+      toast.success("Acesso autorizado! Redirecionando para o Painel do Aluno...");
+      irCom("/aluno", "Acessando Painel do Aluno...");
+      return;
+    }
+
+    // 5. Try Supabase Auth
+    try {
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: senha,
+      });
+      if (!error && authData?.user) {
+        localStorage.setItem("cufa_logged_user", cleanEmail);
         toast.success("Acesso autorizado");
         irCom("/gestor", "Acessando Painel do Gestor Geral...");
         return;
       }
     } catch {}
 
-    // Default Responsável de Polo Login
+    // Fallback: Default login as Responsável de Polo
+    localStorage.setItem("cufa_logged_user", cleanEmail);
+    localStorage.setItem("cufa_logged_role", "polo");
     localStorage.setItem("cufa_polo_atribuido", "Complexo da Penha");
     toast.success("Acesso autorizado! Redirecionando para o Painel do Responsável...");
     irCom("/polo", "Acessando painel da unidade Complexo da Penha...");

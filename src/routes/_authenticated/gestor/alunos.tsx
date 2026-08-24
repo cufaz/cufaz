@@ -90,6 +90,85 @@ function cleanStr(str: string = "") {
     .trim();
 }
 
+const defaultAlunosBase: AlunoRecord[] = [
+  {
+    id: "aluno-gabriel",
+    nome: "Gabriel Santos Lima",
+    email: "gabriel.lima@aluno.cufa.org",
+    telefone: "(21) 99876-5432",
+    polo: "Complexo da Penha",
+    modalidade: "Jiu Jitsu",
+    turma: "Turma 1 - Tarde",
+    nomeEscola: "E.M. Paulo Freire",
+    anoEscolar: "8º Ano - Ensino Fundamental",
+    turnoEscolar: "Manhã",
+    qtdPessoasResidencia: "4",
+    nomeResponsavel: "Maria das Graças Santos",
+    cpfResponsavel: "123.456.789-00",
+    telResponsavel: "(21) 99876-5432",
+    frequenciaGeral: "100% Presença",
+    qtdAtividades: 1,
+    dataCriacao: "2026-08-10",
+  },
+  {
+    id: "aluno-beatriz",
+    nome: "Beatriz Souza Mello",
+    email: "beatriz.souza@aluno.cufa.org",
+    telefone: "(21) 98765-4321",
+    polo: "Viaduto de Madureira",
+    modalidade: "Corte e Costura",
+    turma: "Turma 1 - Manhã",
+    nomeEscola: "C.E. Madureira",
+    anoEscolar: "2º Ano - Ensino Médio",
+    turnoEscolar: "Tarde",
+    qtdPessoasResidencia: "3",
+    nomeResponsavel: "Ana Lúcia Souza",
+    cpfResponsavel: "987.654.321-11",
+    telResponsavel: "(21) 98765-4321",
+    frequenciaGeral: "95% Presença",
+    qtdAtividades: 1,
+    dataCriacao: "2026-08-12",
+  },
+  {
+    id: "aluno-lucas",
+    nome: "Lucas Oliveira Silva",
+    email: "lucas.oliveira@aluno.cufa.org",
+    telefone: "(11) 97654-3210",
+    polo: "Paraisópolis",
+    modalidade: "Karatê",
+    turma: "Turma 1 - Tarde",
+    nomeEscola: "E.E. Paraisópolis",
+    anoEscolar: "9º Ano - Ensino Fundamental",
+    turnoEscolar: "Manhã",
+    qtdPessoasResidencia: "5",
+    nomeResponsavel: "Roberto Oliveira",
+    cpfResponsavel: "456.789.123-22",
+    telResponsavel: "(11) 97654-3210",
+    frequenciaGeral: "98% Presença",
+    qtdAtividades: 1,
+    dataCriacao: "2026-08-14",
+  },
+  {
+    id: "aluno-kaua",
+    nome: "Kauã Ferreira da Silva",
+    email: "kaua.ferreira@aluno.cufa.org",
+    telefone: "(21) 96543-2109",
+    polo: "Complexo da Penha",
+    modalidade: "Aula de Inglês",
+    turma: "Turma 1 - Tarde",
+    nomeEscola: "E.M. Ary Barroso",
+    anoEscolar: "7º Ano - Ensino Fundamental",
+    turnoEscolar: "Manhã",
+    qtdPessoasResidencia: "4",
+    nomeResponsavel: "Fernanda Ferreira",
+    cpfResponsavel: "789.123.456-33",
+    telResponsavel: "(21) 96543-2109",
+    frequenciaGeral: "100% Presença",
+    qtdAtividades: 1,
+    dataCriacao: "2026-08-15",
+  },
+];
+
 function GestorAlunosDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroPolo, setFiltroPolo] = useState("todos");
@@ -102,8 +181,8 @@ function GestorAlunosDashboardPage() {
   });
 
   function loadMergedAlunos(): AlunoRecord[] {
-    const list: AlunoRecord[] = [];
-    const seenEmails = new Set<string>();
+    const list: AlunoRecord[] = [...defaultAlunosBase];
+    const seenEmails = new Set<string>(list.map((a) => a.email.toLowerCase()));
 
     try {
       const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
