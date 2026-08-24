@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   LayoutDashboard,
   Building2,
   Layers,
@@ -74,10 +75,12 @@ export function GestorShell({
         setPendingPedidosCount(0);
       }
 
-      fetchFornecedoresDB().then((forns) => {
-        const pendForns = forns.filter((f) => f.status === "pendente").length;
-        setPendingFornecedoresCount(pendForns);
-      });
+      fetchFornecedoresDB()
+        .then((forns) => {
+          const pendForns = forns.filter((f) => f.status === "pendente").length;
+          setPendingFornecedoresCount(pendForns);
+        })
+        .catch(() => setPendingFornecedoresCount(0));
     }
 
     calcPending();
@@ -133,6 +136,7 @@ export function GestorShell({
     { to: "/gestor/alunos", label: "Alunos", icon: Users },
     { to: "/gestor/professores", label: "Professores", icon: GraduationCap },
     { to: "/gestor/diario-classe", label: "Diário de Classe", icon: BookOpen },
+    { to: "/gestor/relatorios", label: "Relatórios", icon: BarChart3 },
   ];
 
   return (

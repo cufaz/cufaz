@@ -1,3 +1,5 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { zipSync, strToU8 } from "fflate";
@@ -23,6 +25,9 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
+import { deleteCadastroPessoa, getQuadroPessoas } from "@/lib/gestao.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -284,31 +289,17 @@ function ProfessoresDashboardPage() {
     }, 1200);
   }
 
-  function handleDeleteProfessor(id: string, nome: string) {
+  async function handleDeleteProfessor(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do professor ${nome}?`)) return;
-
-    const filtered = professoresList.filter((p) => p.id !== id);
-    setProfessoresList(filtered);
-
     try {
-      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSolic) {
-        const parsed = JSON.parse(storedSolic);
-        const upd = parsed.filter((s: any) => s.id !== id && cleanStr(s.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(upd));
-      }
-
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.professorNome) !== cleanStr(nome));
-        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(upd));
-      }
-
+      await apagarCadastro({ data: { id, tipo: "professor" } });
+      setProfessoresList((current) => current.filter((item) => item.id !== id));
+      await queryClient.invalidateQueries({ queryKey: ["quadro-pessoas"] });
       window.dispatchEvent(new Event("cufa_professores_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do professor ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o professor.");
+    }
   }
 
   // Derived metrics for KPIs
@@ -806,6 +797,8 @@ function ProfessoresDashboardPage() {
                   })()}
                 </div>
               </div>
+
+              <AcessoUsuarioCard email={selectedProf.email} />
 
               {/* Botão de Fechar */}
               <div className="flex justify-end pt-2 border-t border-border">

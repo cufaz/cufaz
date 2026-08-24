@@ -31,6 +31,7 @@ import { Route as AuthenticatedGestorGestoresRouteImport } from './routes/_authe
 import { Route as AuthenticatedGestorPedidosRouteImport } from './routes/_authenticated/gestor/pedidos'
 import { Route as AuthenticatedGestorPolosRouteImport } from './routes/_authenticated/gestor/polos'
 import { Route as AuthenticatedGestorProfessoresRouteImport } from './routes/_authenticated/gestor/professores'
+import { Route as AuthenticatedGestorRelatoriosRouteImport } from './routes/_authenticated/gestor/relatorios'
 import { Route as AuthenticatedPoloIndexRouteImport } from './routes/_authenticated/polo/index'
 import { Route as AuthenticatedPoloAlunosRouteImport } from './routes/_authenticated/polo/alunos'
 import { Route as AuthenticatedPoloAtividadesRouteImport } from './routes/_authenticated/polo/atividades'
@@ -175,6 +176,12 @@ const AuthenticatedGestorProfessoresRoute =
     path: '/professores',
     getParentRoute: () => AuthenticatedGestorRouteRoute,
   } as any)
+const AuthenticatedGestorRelatoriosRoute =
+  AuthenticatedGestorRelatoriosRouteImport.update({
+    id: '/relatorios',
+    path: '/relatorios',
+    getParentRoute: () => AuthenticatedGestorRouteRoute,
+  } as any)
 const AuthenticatedPoloIndexRoute = AuthenticatedPoloIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -307,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/gestor/relatorios': typeof AuthenticatedGestorRelatoriosRoute
   '/polo/alunos': typeof AuthenticatedPoloAlunosRoute
   '/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
   '/polo/chamada': typeof AuthenticatedPoloChamadaRoute
@@ -347,6 +355,7 @@ export interface FileRoutesByTo {
   '/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/gestor/relatorios': typeof AuthenticatedGestorRelatoriosRoute
   '/polo/alunos': typeof AuthenticatedPoloAlunosRoute
   '/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
   '/polo/chamada': typeof AuthenticatedPoloChamadaRoute
@@ -391,6 +400,7 @@ export interface FileRoutesById {
   '/_authenticated/gestor/pedidos': typeof AuthenticatedGestorPedidosRoute
   '/_authenticated/gestor/polos': typeof AuthenticatedGestorPolosRoute
   '/_authenticated/gestor/professores': typeof AuthenticatedGestorProfessoresRoute
+  '/_authenticated/gestor/relatorios': typeof AuthenticatedGestorRelatoriosRoute
   '/_authenticated/polo/alunos': typeof AuthenticatedPoloAlunosRoute
   '/_authenticated/polo/atividades': typeof AuthenticatedPoloAtividadesRoute
   '/_authenticated/polo/chamada': typeof AuthenticatedPoloChamadaRoute
@@ -435,6 +445,7 @@ export interface FileRouteTypes {
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
+    | '/gestor/relatorios'
     | '/polo/alunos'
     | '/polo/atividades'
     | '/polo/chamada'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/gestor/pedidos'
     | '/gestor/polos'
     | '/gestor/professores'
+    | '/gestor/relatorios'
     | '/polo/alunos'
     | '/polo/atividades'
     | '/polo/chamada'
@@ -518,6 +530,7 @@ export interface FileRouteTypes {
     | '/_authenticated/gestor/pedidos'
     | '/_authenticated/gestor/polos'
     | '/_authenticated/gestor/professores'
+    | '/_authenticated/gestor/relatorios'
     | '/_authenticated/polo/alunos'
     | '/_authenticated/polo/atividades'
     | '/_authenticated/polo/chamada'
@@ -705,6 +718,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGestorProfessoresRouteImport
       parentRoute: typeof AuthenticatedGestorRouteRoute
     }
+    '/_authenticated/gestor/relatorios': {
+      id: '/_authenticated/gestor/relatorios'
+      path: '/relatorios'
+      fullPath: '/gestor/relatorios'
+      preLoaderRoute: typeof AuthenticatedGestorRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedGestorRouteRoute
+    }
     '/_authenticated/polo/': {
       id: '/_authenticated/polo/'
       path: '/'
@@ -850,6 +870,7 @@ interface AuthenticatedGestorRouteRouteChildren {
   AuthenticatedGestorPedidosRoute: typeof AuthenticatedGestorPedidosRoute
   AuthenticatedGestorPolosRoute: typeof AuthenticatedGestorPolosRoute
   AuthenticatedGestorProfessoresRoute: typeof AuthenticatedGestorProfessoresRoute
+  AuthenticatedGestorRelatoriosRoute: typeof AuthenticatedGestorRelatoriosRoute
   AuthenticatedGestorIndexRoute: typeof AuthenticatedGestorIndexRoute
   AuthenticatedGestorContabilidadeCentroCustoRoute: typeof AuthenticatedGestorContabilidadeCentroCustoRoute
   AuthenticatedGestorContabilidadeDocumentosRoute: typeof AuthenticatedGestorContabilidadeDocumentosRoute
@@ -867,6 +888,7 @@ const AuthenticatedGestorRouteRouteChildren: AuthenticatedGestorRouteRouteChildr
     AuthenticatedGestorPedidosRoute: AuthenticatedGestorPedidosRoute,
     AuthenticatedGestorPolosRoute: AuthenticatedGestorPolosRoute,
     AuthenticatedGestorProfessoresRoute: AuthenticatedGestorProfessoresRoute,
+    AuthenticatedGestorRelatoriosRoute: AuthenticatedGestorRelatoriosRoute,
     AuthenticatedGestorIndexRoute: AuthenticatedGestorIndexRoute,
     AuthenticatedGestorContabilidadeCentroCustoRoute:
       AuthenticatedGestorContabilidadeCentroCustoRoute,

@@ -18,6 +18,9 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
+import { calcIdade } from "@/lib/avatars";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +37,7 @@ import {
 import { base64ToUint8Array } from "@/lib/zipHelper";
 import {
   fetchAlunosCadastro,
+  deleteAlunoCadastro,
   usePolosCadastrados,
   getAvatarLocal,
   type AlunoCadastro,
@@ -326,10 +330,10 @@ function GestorAlunosDashboardPage() {
         docIdData: existente?.docIdData ?? null,
         docResName: existente?.docResName ?? null,
         docResData: existente?.docResData ?? null,
-        foto: getAvatarLocal(email) || r.avatar_url || existente?.foto || null,
+        foto: r.avatar_url || getAvatarLocal(email) || existente?.foto || null,
         dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
-        frequenciaGeral: existente?.frequenciaGeral ?? "100%",
-        qtdAtividades: existente?.qtdAtividades ?? 1,
+        frequenciaGeral: existente?.frequenciaGeral ?? "—",
+        qtdAtividades: existente?.qtdAtividades ?? 0,
         hospitalEmergencia: existente?.hospitalEmergencia || (r as any).hospital_emergencia || "",
         cep: existente?.cep || (r as any).cep || "",
         endereco: existente?.endereco || (r as any).endereco || "",
@@ -351,12 +355,19 @@ function GestorAlunosDashboardPage() {
     let ativo = true;
 
     async function syncAlunos() {
-      const locais = loadMergedAlunos();
-      const remotos = await fetchAlunosCadastro();
-      if (ativo) setAlunosList(mergeBanco(locais, remotos));
+      try {
+        const remotos = await fetchAlunosCadastro();
+        if (ativo) setAlunosList(mergeBanco([], remotos));
+      } catch (error) {
+        if (ativo) toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
+      }
     }
 
     void syncAlunos();
+    const channel = supabase
+      .channel("gestor-alunos-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_alunos" }, syncAlunos)
+      .subscribe();
     window.addEventListener("cufa_alunos_updated", syncAlunos);
     window.addEventListener("cufa_perfil_foto_updated", syncAlunos);
     window.addEventListener("storage", syncAlunos);
@@ -365,6 +376,7 @@ function GestorAlunosDashboardPage() {
       window.removeEventListener("cufa_alunos_updated", syncAlunos);
       window.removeEventListener("cufa_perfil_foto_updated", syncAlunos);
       window.removeEventListener("storage", syncAlunos);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -427,23 +439,18 @@ DOCUMENTOS ANEXADOS:
     }, 1000);
   }
 
-  function handleDeleteAluno(id: string, nome: string) {
+  async function handleDeleteAluno(id: string, nome: string) {
     if (!window.confirm(`Tem certeza que deseja excluir o cadastro do aluno ${nome}?`)) return;
-
-    const filtered = alunosList.filter((a) => a.id !== id);
-    setAlunosList(filtered);
-
     try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        const upd = parsed.filter((c: any) => c.id !== id && cleanStr(c.nome) !== cleanStr(nome));
-        localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(upd));
-      }
+      const aluno = alunosList.find((item) => item.id === id);
+      if (!aluno) throw new Error("Cadastro não encontrado.");
+      await deleteAlunoCadastro(aluno.email);
+      setAlunosList((current) => current.filter((item) => item.id !== id));
       window.dispatchEvent(new Event("cufa_alunos_updated"));
-    } catch {}
-
-    toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+      toast.success(`Cadastro do aluno ${nome} excluído com sucesso.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o aluno.");
+    }
   }
 
   // Derived metrics for KPIs
@@ -727,7 +734,7 @@ DOCUMENTOS ANEXADOS:
 
       {/* Modal de Análise Detalhada do Aluno */}
       <Dialog open={!!selectedAluno} onOpenChange={(v) => !v && setSelectedAluno(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedAluno && (
             <>
               <DialogHeader className="text-left">
@@ -753,6 +760,14 @@ DOCUMENTOS ANEXADOS:
                   <div>
                     <h4 className="font-extrabold text-sm text-foreground">{selectedAluno.nome}</h4>
                     <p className="text-xs font-bold text-primary">{selectedAluno.modalidade} — {selectedAluno.turma}</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {calcIdade(selectedAluno.dataNasc) !== null
+                        ? `${calcIdade(selectedAluno.dataNasc)} anos`
+                        : "Idade não informada"}
+                      {selectedAluno.dataNasc && selectedAluno.dataNasc !== "—"
+                        ? ` · Nascimento: ${selectedAluno.dataNasc}`
+                        : ""}
+                    </p>
                     <Badge variant="outline" className="mt-1 text-[10px] border-primary/30 text-foreground font-semibold">
                       {selectedAluno.polo}
                     </Badge>
@@ -793,6 +808,8 @@ DOCUMENTOS ANEXADOS:
                     <p>📄 Termo de Autorização Assinado: <strong className={selectedAluno.termoAutorizacaoName ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>{selectedAluno.termoAutorizacaoName || "Pendente de Anexo"}</strong></p>
                   </div>
                 </div>
+
+                <AcessoUsuarioCard email={selectedAluno.email} />
 
                 <div className="pt-2 flex justify-end">
                   <Button

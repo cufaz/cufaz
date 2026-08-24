@@ -125,64 +125,24 @@ export interface OcrCartaoCnpjResult {
   cnae: string;
 }
 
-// Simulated / AI Extractor for Cartão CNPJ PDF/Image Upload
+// Real AI extraction of the Cartão CNPJ (PDF only)
 export async function parseCnpjCardOcr(file: File): Promise<OcrCartaoCnpjResult> {
-  await new Promise((r) => setTimeout(r, 1200));
-
-  const fileName = file.name.toLowerCase();
-
-  let result: OcrCartaoCnpjResult = {
-    cnpj: "12.345.678/0001-99",
-    razao_social: "FORNECEDOR DE TESTE LTDA",
-    nome_fantasia: "SERVIÇOS PERIFÉRICOS CUFA",
-    data_abertura: "15/03/2018",
-    porte: "ME",
-    natureza_juridica: "206-2 - Sociedade Empresária Limitada",
-    situacao_cadastral: "ATIVA",
-    cnae_principal_codigo: "47.89-0-99",
-    cnae_principal_descricao: "Comércio varejista de outros produtos não especificados anteriormente",
-    cnae_secundarios: [
-      { codigo: "56.20-1-01", descricao: "Fornecimento de alimentos preparados para empresas" },
-      { codigo: "73.19-0-02", descricao: "Promotores de vendas" },
-      { codigo: "82.30-0-01", descricao: "Serviços de organização de feiras, congressos e festas" },
-    ],
-    endereco: "Avenida Brasil, nº 5000",
-    cidade: "Rio de Janeiro",
-    uf: "RJ",
-    cep: "21040-361",
-    cnae: "47.89-0-99 - Comércio varejista de outros produtos não especificados anteriormente",
-  };
-
-  if (fileName.includes("grafica") || fileName.includes("impressa")) {
-    result = {
-      ...result,
-      razao_social: "GRÁFICA E EDITORA FAVELA ARTES ME",
-      nome_fantasia: "FAVELA ARTES GRÁFICA",
-      cnae_principal_codigo: "18.13-0-01",
-      cnae_principal_descricao: "Impressão de material para uso publicitário",
-      cnae: "18.13-0-01 - Impressão de material para uso publicitário",
-      cnae_secundarios: [
-        { codigo: "18.13-0-99", descricao: "Impressão de material para outros usos" },
-        { codigo: "18.21-1-00", descricao: "Serviços de pré-impressão" },
-        { codigo: "58.11-6-00", descricao: "Edição de livros" },
-      ],
-    };
-  } else if (fileName.includes("costura") || fileName.includes("textil")) {
-    result = {
-      ...result,
-      razao_social: "TEXTIL E CONFECÇÕES MADUREIRA LTDA",
-      nome_fantasia: "MADUREIRA TECIDOS",
-      cnae_principal_codigo: "14.12-6-01",
-      cnae_principal_descricao: "Confecção de peças do vestuário, exceto roupas intimas",
-      cnae: "14.12-6-01 - Confecção de peças do vestuário",
-      cnae_secundarios: [
-        { codigo: "14.13-4-01", descricao: "Confecção de roupas profissionais" },
-        { codigo: "47.55-5-01", descricao: "Comércio varejista de tecidos" },
-      ],
-    };
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    throw new Error("Envie o Cartão CNPJ em PDF.");
   }
 
-  return result;
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  const base64 = btoa(binary);
+
+  const { parseCartaoCnpj } = await import("./fornecedores.functions");
+  const result = await parseCartaoCnpj({ data: { fileName: file.name, fileData: base64 } });
+  return result as OcrCartaoCnpjResult;
 }
 
 let cachedFornecedoresList: FornecedorDB[] | null = null;
@@ -312,11 +272,58 @@ export async function fetchFornecedorByCnpjDB(cnpj: string): Promise<{
   return { fornecedor: null, propostas: [], documentos: [] };
 }
 
+// ---- Storage helpers (bucket privado "documentos") ----
+export async function uploadDocumentoArquivo(file: File, pasta: string): Promise<string | null> {
+  try {
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${pasta}/${Date.now()}-${safeName}`;
+    const { error } = await supabase.storage.from("documentos").upload(path, file, {
+      upsert: false,
+      contentType: file.type || "application/pdf",
+    });
+    if (error) {
+      console.warn("Falha no upload do documento:", error.message);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    console.warn("Falha no upload do documento:", err);
+    return null;
+  }
+}
+
+export async function getDocumentoUrl(path: string): Promise<string | null> {
+  if (!path || path === "#") return null;
+  if (path.startsWith("http")) return path;
+  try {
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 60 * 10);
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function abrirDocumento(path: string): Promise<boolean> {
+  const url = await getDocumentoUrl(path);
+  if (!url) return false;
+  window.open(url, "_blank", "noopener");
+  return true;
+}
+
 export async function createFornecedorPublicDB(
   payload: Partial<FornecedorDB>,
-  propostasInput: any[]
+  propostasInput: any[],
+  cartaoCnpjFile?: File | null
 ): Promise<FornecedorDB | null> {
   const categorias = categorizeAtuacaoText(payload.atividades_texto || "");
+
+  let cartaoPath = payload.cartao_cnpj_url || null;
+  if (cartaoCnpjFile) {
+    try {
+      cartaoPath = (await uploadDocumentoArquivo(cartaoCnpjFile, "fornecedores")) || cartaoPath;
+    } catch {}
+  }
+
   const newFornecedor: FornecedorDB = {
     cnpj: payload.cnpj || "",
     razao_social: payload.razao_social || "",
@@ -338,7 +345,7 @@ export async function createFornecedorPublicDB(
     cnae: payload.cnae || "",
     atividades_texto: payload.atividades_texto || "",
     categorias,
-    cartao_cnpj_url: payload.cartao_cnpj_url || null,
+    cartao_cnpj_url: cartaoPath,
     banco_nome: payload.banco_nome || "",
     banco_agencia: payload.banco_agencia || "",
     banco_conta: payload.banco_conta || "",
@@ -371,6 +378,17 @@ export async function createFornecedorPublicDB(
           await supabase.from("fornecedor_propostas" as any).insert(propPayloads as any);
         } catch {}
       }
+      if (cartaoPath && cartaoCnpjFile) {
+        const docPayload = {
+          tipo: "Cartão CNPJ",
+          nome: cartaoCnpjFile.name,
+          url: cartaoPath,
+        };
+        await supabase
+          .from("fornecedor_documentos" as any)
+          .insert({ fornecedor_id: f.id!, ...docPayload } as any)
+          .catch(() => {});
+      }
       saveLocalFornecedor(f, propostasInput);
       window.dispatchEvent(new Event("cufa_fornecedores_updated"));
       return f;
@@ -379,11 +397,11 @@ export async function createFornecedorPublicDB(
     console.warn("Public insert into fornecedores DB failed:", err);
   }
 
-  // Local fallback save
   saveLocalFornecedor(newFornecedor, propostasInput);
   window.dispatchEvent(new Event("cufa_fornecedores_updated"));
   return newFornecedor;
 }
+
 
 export async function updateFornecedorStatusDB(
   id: string,
@@ -403,86 +421,12 @@ export async function updateFornecedorStatusDB(
     decidido_por: "Gestor CUFA",
   };
 
-  try {
-    const { error } = await supabase
-      .from("fornecedores" as any)
-      .update(updatePayload as any)
-      .eq("id", id);
-
-    if (!error) {
-      window.dispatchEvent(new Event("cufa_fornecedores_updated"));
-      return true;
-    }
-  } catch {}
-
-  // Update local storage
-  updateLocalFornecedorStatus(id, updatePayload);
+  const { error } = await supabase
+    .from("fornecedores" as any)
+    .update(updatePayload as any)
+    .eq("id", id);
+  if (error) throw new Error(`Não foi possível atualizar o fornecedor: ${error.message}`);
   window.dispatchEvent(new Event("cufa_fornecedores_updated"));
   return true;
 }
 
-// Local Storage Fallback Helpers
-function loadLocalFornecedores(filters?: { status?: string; uf?: string }): FornecedorDB[] {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    if (!stored) return getDefaultInitialFornecedores();
-
-    let list: FornecedorDB[] = JSON.parse(stored);
-    if (filters?.status && filters.status !== "todos") {
-      list = list.filter((f) => f.status === filters.status);
-    }
-    if (filters?.uf && filters.uf !== "todos") {
-      list = list.filter((f) => f.uf === filters.uf);
-    }
-    return list;
-  } catch {
-    return getDefaultInitialFornecedores();
-  }
-}
-
-function getDefaultInitialFornecedores(): FornecedorDB[] {
-  return [];
-}
-
-function saveLocalFornecedor(f: FornecedorDB, propostas: any[]) {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
-    const id = `f-${Date.now()}`;
-    const entry = { ...f, id, created_at: new Date().toISOString().slice(0, 10) };
-    list.unshift(entry);
-    localStorage.setItem("cufa_fornecedores_list", JSON.stringify(list));
-
-    if (propostas && propostas.length > 0) {
-      localStorage.setItem(`cufa_fornecedor_propostas_${id}`, JSON.stringify(propostas));
-    }
-  } catch {}
-}
-
-function updateLocalFornecedorStatus(id: string, updatePayload: any) {
-  try {
-    const stored = localStorage.getItem("cufa_fornecedores_list");
-    let list: FornecedorDB[] = stored ? JSON.parse(stored) : [];
-    const idx = list.findIndex((f) => f.id === id);
-    if (idx !== -1 && list[idx]) {
-      list[idx] = { ...list[idx], ...updatePayload };
-      localStorage.setItem("cufa_fornecedores_list", JSON.stringify(list));
-    }
-  } catch {}
-}
-
-function loadLocalPropostas(fornecedorId: string): FornecedorPropostaDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_propostas_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}
-
-function loadLocalDocumentos(fornecedorId: string): FornecedorDocumentoDB[] {
-  try {
-    const stored = localStorage.getItem(`cufa_fornecedor_documentos_${fornecedorId}`);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [];
-}

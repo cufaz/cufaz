@@ -36,6 +36,7 @@ import {
   fetchFornecedoresDB,
   updateFornecedorStatusDB,
   fetchFornecedorByCnpjDB,
+  abrirDocumento,
   FornecedorDB,
   FornecedorPropostaDB,
   FornecedorDocumentoDB,
@@ -67,14 +68,19 @@ function FornecedoresGestorPage() {
 
   async function loadFornecedores() {
     setLoading(true);
-    const data = await fetchFornecedoresDB({
-      status: filtroStatus,
-      search: busca,
-      categoria: filtroCategoria,
-      uf: filtroUf,
-    });
-    setFornecedores(data);
-    setLoading(false);
+    try {
+      const data = await fetchFornecedoresDB({
+        status: filtroStatus,
+        search: busca,
+        categoria: filtroCategoria,
+        uf: filtroUf,
+      });
+      setFornecedores(data);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar os fornecedores.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -499,6 +505,38 @@ function FornecedoresGestorPage() {
                           <span className="text-[10px] font-bold text-primary">Prazo: {p.prazo || "15 dias"}</span>
                         </div>
                         <span className="font-extrabold text-sm text-emerald-600">{brl(p.valor)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Documentos anexados pelo fornecedor */}
+              <div>
+                <h4 className="font-extrabold text-xs uppercase text-foreground mb-2 flex items-center gap-1.5">
+                  <FileCheck className="size-4 text-primary" /> Documentos Anexados ({documentosInsp.length})
+                </h4>
+                {documentosInsp.length === 0 ? (
+                  <p className="text-muted-foreground italic">Nenhum documento anexado no cadastro.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {documentosInsp.map((d) => (
+                      <div key={d.id} className="rounded-xl border border-border bg-card p-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-foreground text-xs truncate">{d.tipo}</p>
+                          <p className="text-muted-foreground truncate">{d.nome}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs font-bold shrink-0"
+                          onClick={async () => {
+                            const ok = await abrirDocumento(d.url);
+                            if (!ok) toast.error("Não foi possível abrir o arquivo.");
+                          }}
+                        >
+                          Abrir
+                        </Button>
                       </div>
                     ))}
                   </div>

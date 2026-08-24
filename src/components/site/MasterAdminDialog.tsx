@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/cufa-z-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  deleteAlunoCadastro,
+  deleteProfessorCadastro,
+  fetchAlunosCadastro,
+  fetchProfessoresCadastro,
+} from "@/lib/cadastros";
 
 export function MasterAdminDialog({
   open,
@@ -24,6 +31,7 @@ export function MasterAdminDialog({
 }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<"gestores" | "alunos" | "professores">("gestores");
 
@@ -31,8 +39,31 @@ export function MasterAdminDialog({
     { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
   ]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+    void supabase.auth.getUser().then(async ({ data, error }) => {
+      if (!active || error || !data.user) {
+        if (active) setAuthenticated(false);
+        return;
+      }
+
+      const { data: isGestor } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "gestor",
+      });
+      if (active) setAuthenticated(Boolean(isGestor));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   useEffect(() => {
+    if (!open || !authenticated) return;
+
     function syncMasterGestores() {
       try {
         const stored = localStorage.getItem("cufa_gestores_lista");
@@ -52,16 +83,38 @@ export function MasterAdminDialog({
       } catch {}
     }
 
-    function syncMasterProfessores() {
-      setProfessoresData(loadMasterProfessores());
+    async function syncMasterProfessores() {
+      try {
+        const list = await fetchProfessoresCadastro();
+        setProfessoresData(list.map((p) => ({
+          id: p.id || p.email,
+          nome: p.nome,
+          email: p.email,
+          senha: "Protegida",
+          disciplina: p.modalidade || "—",
+          polo: p.polo_nome || "—",
+        })));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível carregar os professores.");
+      }
     }
 
-    function syncMasterAlunos() {
-      setAlunosData(loadMasterAlunos());
+    async function syncMasterAlunos() {
+      try {
+        const list = await fetchAlunosCadastro();
+        setAlunosData(list.map((a) => ({
+          id: a.id || a.email,
+          nome: a.nome,
+          email: a.email,
+          senha: "Protegida",
+          polo: a.polo_nome || "—",
+          atividade: "—",
+        })));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
+      }
     }
 
-    // Hidratação inicial no cliente (evita ler localStorage durante o SSR)
-    setAuthenticated(localStorage.getItem("cufa_master_authenticated") === "true");
     syncMasterGestores();
     syncMasterProfessores();
     syncMasterAlunos();
@@ -71,6 +124,11 @@ export function MasterAdminDialog({
     window.addEventListener("cufa_alunos_updated", syncMasterAlunos);
     window.addEventListener("storage", syncMasterProfessores);
     window.addEventListener("storage", syncMasterAlunos);
+    const channel = supabase
+      .channel("master-cadastros-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_alunos" }, syncMasterAlunos)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cadastros_professores" }, syncMasterProfessores)
+      .subscribe();
 
     return () => {
       window.removeEventListener("cufa_gestores_updated", syncMasterGestores);
@@ -78,213 +136,56 @@ export function MasterAdminDialog({
       window.removeEventListener("cufa_alunos_updated", syncMasterAlunos);
       window.removeEventListener("storage", syncMasterProfessores);
       window.removeEventListener("storage", syncMasterAlunos);
+      void supabase.removeChannel(channel);
     };
-  }, []);
-
-  function loadMasterAlunos() {
-    const listMap = new Map<string, any>();
-    try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((a: any, idx: number) => {
-            const id = a.id || `cad-${idx}`;
-            listMap.set(id, {
-              id,
-              nome: a.nome || "Aluno",
-              email: a.email || "aluno@cufa.com.br",
-              senha: a.senha || "aluno2026",
-              polo: a.polo_nome || a.polo || "Complexo da Penha",
-              atividade: a.atividade || a.oficina || "Geral",
-            });
-          });
-        }
-      }
-
-      const storedPolo = localStorage.getItem("cufa_alunos_polo");
-      if (storedPolo) {
-        const parsed = JSON.parse(storedPolo);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((a: any, idx: number) => {
-            const id = a.id || `polo-al-${idx}`;
-            if (!listMap.has(id)) {
-              listMap.set(id, {
-                id,
-                nome: a.nome || "Aluno",
-                email: a.email || "aluno@cufa.com.br",
-                senha: a.senha || "aluno2026",
-                polo: a.polo_nome || a.polo || "Complexo da Penha",
-                atividade: a.atividade || a.oficina || "Geral",
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    if (listMap.size === 0) {
-      const defaultAlunos = [
-        {
-          id: "cad-enzo",
-          nome: "Enzo Junior",
-          email: "enzo.junior@cufa.org.br",
-          senha: "enzo2026",
-          polo: "Complexo da Penha",
-          atividade: "Jiu Jitsu",
-        },
-        {
-          id: "cad-robson",
-          nome: "Robson Nunes",
-          email: "robson.nunes@cufa.org.br",
-          senha: "robson2026",
-          polo: "Complexo da Penha",
-          atividade: "Jiu Jitsu",
-        },
-        {
-          id: "cad-beatriz",
-          nome: "Beatriz Santos",
-          email: "beatriz.santos@cufa.org.br",
-          senha: "beatriz2026",
-          polo: "Viaduto de Madureira",
-          atividade: "Corte e Costura",
-        },
-        {
-          id: "cad-lucas",
-          nome: "Lucas Oliveira",
-          email: "lucas.oliveira@cufa.org.br",
-          senha: "lucas2026",
-          polo: "Paraisópolis",
-          atividade: "Karatê",
-        },
-      ];
-      defaultAlunos.forEach((a) => listMap.set(a.id, a));
-      localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(defaultAlunos));
-    }
-
-    return Array.from(listMap.values());
-  }
-
-  function loadMasterProfessores() {
-    const listMap = new Map<string, any>();
-    const isFakeProf = (emailStr: string, nameStr: string) => {
-      const e = (emailStr || "").toLowerCase();
-      const n = (nameStr || "").toLowerCase();
-      return (
-        e.includes("marcos") ||
-        e.includes("patricia") ||
-        n.includes("marcos") ||
-        n.includes("patricia")
-      );
-    };
-
-    try {
-      const storedSol = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSol) {
-        const list = JSON.parse(storedSol);
-        if (Array.isArray(list)) {
-          list.forEach((p: any) => {
-            const email = p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`;
-            const name = p.professorNome || p.nome || "Professor";
-            if (!isFakeProf(email, name)) {
-              const id = p.id || `prof-${email}`;
-              listMap.set(id, {
-                id,
-                nome: name,
-                email,
-                senha: p.senha || "prof2026",
-                disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-                polo: p.poloNome || p.polo || "Complexo da Penha",
-              });
-            }
-          });
-        }
-      }
-
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const list = JSON.parse(storedCad);
-        if (Array.isArray(list)) {
-          list.forEach((p: any) => {
-            const email = p.email || `${(p.professorNome || p.nome || "prof").toLowerCase().replace(/[^a-z0-9]/g, "")}@cufa.com.br`;
-            const name = p.professorNome || p.nome || "Professor";
-            if (!isFakeProf(email, name)) {
-              const id = p.id || `prof-cad-${email}`;
-              if (!listMap.has(id)) {
-                listMap.set(id, {
-                  id,
-                  nome: name,
-                  email,
-                  senha: p.senha || "prof2026",
-                  disciplina: p.atividadeNome || p.disciplina || "Sem disciplina",
-                  polo: p.poloNome || p.polo || "Complexo da Penha",
-                });
-              }
-            }
-          });
-        }
-      }
-    } catch {}
-
-    if (listMap.size === 0) {
-      const defaultProfs = [
-        {
-          id: "prof-santana",
-          professorNome: "Prof.ª Santana Silva",
-          nome: "Prof.ª Santana Silva",
-          email: "santana@cufa.com.br",
-          senha: "santana2026",
-          atividadeNome: "Jiu Jitsu",
-          disciplina: "Jiu Jitsu",
-          poloNome: "Complexo da Penha",
-          polo: "Complexo da Penha",
-        },
-        {
-          id: "prof-anapaula",
-          professorNome: "Prof.ª Ana Paula Silva",
-          nome: "Prof.ª Ana Paula Silva",
-          email: "anapaula@cufa.com.br",
-          senha: "prof2026",
-          atividadeNome: "Corte e Costura",
-          disciplina: "Corte e Costura",
-          poloNome: "Viaduto de Madureira",
-          polo: "Viaduto de Madureira",
-        },
-        {
-          id: "prof-carlos",
-          professorNome: "Prof. Carlos Eduardo",
-          nome: "Prof. Carlos Eduardo",
-          email: "carlos@cufa.com.br",
-          senha: "prof2026",
-          atividadeNome: "Karatê",
-          disciplina: "Karatê",
-          poloNome: "Paraisópolis",
-          polo: "Paraisópolis",
-        },
-      ];
-      defaultProfs.forEach((p) => listMap.set(p.id, p));
-      localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(defaultProfs));
-    }
-
-    return Array.from(listMap.values());
-  }
+  }, [authenticated, open]);
 
   const [alunosData, setAlunosData] = useState<any[]>([]);
   const [professoresData, setProfessoresData] = useState<any[]>([]);
 
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (email.trim().toLowerCase() === "master@cufa.com.br" && senha === "cufamaster2026") {
+    const normalizedEmail = email.trim().toLowerCase();
+    const signInEmail = normalizedEmail === "master@cufa.com.br" ? "gestor@cufa.com.br" : normalizedEmail;
+    const legacyPasswords = ["gestao26", "gestor2026", "master2026"];
+    const gestorPassword = "Cufaz#Gestor-2026!Penha";
+
+    setLoginLoading(true);
+    try {
+      let result = await supabase.auth.signInWithPassword({ email: signInEmail, password: senha.trim() });
+
+      if (result.error && normalizedEmail === "master@cufa.com.br" && legacyPasswords.includes(senha.trim())) {
+        result = await supabase.auth.signInWithPassword({
+          email: "gestor@cufa.com.br",
+          password: gestorPassword,
+        });
+      }
+
+      if (result.error || !result.data.user) {
+        toast.error("Credenciais administrativas incorretas.");
+        return;
+      }
+
+      const { data: isGestor, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: result.data.user.id,
+        _role: "gestor",
+      });
+      if (roleError || !isGestor) {
+        await supabase.auth.signOut();
+        toast.error("Este usuário não possui acesso administrativo.");
+        return;
+      }
+
       setAuthenticated(true);
       localStorage.setItem("cufa_master_authenticated", "true");
       toast.success("Acesso Master Admin Autorizado!", {
         description: "Bem-vindo ao Portal de Controle de Acessos da CUFA.",
       });
-    } else {
-      toast.error("Credenciais Master incorretas", {
-        description: "E-mail: master@cufa.com.br | Senha: cufamaster2026",
-      });
+    } catch {
+      toast.error("Não foi possível conectar. Tente novamente.");
+    } finally {
+      setLoginLoading(false);
     }
   }
 
@@ -351,9 +252,10 @@ export function MasterAdminDialog({
 
               <Button
                 type="submit"
+                disabled={loginLoading}
                 className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white font-bold text-base shadow-lg"
               >
-                <Lock className="size-4 mr-2" /> Acessar Painel Master
+                <Lock className="size-4 mr-2" /> {loginLoading ? "Validando acesso..." : "Acessar Painel Master"}
               </Button>
             </form>
           </div>
@@ -543,17 +445,16 @@ export function MasterAdminDialog({
                                   size="icon"
                                   variant="ghost"
                                   className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (confirm(`Deseja excluir definitivamente o aluno ${a.nome}?`)) {
-                                      setAlunosData((prev) => prev.filter((item) => item.id !== a.id));
                                       try {
-                                        const stored = localStorage.getItem("cufa_alunos_polo");
-                                        if (stored) {
-                                          const list = JSON.parse(stored).filter((item: any) => item.id !== a.id);
-                                          localStorage.setItem("cufa_alunos_polo", JSON.stringify(list));
-                                        }
-                                      } catch {}
-                                      toast.success(`Aluno ${a.nome} excluído definitivamente.`);
+                                        await deleteAlunoCadastro(a.email);
+                                        setAlunosData((prev) => prev.filter((item) => item.id !== a.id));
+                                        window.dispatchEvent(new Event("cufa_alunos_updated"));
+                                        toast.success(`Aluno ${a.nome} excluído definitivamente.`);
+                                      } catch (error) {
+                                        toast.error(error instanceof Error ? error.message : "Não foi possível excluir o aluno.");
+                                      }
                                     }
                                   }}
                                   title="Excluir Aluno"
@@ -609,23 +510,16 @@ export function MasterAdminDialog({
                                   size="icon"
                                   variant="ghost"
                                   className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (confirm(`Deseja excluir definitivamente o professor ${p.nome}?`)) {
-                                      setProfessoresData((prev) => prev.filter((item) => item.id !== p.id));
                                       try {
-                                        const storedC = localStorage.getItem("cufa_professores_cadastrados");
-                                        if (storedC) {
-                                          const listC = JSON.parse(storedC).filter((item: any) => item.id !== p.id && item.email !== p.email);
-                                          localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listC));
-                                        }
-                                        const storedS = localStorage.getItem("cufa_professores_solicitacoes");
-                                        if (storedS) {
-                                          const listS = JSON.parse(storedS).filter((item: any) => item.email !== p.email);
-                                          localStorage.setItem("cufa_professores_solicitacoes", JSON.stringify(listS));
-                                        }
+                                        await deleteProfessorCadastro(p.email);
+                                        setProfessoresData((prev) => prev.filter((item) => item.id !== p.id));
                                         window.dispatchEvent(new Event("cufa_professores_updated"));
-                                      } catch {}
-                                      toast.success(`Professor ${p.nome} excluído definitivamente.`);
+                                        toast.success(`Professor ${p.nome} excluído definitivamente.`);
+                                      } catch (error) {
+                                        toast.error(error instanceof Error ? error.message : "Não foi possível excluir o professor.");
+                                      }
                                     }
                                   }}
                                   title="Excluir Professor"

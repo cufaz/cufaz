@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useIsFetching } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, Filter, Calendar, Loader2 } from "lucide-react";
 
-import { getResumoGestor, getFinanceiro } from "@/lib/gestao.functions";
+import { getResumoGestor, getFinanceiro, getQuadroPessoas } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
 import { Kpi } from "@/components/admin/Kpi";
@@ -15,107 +15,43 @@ export const Route = createFileRoute("/_authenticated/gestor/")({
   component: DashboardPage,
 });
 
+function mesesEntre(inicio?: string | null, fim?: string | null): number {
+  if (!inicio || !fim) return 0;
+  const d1 = new Date(inicio);
+  const d2 = new Date(fim);
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return 0;
+  const meses = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()) + 1;
+  return meses > 0 ? meses : 0;
+}
+
 function DashboardPage() {
   const fetchResumo = useServerFn(getResumoGestor);
   const fetchFinanceiro = useServerFn(getFinanceiro);
+  const fetchQuadro = useServerFn(getQuadroPessoas);
 
   const [selectedPoloIds, setSelectedPoloIds] = useState<string[]>([]);
   const [dataInicio, setDataInicio] = useState("2026-08-01");
   const [dataFim, setDataFim] = useState("2026-08-31");
-  const [isFiltering, setIsFiltering] = useState(false);
-
-  function getDeduplicatedLocalLancamentos(): any[] {
-    try {
-      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-      const listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
-
-      const storedPedidos = localStorage.getItem("cufa_compras_polo");
-      const listPedidos: any[] = storedPedidos ? JSON.parse(storedPedidos) : [];
-      const approvedLanc = listPedidos
-        .filter((p: any) => p.status === "aprovado")
-        .map((p: any) => {
-          const pNome = String(p.polo_nome || p.polos?.nome || "Complexo da Penha");
-          const pIdCode = pNome.toLowerCase().includes("penha")
-            ? "penha"
-            : pNome.toLowerCase().includes("madureira")
-            ? "madureira"
-            : pNome.toLowerCase().includes("paraisopolis") || pNome.toLowerCase().includes("paraisópolis")
-            ? "paraisopolis"
-            : "polo-teste";
-          const valNum = Number(p.valor_total || p.valor || 0);
-
-          return {
-            id: `ped-aprov-${p.id}`,
-            polo_id: pIdCode,
-            polo_nome: pNome,
-            descricao: `[Compra Aprovada] ${p.item || 'Pedido de Compra'}`,
-            valor: valNum,
-            tipo: "despesa",
-            natureza: "realizado",
-            categoria_id: p.categoria || "Materiais / consumo",
-            categoria_nome: p.categoria || "Materiais / consumo",
-            competencia: "2026-08-01",
-            created_at: p.dataSolicitacao || new Date().toISOString(),
-          };
-        });
-
-      const combined = [...listLanc, ...approvedLanc];
-      const result: any[] = [];
-      const seen = new Map<string, any>();
-
-      combined.forEach((item) => {
-        const descClean = String(item.descricao || item.item || "").trim().toLowerCase();
-        const poloClean = String(item.polo_id || item.polo_nome || "").trim().toLowerCase();
-        const key = `${descClean}_${poloClean}`;
-        const valNum = Number(item.valor || item.valor_total || 0);
-
-        if (!seen.has(key)) {
-          const entry = { ...item, valor: valNum };
-          seen.set(key, entry);
-          result.push(entry);
-        } else {
-          const existing = seen.get(key)!;
-          if (valNum > Number(existing['valor'] || 0)) {
-            existing['valor'] = valNum;
-          }
-        }
-      });
-
-      return result;
-    } catch {}
-    return [];
-  }
-
-  const [localCustomLancamentos, setLocalCustomLancamentos] = useState<any[]>(getDeduplicatedLocalLancamentos);
-
-  useEffect(() => {
-    function syncDashboardLanc() {
-      setLocalCustomLancamentos(getDeduplicatedLocalLancamentos());
-    }
-
-    window.addEventListener("cufa_pedidos_updated", syncDashboardLanc);
-    window.addEventListener("storage", syncDashboardLanc);
-    return () => {
-      window.removeEventListener("cufa_pedidos_updated", syncDashboardLanc);
-      window.removeEventListener("storage", syncDashboardLanc);
-    };
-  }, []);
-
-  function triggerLoading(fn: () => void) {
-    setIsFiltering(true);
-    fn();
-    setTimeout(() => setIsFiltering(false), 400);
-  }
 
   const { data: resumoData, isLoading: loadingResumo } = useQuery({
     queryKey: ["resumo"],
     queryFn: () => fetchResumo({}),
+    refetchOnWindowFocus: true,
   });
 
   const { data: finData, isLoading: loadingFin } = useQuery({
-    queryKey: ["financeiro-dashboard"],
-    queryFn: () => fetchFinanceiro({ data: {} }),
+    queryKey: ["financeiro-dashboard", dataInicio, dataFim],
+    queryFn: () => fetchFinanceiro({ data: { desde: dataInicio, ate: dataFim } }),
+    refetchOnWindowFocus: true,
   });
+
+  const { data: quadro } = useQuery({
+    queryKey: ["quadro-pessoas"],
+    queryFn: () => fetchQuadro({}),
+    refetchOnWindowFocus: true,
+  });
+
+  const fetching = useIsFetching() > 0;
 
   if (loadingResumo || loadingFin || !resumoData) {
     return (
@@ -129,198 +65,89 @@ function DashboardPage() {
     );
   }
 
-  const polos = resumoData.polos ?? [];
-  const activePolosAll = polos.filter((p: { ativo: boolean }) => p.ativo);
-  const activePolos = selectedPoloIds.length === 0
-    ? activePolosAll
-    : activePolosAll.filter((p: { id: string }) => selectedPoloIds.includes(String(p.id)));
+  const polos = (resumoData.polos ?? []) as any[];
+  const activePolosAll = polos.filter((p) => p.ativo && !p.rascunho);
+  const activePolos =
+    selectedPoloIds.length === 0
+      ? activePolosAll
+      : activePolosAll.filter((p) => selectedPoloIds.includes(String(p.id)));
+  const poloIdsAtivos = activePolos.map((p) => String(p.id));
 
-  // Filter Atividades by selected polo filter
-  const atividades = (resumoData.atividades ?? []).filter((a: any) => {
-    if (selectedPoloIds.length === 0) return true;
-    const aPoloId = String(a.polo_id || "");
-    const aPoloObj = activePolosAll.find((p: any) => String(p.id) === aPoloId);
-    const aPoloNome = (aPoloObj ? aPoloObj.nome : String(a.polo || "")).toLowerCase();
-    const aName = String(a.nome || a.slug || "").toLowerCase();
+  const atividades = ((resumoData.atividades ?? []) as any[]).filter((a) =>
+    poloIdsAtivos.includes(String(a.polo_id)),
+  );
+  const atividadeIds = atividades.map((a) => String(a.id));
 
-    return selectedPoloIds.some((pId) => {
-      if (aPoloId === pId) return true;
-      const selPoloObj = activePolosAll.find((p: any) => String(p.id) === pId);
-      const selName = (selPoloObj ? selPoloObj.nome : "").toLowerCase();
+  const turmas = ((resumoData.turmas ?? []) as any[]).filter((t) =>
+    atividadeIds.includes(String(t.atividade_id)),
+  );
+  const turmaIds = turmas.map((t) => String(t.id));
 
-      if (selName.includes("penha") && (aPoloNome.includes("penha") || aName.includes("jiu") || aName.includes("ingl") || aName.includes("nata"))) return true;
-      if (selName.includes("madureira") && (aPoloNome.includes("madureira") || aName.includes("corte") || aName.includes("futsal") || aName.includes("basq"))) return true;
-      if ((selName.includes("paraisópolis") || selName.includes("paraisopolis")) && (aPoloNome.includes("paraisopolis") || aName.includes("karat"))) return true;
-      if (selName.includes("teste") && (aPoloNome.includes("teste") || aName.includes("vôlei") || aName.includes("volei"))) return true;
-      return false;
-    });
-  });
+  const matriculas = ((resumoData.matriculas ?? []) as any[])
+    .filter((m) => m.status === "ativa")
+    .filter((m) => turmaIds.includes(String(m.turma_id)));
 
-  // Filter Turmas by filtered Atividades
-  const turmas = (resumoData.turmas ?? []).filter((t: any) =>
-    selectedPoloIds.length === 0 || atividades.some((a: any) => String(a.id) === String(t.atividade_id))
+  const pedidos = ((resumoData.pedidos ?? []) as any[]).filter((p) =>
+    poloIdsAtivos.includes(String(p.polo_id)),
   );
 
-  // Filter Matriculas by filtered Turmas
-  const matriculas = (resumoData.matriculas ?? [])
-    .filter((m: { status: string }) => m.status === "ativa")
-    .filter((m: any) =>
-      selectedPoloIds.length === 0 || turmas.some((t: any) => String(t.id) === String(m.turma_id))
-    );
+  const lancamentos = ((finData?.lancamentos ?? []) as any[]).filter((l) =>
+    poloIdsAtivos.includes(String(l.polo_id)),
+  );
 
-  // Filter Pedidos by selected polos
-  const pedidos = (resumoData.pedidos ?? []).filter((p: any) => {
-    if (selectedPoloIds.length === 0) return true;
-    return selectedPoloIds.includes(String(p.polo_id));
-  });
+  // Orçamento previsto real (soma dos polos selecionados)
+  const custoMensalPrevisto = activePolos.reduce(
+    (s, p) => s + Number(p.orcamento_mensal || 0),
+    0,
+  );
 
-  const deletedLancamentosIds: string[] = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_deleted_lancamentos");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  })();
+  const totalBeneficiarios = activePolos.reduce(
+    (s, p) => s + Number(p.beneficiarios_projetados || 0),
+    0,
+  );
 
-  const selectedPoloNames = activePolosAll
-    .filter((p: any) => selectedPoloIds.includes(String(p.id)))
-    .map((p: any) => String(p.nome).toLowerCase());
+  // Duração do projeto calculada pelos períodos cadastrados nas atividades
+  const duracoes = atividades
+    .map((a) => mesesEntre(a.data_inicio_atividade, a.data_fim_atividade))
+    .filter((m) => m > 0);
+  const duracaoProjetoMeses = duracoes.length > 0 ? Math.max(...duracoes) : 0;
 
-  const serverLanc = finData?.lancamentos ?? [];
-  const combinedLanc = [
-    ...localCustomLancamentos,
-    ...serverLanc.filter((s: any) => !localCustomLancamentos.some((l) => String(l.id) === String(s.id))),
-  ];
+  const custoTotalPrevisto = custoMensalPrevisto * (duracaoProjetoMeses || 1);
 
-  // Filter Lancamentos by selected polos & date range & non-deleted
-  const lancamentos = combinedLanc.filter((l: any) => {
-    if (deletedLancamentosIds.includes(String(l.id))) return false;
-    const lPoloId = String(l.polo_id || "").toLowerCase();
-    const lPoloNome = String(l.polo_nome || "").toLowerCase();
-
-    const pMatch =
-      selectedPoloIds.length === 0 ||
-      selectedPoloIds.includes(String(l.polo_id)) ||
-      (selectedPoloNames.length > 0 &&
-        selectedPoloNames.some(
-          (pName) =>
-            (lPoloId !== "" && (lPoloId.includes(pName) || pName.includes(lPoloId))) ||
-            (lPoloNome !== "" && (lPoloNome.includes(pName) || pName.includes(lPoloNome))) ||
-            (pName.includes("penha") && lPoloId.includes("penha")) ||
-            (pName.includes("madureira") && lPoloId.includes("madureira")) ||
-            ((pName.includes("paraisópolis") || pName.includes("paraisopolis")) && lPoloId.includes("paraisopolis")) ||
-            (pName.includes("teste") && lPoloId.includes("teste"))
-        ));
-
-    const dMatch = (!dataInicio || String(l.competencia || l.created_at || "").slice(0, 10) >= dataInicio) &&
-                   (!dataFim || String(l.competencia || l.created_at || "").slice(0, 10) <= dataFim);
-    return pMatch && dMatch;
-  });
-
-  // Calculate Custo Mensal Previsto based on selected polos (Official preset sum)
-  let custoMensalPrevisto = 0;
-  if (selectedPoloIds.length === 0) {
-    custoMensalPrevisto = 218440.16; // Penha (109.017,99) + Madureira (74.301,77) + Paraisópolis (34.620,40) + Teste (500,00)
-  } else {
-    selectedPoloIds.forEach((pId) => {
-      const pObj = activePolosAll.find((p: any) => String(p.id) === pId);
-      const pName = pObj ? String(pObj.nome).toLowerCase() : "";
-      if (pName.includes("penha")) custoMensalPrevisto += 109017.99;
-      else if (pName.includes("madureira")) custoMensalPrevisto += 74301.77;
-      else if (pName.includes("paraisópolis") || pName.includes("paraisopolis")) custoMensalPrevisto += 34620.40;
-      else if (pName.includes("teste")) custoMensalPrevisto += 500.00;
-      else if (pObj && Number(pObj.orcamento_mensal || 0) > 0) custoMensalPrevisto += Number(pObj.orcamento_mensal);
-      else {
-        const ativCost = atividades.filter((a: any) => String(a.polo_id) === pId).reduce((s: number, a: any) => s + Number(a.custo_mensal || 0), 0);
-        custoMensalPrevisto += ativCost;
-      }
-    });
-  }
-
-  // Calculate Beneficiários Projetados based on selected polos
-  let totalBeneficiarios = 0;
-  if (selectedPoloIds.length === 0) {
-    totalBeneficiarios = 281;
-  } else {
-    selectedPoloIds.forEach((pId) => {
-      const pObj = activePolosAll.find((p: any) => String(p.id) === pId);
-      const pName = pObj ? String(pObj.nome).toLowerCase() : "";
-      if (pName.includes("penha")) totalBeneficiarios += 150;
-      else if (pName.includes("madureira")) totalBeneficiarios += 81;
-      else if (pName.includes("paraisópolis") || pName.includes("paraisopolis")) totalBeneficiarios += 30;
-      else if (pObj && Number(pObj.beneficiarios_projetados || 0) > 0) totalBeneficiarios += Number(pObj.beneficiarios_projetados);
-      else {
-        const ativBen = atividades.filter((a: any) => String(a.polo_id) === pId).reduce((s: number, a: any) => s + Number(a.beneficiarios_projetados || 0), 0);
-        totalBeneficiarios += ativBen || 10;
-      }
-    });
-  }
-
-  // Dynamic calculation of project duration (months) across configured activity dates
-  let duracaoProjetoMeses = 6;
-  try {
-    const periodosList = atividades.map((a: any) => {
-      const key = String(a.id || a.slug || a.nome);
-      const raw = localStorage.getItem(`cufa_periodos_${key}`);
-      if (raw) return JSON.parse(raw);
-      return null;
-    }).filter(Boolean);
-
-    if (periodosList.length > 0) {
-      const diffs = periodosList.map((p: any) => {
-        if (p.data_inicio_atividade && p.data_fim_atividade) {
-          const d1 = new Date(p.data_inicio_atividade);
-          const d2 = new Date(p.data_fim_atividade);
-          const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()) + 1;
-          return months > 0 ? months : 6;
-        }
-        return 6;
-      });
-      duracaoProjetoMeses = Math.max(...diffs, 6);
-    }
-  } catch {}
-
-  const custoTotalPrevisto = custoMensalPrevisto * duracaoProjetoMeses;
-
-  // Total Realizado (Despesas Lançadas)
   const despesasRealizadas = lancamentos
-    .filter((l: { tipo: string; valor: number }) => l.tipo === "despesa")
-    .reduce((s: number, l: { valor: number }) => s + Number(l.valor || 0), 0);
+    .filter((l) => l.tipo === "despesa")
+    .reduce((s, l) => s + Number(l.valor || 0), 0);
 
-  const percUtilizadoNum = custoMensalPrevisto > 0 ? (despesasRealizadas / custoMensalPrevisto) * 100 : 0;
-  const percUtilizadoStr = percUtilizadoNum > 0 && percUtilizadoNum < 0.1
-    ? percUtilizadoNum.toFixed(2) + "%"
-    : percUtilizadoNum.toFixed(1) + "%";
+  const percUtilizadoNum =
+    custoMensalPrevisto > 0 ? (despesasRealizadas / custoMensalPrevisto) * 100 : 0;
+  const percUtilizadoStr =
+    percUtilizadoNum > 0 && percUtilizadoNum < 0.1
+      ? percUtilizadoNum.toFixed(2) + "%"
+      : percUtilizadoNum.toFixed(1) + "%";
 
-  // Calculate real student enrollments and total household members (Pessoas Impactadas)
-  const alunosCadastrados: any[] = (() => {
-    try {
-      const stored = localStorage.getItem("cufa_alunos_cadastrados");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  })();
+  const alunosCadastrados = ((quadro?.alunos ?? []) as any[]).filter((a) => {
+    if (selectedPoloIds.length === 0) return true;
+    const nomes = activePolos.map((p) => String(p.nome).toLowerCase());
+    return nomes.includes(String(a.polo_nome || "").toLowerCase());
+  });
 
-  const totalMatriculadosReal = alunosCadastrados.length;
+  const totalMatriculadosReal = Math.max(alunosCadastrados.length, matriculas.length);
   const totalPessoasImpactadas = alunosCadastrados.reduce((acc, a) => {
-    const qtd = Number(a.qtdPessoasResidencia || 0);
+    const qtd = Number(a.qtd_pessoas_residencia || 0);
     return acc + (qtd > 0 ? qtd : 1);
   }, 0);
 
-  const turmasVagas = turmas.reduce((s: number, t: { vagas: number }) => s + Number(t.vagas || 0), 0);
-  const totalVagas = Math.max(totalBeneficiarios, turmasVagas);
-  const pendentes = pedidos.filter((p: { status: string }) => p.status === "pendente");
+  const pendentes = pedidos.filter((p) => p.status === "pendente");
 
-  // Calculate per-polo alerts (Anexo 5)
-  const poloAlerts = activePolos.map((p: { id: string; nome: string; orcamento_mensal: number }) => {
+  const poloAlerts = activePolos.map((p) => {
     const poloOrcamento = Number(p.orcamento_mensal || 0);
     const poloGastos = lancamentos
-      .filter((l: { tipo: string; polo_id: string; valor: number }) => l.tipo === "despesa" && String(l.polo_id) === String(p.id))
-      .reduce((s: number, l: { valor: number }) => s + Number(l.valor || 0), 0);
+      .filter((l) => l.tipo === "despesa" && String(l.polo_id) === String(p.id))
+      .reduce((s, l) => s + Number(l.valor || 0), 0);
     const perc = poloOrcamento > 0 ? (poloGastos / poloOrcamento) * 100 : 0;
     return {
-      id: p.id,
-      nome: p.nome,
+      id: String(p.id),
+      nome: String(p.nome),
       orcamento: poloOrcamento,
       gastos: poloGastos,
       perc,
@@ -329,17 +156,15 @@ function DashboardPage() {
     };
   });
 
-  const activeAlerts = poloAlerts.filter((a: { isWarning: boolean; isCritical: boolean }) => a.isWarning || a.isCritical);
+  const activeAlerts = poloAlerts.filter((a) => a.isWarning || a.isCritical);
 
   return (
     <GestorShell
       title="Dashboard"
       description="Visão geral da plataforma CUFA — polos, atividades, vagas e orçamento."
     >
-      {/* Barra de Filtros de Polo e Período (Anexo 1) */}
       <div className="relative mb-6 rounded-2xl border border-border bg-card p-4 shadow-xs">
-        {/* Centered Circle Loading Spinner when filtering */}
-        {isFiltering && (
+        {fetching && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-background/80 backdrop-blur-xs">
             <Loader2 className="size-10 animate-spin text-primary" />
             <p className="mt-2 text-xs font-bold text-foreground">Atualizando indicadores...</p>
@@ -347,19 +172,17 @@ function DashboardPage() {
         )}
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {/* Filtro Lista Suspensa de Polos */}
           <div className="space-y-1">
             <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Filter className="size-3.5 text-primary" /> Polo / Unidade
             </label>
             <PoloMultiSelect
-              polos={activePolosAll.map((p: any) => ({ id: String(p.id), nome: String(p.nome) }))}
+              polos={activePolosAll.map((p) => ({ id: String(p.id), nome: String(p.nome) }))}
               selectedIds={selectedPoloIds}
-              onChange={(ids) => triggerLoading(() => setSelectedPoloIds(ids))}
+              onChange={setSelectedPoloIds}
             />
           </div>
 
-          {/* Filtro Período Início */}
           <div className="space-y-1">
             <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Calendar className="size-3.5 text-primary" /> Período de (Início)
@@ -367,12 +190,11 @@ function DashboardPage() {
             <input
               type="date"
               value={dataInicio}
-              onChange={(e) => triggerLoading(() => setDataInicio(e.target.value))}
+              onChange={(e) => setDataInicio(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
-          {/* Filtro Período Fim */}
           <div className="space-y-1">
             <label className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Calendar className="size-3.5 text-primary" /> Período até (Fim)
@@ -380,21 +202,33 @@ function DashboardPage() {
             <input
               type="date"
               value={dataFim}
-              onChange={(e) => triggerLoading(() => setDataFim(e.target.value))}
+              onChange={(e) => setDataFim(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
       </div>
-      {/* Cards de KPIs Principais (Anexo 1, 2, 3 & 4) */}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
         <Kpi label="Custo mensal previsto" value={brl(custoMensalPrevisto)} hint="Orçamento mensal" />
-        <Kpi label="Custo total previsto" value={brl(custoTotalPrevisto)} hint={`Período do Projeto (${duracaoProjetoMeses} meses)`} />
+        <Kpi
+          label="Custo total previsto"
+          value={brl(custoTotalPrevisto)}
+          hint={
+            duracaoProjetoMeses > 0
+              ? `Período do projeto (${duracaoProjetoMeses} ${duracaoProjetoMeses === 1 ? "mês" : "meses"})`
+              : "Defina o período nas atividades"
+          }
+        />
         <Kpi label="Valores já utilizados" value={brl(despesasRealizadas)} hint="Despesas realizadas" />
         <Kpi label="% Orçamento utilizado" value={percUtilizadoStr} hint="Em relação ao previsto" />
-        <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma de todos os polos" />
-        <Kpi label="Pessoas impactadas" value={String(totalPessoasImpactadas)} hint="Soma de residentes dos alunos" />
-        <Kpi label="Vagas / matrículas" value={`${totalMatriculadosReal} / ${totalBeneficiarios}`} hint={`${totalMatriculadosReal} alunos matriculados`} />
+        <Kpi label="Beneficiários projetados" value={String(totalBeneficiarios)} hint="Soma dos polos" />
+        <Kpi label="Pessoas impactadas" value={String(totalPessoasImpactadas)} hint="Residentes dos alunos" />
+        <Kpi
+          label="Vagas / matrículas"
+          value={`${totalMatriculadosReal} / ${totalBeneficiarios}`}
+          hint={`${totalMatriculadosReal} alunos matriculados`}
+        />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -404,11 +238,10 @@ function DashboardPage() {
         <Kpi
           label="Pedidos pendentes"
           value={String(pendentes.length)}
-          hint={brl(pendentes.reduce((s: number, p: { valor_total: number }) => s + Number(p.valor_total || 0), 0))}
+          hint={brl(pendentes.reduce((s, p) => s + Number(p.valor_total || 0), 0))}
         />
       </div>
 
-      {/* Cards de Alertas de Orçamento (Anexo 5) */}
       <div className="mt-8 rounded-xl border border-border bg-card p-5 shadow-xs">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle className="size-5 text-amber-500" />
@@ -416,7 +249,6 @@ function DashboardPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          {/* Card Alerta Geral */}
           <div
             className={`p-3.5 rounded-lg border flex items-start gap-3 ${
               percUtilizadoNum >= 80
@@ -439,7 +271,6 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Cards Alerta Por Polo */}
           {activeAlerts.length === 0 ? (
             <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-900 flex items-start gap-3">
               <CheckCircle2 className="size-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -449,14 +280,18 @@ function DashboardPage() {
               </div>
             </div>
           ) : (
-            activeAlerts.map((a: { id: string; nome: string; perc: number; gastos: number; orcamento: number; isCritical: boolean }) => (
+            activeAlerts.map((a) => (
               <div
                 key={a.id}
                 className={`p-3.5 rounded-lg border flex items-start gap-3 ${
-                  a.isCritical ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-amber-500/30 bg-amber-500/10 text-amber-900"
+                  a.isCritical
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-amber-500/30 bg-amber-500/10 text-amber-900"
                 }`}
               >
-                <AlertTriangle className={`size-5 shrink-0 mt-0.5 ${a.isCritical ? "text-destructive" : "text-amber-600"}`} />
+                <AlertTriangle
+                  className={`size-5 shrink-0 mt-0.5 ${a.isCritical ? "text-destructive" : "text-amber-600"}`}
+                />
                 <div>
                   <h3 className="font-bold text-xs uppercase tracking-wide">Polo {a.nome}</h3>
                   <p className="text-xs mt-0.5">
@@ -472,62 +307,42 @@ function DashboardPage() {
 
       <h2 className="mt-8 text-lg font-bold">Resumo por polo</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {polos
-          .filter((p: any) => !String(p.nome).toLowerCase().includes("cidade de deus"))
-          .map((p: any) => {
-            const pName = String(p.nome).toLowerCase();
-            const pId = String(p.id);
+        {activePolos.map((p) => {
+          const pId = String(p.id);
+          const poloAtivs = atividades.filter((a) => String(a.polo_id) === pId);
+          const vagasReal =
+            Number(p.vagas_totais || 0) ||
+            poloAtivs.reduce((s, a) => s + Number(a.vagas || 0), 0);
+          const beneficiariosReal =
+            Number(p.beneficiarios_projetados || 0) ||
+            poloAtivs.reduce((s, a) => s + Number(a.beneficiarios_projetados || 0), 0);
+          const custoReal =
+            Number(p.orcamento_mensal || 0) ||
+            poloAtivs.reduce((s, a) => s + Number(a.custo_mensal || 0), 0);
 
-            let beneficiariosReal = 0;
-            let vagasReal = 0;
-            let custoReal = Number(p.orcamento_mensal || 0);
-
-            if (pName.includes("penha")) {
-              beneficiariosReal = 160;
-              vagasReal = 160;
-              custoReal = 109017.99;
-            } else if (pName.includes("madureira")) {
-              beneficiariosReal = 81;
-              vagasReal = 81;
-              custoReal = 64800.00;
-            } else if (pName.includes("paraisópolis") || pName.includes("paraisopolis")) {
-              beneficiariosReal = 30;
-              vagasReal = 30;
-              custoReal = 45000.00;
-            } else if (pName.includes("teste")) {
-              beneficiariosReal = 10;
-              vagasReal = 10;
-              custoReal = 500.00;
-            } else {
-              const poloAtivs = atividades.filter((a: any) => String(a.polo_id) === pId);
-              vagasReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.vagas || 0), 0);
-              beneficiariosReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.beneficiarios_projetados || 0), 0);
-              custoReal = poloAtivs.reduce((s: number, a: any) => s + Number(a.custo_mensal || 0), 0);
-            }
-
-            return (
-              <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-                <p className="text-base font-bold text-foreground">{p.nome}</p>
-                <p className="text-xs text-muted-foreground font-medium">
-                  {p.cidade || (pName.includes("paraisopolis") ? "São Paulo" : "Rio de Janeiro")} / {p.uf || (pName.includes("paraisopolis") ? "SP" : "RJ")}
-                </p>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                  <div>
-                    <dt className="text-xs text-muted-foreground font-medium">Beneficiários</dt>
-                    <dd className="break-words font-bold tabular-nums text-primary">{beneficiariosReal}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground font-medium">Vagas</dt>
-                    <dd className="break-words font-bold tabular-nums text-foreground">{vagasReal}</dd>
-                  </div>
-                  <div className="col-span-2 mt-1 border-t border-border/40 pt-2">
-                    <dt className="text-xs text-muted-foreground font-medium">Orçamento mensal</dt>
-                    <dd className="break-words font-bold tabular-nums text-primary">{brl(custoReal)}</dd>
-                  </div>
-                </dl>
-              </div>
-            );
-          })}
+          return (
+            <div key={pId} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-base font-bold text-foreground">{p.nome}</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                {p.cidade} / {p.uf}
+              </p>
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground font-medium">Beneficiários</dt>
+                  <dd className="break-words font-bold tabular-nums text-primary">{beneficiariosReal}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground font-medium">Vagas</dt>
+                  <dd className="break-words font-bold tabular-nums text-foreground">{vagasReal}</dd>
+                </div>
+                <div className="col-span-2 mt-1 border-t border-border/40 pt-2">
+                  <dt className="text-xs text-muted-foreground font-medium">Orçamento mensal</dt>
+                  <dd className="break-words font-bold tabular-nums text-primary">{brl(custoReal)}</dd>
+                </div>
+              </dl>
+            </div>
+          );
+        })}
       </div>
     </GestorShell>
   );

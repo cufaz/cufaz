@@ -44,6 +44,7 @@ interface CnaeFormItem {
 
 function FornecedorCadastroPage() {
   const [parsingOcr, setParsingOcr] = useState(false);
+  const [cartaoFile, setCartaoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [concluido, setConcluido] = useState(false);
 
@@ -93,13 +94,19 @@ function FornecedorCadastroPage() {
     },
   ]);
 
-  // Step 1: Upload Cartão CNPJ with AI OCR Extraction
+  // Step 1: Upload Cartão CNPJ (PDF) with AI extraction
   async function handleFileUploadOcr(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Formato inválido. Envie o Cartão CNPJ em PDF.");
+      e.target.value = "";
+      return;
+    }
+
     setParsingOcr(true);
-    toast.info("Analisando Cartão CNPJ com IA (Lovable AI Gateway / OCR)...");
+    toast.info("Lendo o Cartão CNPJ...");
 
     try {
       const result = await parseCnpjCardOcr(file);
@@ -114,27 +121,36 @@ function FornecedorCadastroPage() {
       setCnaePrincipalDescricao(result.cnae_principal_descricao);
       setCnae(result.cnae);
 
-      if (result.cnae_secundarios && result.cnae_secundarios.length > 0) {
-        setCnaeSecundarios(
-          result.cnae_secundarios.map((item, idx) => ({
-            id: `sec-${idx}-${Date.now()}`,
-            codigo: item.codigo,
-            descricao: item.descricao,
-          }))
-        );
-      }
+      const extra = result as unknown as { email?: string; telefone?: string };
+      if (extra.email) setEmail(extra.email);
+      if (extra.telefone) setTelefone(extra.telefone);
+
+      setCnaeSecundarios(
+        (result.cnae_secundarios ?? []).map((item, idx) => ({
+          id: `sec-${idx}-${Date.now()}`,
+          codigo: item.codigo,
+          descricao: item.descricao,
+        }))
+      );
 
       setEndereco(result.endereco);
       setCidade(result.cidade);
       setUf(result.uf);
       setCep(result.cep);
-      toast.success("Cartão CNPJ analisado com sucesso! CNAE principal e atividades secundárias importadas.");
-    } catch {
-      toast.error("Erro na leitura automática. Preencha os campos manualmente.");
+      setCartaoFile(file);
+      toast.success("Cartão CNPJ lido! Confira os campos preenchidos.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Não foi possível ler o cartão. Preencha os campos manualmente."
+      );
     } finally {
       setParsingOcr(false);
+      e.target.value = "";
     }
   }
+
 
   function addCnaeSecundarioRow() {
     setCnaeSecundarios((prev) => [
@@ -196,12 +212,17 @@ function FornecedorCadastroPage() {
           banco_conta: bancoConta,
           banco_pix: bancoPix,
         },
-        propostas.filter((p) => p.titulo.trim() !== "")
+        propostas.filter((p) => p.titulo.trim() !== ""),
+        cartaoFile
       );
       setConcluido(true);
       toast.success("Cadastro de fornecedor realizado com sucesso!");
-    } catch {
-      toast.error("Falha ao salvar fornecedor. Tente novamente.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Falha ao salvar fornecedor. Tente novamente."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -298,13 +319,13 @@ function FornecedorCadastroPage() {
             </div>
 
             <p className="text-xs text-muted-foreground font-medium">
-              Faça upload do seu Cartão CNPJ (PDF ou Imagem). Nossa inteligência artificial extrairá Razão Social, CNPJ, Endereço e CNAE automaticamente.
+              Faça upload do seu Cartão CNPJ em PDF. Nossa inteligência artificial extrairá Razão Social, CNPJ, Endereço e CNAE automaticamente.
             </p>
 
             <div className="relative border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl bg-card p-6 text-center transition-colors">
               <input
                 type="file"
-                accept="application/pdf,image/*"
+                accept="application/pdf"
                 onChange={handleFileUploadOcr}
                 className="absolute inset-0 size-full opacity-0 cursor-pointer"
               />
@@ -317,7 +338,7 @@ function FornecedorCadastroPage() {
                 <div className="flex flex-col items-center py-2">
                   <Upload className="size-8 text-primary mb-2" />
                   <span className="text-sm font-bold text-foreground">Clique para selecionar ou arraste o Cartão CNPJ</span>
-                  <span className="text-xs text-muted-foreground mt-1">Arquivos em PDF, PNG ou JPG</span>
+                  <span className="text-xs text-muted-foreground mt-1">Somente arquivos em PDF</span>
                 </div>
               )}
             </div>
@@ -741,17 +762,27 @@ function FornecedorCadastroPage() {
 
                     <div className="space-y-1">
                       <Label className="text-[11px] font-bold text-muted-foreground uppercase">Valor Estimado (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={p.valor || ""}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setPropostas((prev) => prev.map((item) => (item.id === p.id ? { ...item, valor: val } : item)));
-                        }}
-                        placeholder="0,00"
-                        className="h-9 font-bold text-xs"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-2 text-xs font-bold text-muted-foreground">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={Number(p.valor || 0).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            const val = raw ? Number(raw) / 100 : 0;
+                            setPropostas((prev) =>
+                              prev.map((item) => (item.id === p.id ? { ...item, valor: val } : item)),
+                            );
+                          }}
+                          placeholder="0,00"
+                          className="h-9 pl-8 font-bold text-xs tabular-nums"
+                        />
+                      </div>
+
                     </div>
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { listPolos, savePolo, deletePolo } from "@/lib/gestao.functions";
@@ -75,6 +75,17 @@ function PolosPage() {
     setAberto(true);
   }
 
+  function duplicar(p: Polo) {
+    const { id: _id, created_at: _c, updated_at: _u, ...resto } = p as Record<string, unknown>;
+    mSalvar.mutate({
+      ...(resto as Polo),
+      nome: `${String(p['nome'] ?? "Polo")} (cópia)`,
+      slug: `${String(p['slug'] ?? "polo")}-copia-${Date.now().toString().slice(-5)}`,
+      ativo: false,
+      rascunho: true,
+    });
+  }
+
   function editar(p: Polo) {
     setForm({ ...p });
     setAberto(true);
@@ -114,9 +125,17 @@ function PolosPage() {
                     <p className="text-xs text-muted-foreground">
                       {cidade} / {uf} · {p['ativo'] !== false ? "Ativo" : "Inativo"}
                     </p>
+                    {p['rascunho'] ? (
+                      <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-600">
+                        Rascunho — edite e salve para oficializar
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => editar(p)}>
+                    <Button size="icon" variant="ghost" title="Duplicar polo" onClick={() => duplicar(p)}>
+                      <Copy className="size-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" title="Editar polo" onClick={() => editar(p)}>
                       <Pencil className="size-4" />
                     </Button>
                     <Button
@@ -162,7 +181,7 @@ function PolosPage() {
             className="grid gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              mSalvar.mutate(form);
+              mSalvar.mutate({ ...form, rascunho: false });
             }}
           >
             <div className="grid gap-3 sm:grid-cols-2">
