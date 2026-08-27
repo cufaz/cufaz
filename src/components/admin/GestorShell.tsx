@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AuthLoadingOverlay } from "@/components/site/AuthLoadingOverlay";
 import { fetchFornecedoresDB } from "@/lib/fornecedoresService";
+import { clearRoleCache } from "@/lib/authGuard";
 
 export function GestorShell({
   title,
@@ -96,7 +97,8 @@ export function GestorShell({
 
   async function sair() {
     setIsLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 5200));
+    clearRoleCache();
+    await new Promise((r) => setTimeout(r, 1200));
     await queryClient.cancelQueries();
     queryClient.clear();
     try {
