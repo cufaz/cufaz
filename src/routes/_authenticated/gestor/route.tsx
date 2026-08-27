@@ -1,24 +1,21 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
-import { supabase } from "@/integrations/supabase/client";
+import { getCachedUser, hasRoleCached } from "@/lib/authGuard";
 
 export const Route = createFileRoute("/_authenticated/gestor")({
   ssr: false,
   beforeLoad: async () => {
+    let user = null;
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) throw redirect({ to: "/auth", replace: true });
-
-      const { data: isGestor, error: roleError } = await supabase.rpc("has_role", {
-        _user_id: data.user.id,
-        _role: "gestor",
-      });
-
-      if (roleError || !isGestor) throw redirect({ to: "/auth", replace: true });
-      return { user: data.user };
+      user = await getCachedUser();
     } catch {}
 
-    throw redirect({ to: "/auth", replace: true });
+    if (!user) throw redirect({ to: "/auth", replace: true });
+
+    const isGestor = await hasRoleCached(user.id, "gestor");
+    if (!isGestor) throw redirect({ to: "/auth", replace: true });
+
+    return { user };
   },
   component: GestorLayout,
   errorComponent: ({ error }) => (
