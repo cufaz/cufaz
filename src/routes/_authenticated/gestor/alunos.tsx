@@ -357,7 +357,12 @@ function GestorAlunosDashboardPage() {
     async function syncAlunos() {
       try {
         const remotos = await fetchAlunosCadastro();
-        if (ativo) setAlunosList(mergeBanco([], remotos));
+        if (ativo) {
+          setAlunosList((atuais) => {
+            if (remotos.length === 0) return atuais;
+            return mergeBanco(atuais, remotos);
+          });
+        }
       } catch (error) {
         if (ativo) toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");
       }
