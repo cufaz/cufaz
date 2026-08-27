@@ -1,12 +1,13 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+
+import { getCachedUser } from "@/lib/authGuard";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (!error && data?.user) return { user: data.user };
+      const user = await getCachedUser();
+      if (user) return { user };
     } catch {}
 
     throw redirect({ to: "/auth" });
