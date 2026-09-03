@@ -462,6 +462,20 @@ function PedidosPage() {
                 </select>
               </div>
               <div className="space-y-1.5">
+                <Label>Centro de Custo</Label>
+                <select
+                  required
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+                  value={String(form['centro_custo_id'] ?? "")}
+                  onChange={(e) => setForm({ ...form, centro_custo_id: e.target.value || null })}
+                >
+                  <option value="">Selecione um centro de custo</option>
+                  {(centrosCusto.data ?? []).map((centro) => (
+                    <option key={centro.id} value={centro.id}>{centro.codigo} — {centro.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
                 <Label>Competência</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
