@@ -311,28 +311,6 @@ export function SignupDialog({
     } else if (perfil === "professor") {
       const pNome = nome.trim() ? (nome.trim().startsWith("Prof") ? nome.trim() : `Prof. ${nome.trim()}`) : "Prof. Novo Professor";
       const pEmail = email.trim().toLowerCase();
-      const pSenha = senha.trim();
-
-      const novoProf = {
-        id: `prof-${Date.now()}`,
-        professorNome: pNome,
-        email: pEmail,
-        senha: pSenha,
-        telefone: telefone.trim(),
-        status: "ativo",
-        docIdName: docIdName || null,
-        docIdData: docIdData || null,
-        docResName: docResName || null,
-        docResData: docResData || null,
-        docFuncName: docFuncName || null,
-        docFuncData: docFuncData || null,
-        cert1Name: cert1Name || null,
-        cert2Name: cert2Name || null,
-        cert3Name: cert3Name || null,
-        cert4Name: cert4Name || null,
-        dataCriacao: new Date().toISOString().slice(0, 10),
-      };
-
       try {
         await upsertProfessorCadastro({
           nome: pNome,
@@ -368,39 +346,6 @@ export function SignupDialog({
     } else if (perfil === "aluno") {
       const aNome = nome.trim() || "Aluno";
       const aEmail = email.trim().toLowerCase();
-      const aSenha = senha.trim();
-
-      const novoAluno = {
-        id: `aluno-${Date.now()}`,
-        nome: aNome,
-        email: aEmail,
-        senha: aSenha,
-        telefone: telefone.trim(),
-        dataNasc,
-        nomeEscola,
-        anoEscolar,
-        turnoEscolar,
-        qtdPessoasResidencia,
-        nomeResponsavel,
-        cpfResponsavel,
-        telResponsavel,
-        docIdName: docIdAlunoName,
-        docIdData: docIdAlunoData,
-        docResName: docResAlunoName,
-        docResData: docResAlunoData,
-        hospitalEmergencia: hospitalEmergencia.trim(),
-        cep: cep.trim(),
-        endereco: endereco.trim(),
-        numero: numero.trim(),
-        bairro: bairro.trim(),
-        cidade: cidade.trim(),
-        uf: uf.trim(),
-        telefonePai: telefonePai.trim(),
-        telefoneVizinho: telefoneVizinho.trim(),
-        telefoneAvo: telefoneAvo.trim(),
-        dataCriacao: new Date().toISOString().slice(0, 10),
-      };
-
       try {
         await upsertAlunoCadastro({
           nome: aNome,

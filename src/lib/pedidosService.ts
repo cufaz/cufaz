@@ -20,6 +20,7 @@ export interface PedidoDB {
   decidido_em?: string | null;
   decidido_por?: string | null;
   observacao_gestor?: string | null;
+  centro_custo_id?: string | null;
 }
 
 export async function autoMigrateLocalPedidos() {
@@ -92,7 +93,8 @@ export async function createPedidoDB(pedido: Omit<PedidoDB, "id" | "created_at">
 export async function updatePedidoStatusDB(
   id: string,
   status: "aprovado" | "reprovado",
-  observacaoGestor?: string
+  observacaoGestor?: string,
+  updates: Partial<Pick<PedidoDB, "polo_id" | "centro_custo_id" | "valor_total">> = {},
 ) {
   const { data, error } = await supabase
     .from("pedidos_compra")
@@ -100,6 +102,7 @@ export async function updatePedidoStatusDB(
       status,
       observacao_gestor: observacaoGestor || null,
       decidido_em: new Date().toISOString(),
+      ...updates,
     } as any)
     .eq("id", id)
     .select()
@@ -118,6 +121,7 @@ export async function updatePedidoStatusDB(
       valor: p.valor_total,
       competencia: p.competencia || "2026-08-01",
       pedido_id: id,
+      centro_custo_id: p.centro_custo_id,
     } as any);
   }
 
