@@ -79,9 +79,10 @@ export async function fetchPedidosDB(): Promise<PedidoDB[]> {
 }
 
 export async function createPedidoDB(pedido: Omit<PedidoDB, "id" | "created_at">) {
+  const { polo_nome: _poloNome, categoria: _categoria, dataSolicitacao: _dataSolicitacao, ...persisted } = pedido;
   const { data, error } = await supabase
     .from("pedidos_compra")
-    .insert(pedido as any)
+    .insert(persisted as any)
     .select()
     .single();
 

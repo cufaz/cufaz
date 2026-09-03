@@ -35,9 +35,7 @@ export function MasterAdminDialog({
   const [authenticated, setAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<"gestores" | "alunos" | "professores">("gestores");
 
-  const [gestoresData, setGestoresData] = useState<any[]>(() => [
-    { id: "g1", nome: "Gestor Geral CUFA", email: "gestor@cufa.com.br", senha: "gestao26", polo: "Todos", status: "Ativo" },
-  ]);
+  const [gestoresData, setGestoresData] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -64,23 +62,25 @@ export function MasterAdminDialog({
   useEffect(() => {
     if (!open || !authenticated) return;
 
-    function syncMasterGestores() {
+    async function syncMasterGestores() {
       try {
-        const stored = localStorage.getItem("cufa_gestores_lista");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setGestoresData(
-            parsed.map((g: any) => ({
-              id: g.id,
-              nome: g.nome,
-              email: g.email,
-              senha: g.senha,
-              polo: g.poloNome,
-              status: g.ativo ? "Ativo" : "Inativo",
-            }))
-          );
-        }
-      } catch {}
+        const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id, role").in("role", ["gestor", "responsavel"]);
+        if (rolesError) throw rolesError;
+        const ids = (roles || []).map((role) => role.user_id);
+        if (ids.length === 0) return setGestoresData([]);
+        const { data: profiles, error: profilesError } = await supabase.from("profiles").select("id, nome, email, polo_id, polos(nome)").in("id", ids);
+        if (profilesError) throw profilesError;
+        setGestoresData((profiles || []).map((profile: any) => ({
+          id: profile.id,
+          nome: profile.nome,
+          email: profile.email,
+          senha: "Protegida",
+          polo: profile.polos?.nome || "Todos",
+          status: "Ativo",
+        })));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível carregar os gestores.");
+      }
     }
 
     async function syncMasterProfessores() {
@@ -380,17 +380,16 @@ export function MasterAdminDialog({
                                 size="icon"
                                 variant="ghost"
                                 className="size-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                                onClick={() => {
+                                onClick={async () => {
                                   if (confirm(`Deseja excluir definitivamente o gestor ${g.nome}?`)) {
-                                    setGestoresData((prev: any[]) => prev.filter((item) => item.id !== g.id));
                                     try {
-                                      const stored = localStorage.getItem("cufa_gestores_lista");
-                                      if (stored) {
-                                        const list = JSON.parse(stored).filter((item: any) => item.id !== g.id);
-                                        localStorage.setItem("cufa_gestores_lista", JSON.stringify(list));
-                                      }
-                                    } catch {}
-                                    toast.success(`Gestor ${g.nome} excluído definitivamente.`);
+                                      const { error } = await supabase.from("profiles").delete().eq("id", g.id);
+                                      if (error) throw error;
+                                      setGestoresData((prev: any[]) => prev.filter((item) => item.id !== g.id));
+                                      toast.success(`Gestor ${g.nome} removido da plataforma.`);
+                                    } catch (error) {
+                                      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o gestor.");
+                                    }
                                   }
                                 }}
                                 title="Excluir Gestor"

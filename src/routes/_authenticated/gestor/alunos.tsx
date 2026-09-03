@@ -344,9 +344,9 @@ DOCUMENTOS ANEXADOS:
                 className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-56"
               >
                 <option value="todos">Todos os Polos</option>
-                <option value="penha">Complexo da Penha</option>
-                <option value="madureira">Viaduto de Madureira</option>
-                <option value="paraisopolis">Paraisópolis</option>
+                {Array.from(new Set(alunosList.map((aluno) => aluno.polo).filter((polo) => polo !== "—"))).map((polo) => (
+                  <option key={polo} value={cleanStr(polo)}>{polo}</option>
+                ))}
               </select>
             </div>
 

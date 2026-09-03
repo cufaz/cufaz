@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 import { buildProfessorZipBlob } from "@/lib/zipHelper";
 import { brl } from "@/lib/brl";
-import { deleteCadastroPessoa, getQuadroPessoas } from "@/lib/gestao.functions";
+import { deleteCadastroPessoa } from "@/lib/gestao.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { AcessoUsuarioCard } from "@/components/admin/AcessoUsuarioCard";
 import { GestorShell } from "@/components/admin/GestorShell";
@@ -289,9 +289,9 @@ function ProfessoresDashboardPage() {
                 className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
               >
                 <option value="todos">Todos os Polos</option>
-                <option value="penha">Complexo da Penha</option>
-                <option value="madureira">Viaduto de Madureira</option>
-                <option value="paraisopolis">Paraisópolis</option>
+                {Array.from(new Set(professoresList.map((prof) => prof.polo).filter((polo) => polo !== "—"))).map((polo) => (
+                  <option key={polo} value={cleanStr(polo)}>{polo}</option>
+                ))}
               </select>
             </div>
 
@@ -303,12 +303,9 @@ function ProfessoresDashboardPage() {
                 className="h-9 rounded-md border border-input bg-background px-3 text-xs font-bold text-foreground w-full sm:w-48"
               >
                 <option value="todas">Todas as Oficinas</option>
-                <option value="jiu">Jiu Jitsu</option>
-                <option value="ingles">Aula de Inglês</option>
-                <option value="natacao">Natação</option>
-                <option value="karate">Karatê</option>
-                <option value="corte">Corte e Costura</option>
-                <option value="futsal">Futsal</option>
+                {Array.from(new Set(professoresList.map((prof) => prof.modalidade).filter((modalidade) => modalidade !== "—"))).map((modalidade) => (
+                  <option key={modalidade} value={cleanStr(modalidade)}>{modalidade}</option>
+                ))}
               </select>
             </div>
           </div>
