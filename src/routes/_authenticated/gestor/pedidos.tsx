@@ -180,29 +180,6 @@ function PedidosPage() {
     toast.success(`Categoria "${catRemovida}" removida permanentemente!`);
   }
 
-  const [localPedidos, setLocalPedidos] = useState<Row[]>(() => {
-    try {
-      const stored = localStorage.getItem("cufa_compras_polo");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
-
-  useEffect(() => {
-    function syncLocal() {
-      try {
-        const stored = localStorage.getItem("cufa_compras_polo");
-        if (stored) setLocalPedidos(JSON.parse(stored));
-      } catch {}
-    }
-    window.addEventListener("cufa_pedidos_updated", syncLocal);
-    window.addEventListener("storage", syncLocal);
-    return () => {
-      window.removeEventListener("cufa_pedidos_updated", syncLocal);
-      window.removeEventListener("storage", syncLocal);
-    };
-  }, []);
-
   const [approveModalPedido, setApproveModalPedido] = useState<Row | null>(null);
   const [aprovPoloNome, setAprovPoloNome] = useState<string>("");
   const [aprovCategoria, setAprovCategoria] = useState<string>("Materiais / consumo");
@@ -214,63 +191,33 @@ function PedidosPage() {
   function openEditModal(p: Row) {
     setEditModalPedido({
       ...p,
-      polo_nome: p['polo_nome'] || p['polos']?.nome || "Complexo da Penha",
+      polo_nome: p['polo_nome'] || p['polos']?.nome || "",
       categoria: p['categoria'] || p['categorias_custo']?.nome || categorias[0] || "Materiais / consumo",
       valor_total: p['valor_total'] || p['valor'] || 0,
       quantidade: p['quantidade'] || 1,
     });
   }
 
-  function handleSalvarEdicaoPedido(e: React.FormEvent) {
+  async function handleSalvarEdicaoPedido(e: React.FormEvent) {
     e.preventDefault();
     if (!editModalPedido) return;
 
     const pId = String(editModalPedido['id']);
-    let updated = localPedidos.map((p) => (String(p['id']) === pId ? editModalPedido : p));
-    if (!localPedidos.some((p) => String(p['id']) === pId)) {
-      updated = [editModalPedido, ...localPedidos];
-    }
-
-    setLocalPedidos(updated);
+    const polo = ((polos.data ?? []) as Row[]).find((item) => String(item['nome']) === String(editModalPedido['polo_nome']));
     try {
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-    } catch {}
-
-    if (editModalPedido['status'] === "aprovado") {
-      const valNum = Number(editModalPedido['valor_total'] || editModalPedido['valor'] || 0);
-      const poloNome = String(editModalPedido['polo_nome'] || "Complexo da Penha");
-      const poloIdCode = poloNome.toLowerCase().includes("penha")
-        ? "penha"
-        : poloNome.toLowerCase().includes("madureira")
-        ? "madureira"
-        : poloNome.toLowerCase().includes("paraisopolis") || poloNome.toLowerCase().includes("paraisópolis")
-        ? "paraisopolis"
-        : "polo-teste";
-
-      const novoLanc = {
-        id: `lanc-ped-${pId}`,
-        polo_id: poloIdCode,
-        descricao: `[Compra Aprovada] ${editModalPedido['item'] || 'Pedido de Compra'}`,
-        valor: valNum,
-        tipo: "despesa",
-        natureza: "realizado",
-        categoria_id: editModalPedido['categoria'],
-        categoria_nome: editModalPedido['categoria'],
-        competencia: "2026-08-01",
-        created_at: new Date().toISOString(),
-      };
-
-      try {
-        const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-        let listLanc: any[] = storedLanc ? JSON.parse(storedLanc) : [];
-        listLanc = listLanc.filter((l) => l.id !== `lanc-ped-${pId}`);
-        localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
-      } catch {}
+      await updatePedidoDB(pId, {
+        item: String(editModalPedido['item'] || ""),
+        quantidade: Number(editModalPedido['quantidade'] || 1),
+        valor_total: Number(editModalPedido['valor_total'] || 0),
+        polo_id: String(polo?.['id'] || editModalPedido['polo_id']),
+        status: editModalPedido['status'],
+      });
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success("Pedido de compra editado com sucesso!");
+      setEditModalPedido(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível editar o pedido.");
     }
-
-    toast.success("Pedido de compra editado com sucesso!");
-    setEditModalPedido(null);
   }
 
   function openApprovalModal(p: Row) {
@@ -304,7 +251,7 @@ function PedidosPage() {
     setApproveModalPedido(null);
   }
 
-  function handleDecidirLocal(id: string, novoStatus: "aprovado" | "reprovado", pObj: Row) {
+  function handleDecidirLocal(id: string, novoStatus: "aprovado" | "reprovado", _pObj: Row) {
     mDecidir.mutate({ id, status: novoStatus });
   }
 
@@ -823,12 +770,13 @@ function PedidosPage() {
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Polo de Destino</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  value={String(editModalPedido['polo_nome'] || "Complexo da Penha")}
+                  value={String(editModalPedido['polo_nome'] || "")}
                   onChange={(e) => setEditModalPedido({ ...editModalPedido, polo_nome: e.target.value })}
                 >
-                  <option value="Complexo da Penha">Complexo da Penha</option>
-                  <option value="Viaduto de Madureira">Viaduto de Madureira</option>
-                  <option value="Paraisópolis">Paraisópolis</option>
+                  <option value="">Selecione um polo</option>
+                  {((polos.data ?? []) as Row[]).map((polo) => (
+                    <option key={String(polo['id'])} value={String(polo['nome'])}>{String(polo['nome'])}</option>
+                  ))}
                 </select>
               </div>
 
