@@ -94,85 +94,6 @@ function cleanStr(str: string = "") {
     .trim();
 }
 
-const defaultAlunosBase: AlunoRecord[] = [
-  {
-    id: "aluno-gabriel",
-    nome: "Gabriel Santos Lima",
-    email: "gabriel.lima@aluno.cufa.org",
-    telefone: "(21) 99876-5432",
-    polo: "Complexo da Penha",
-    modalidade: "Jiu Jitsu",
-    turma: "Turma 1 - Tarde",
-    nomeEscola: "E.M. Paulo Freire",
-    anoEscolar: "8º Ano - Ensino Fundamental",
-    turnoEscolar: "Manhã",
-    qtdPessoasResidencia: "4",
-    nomeResponsavel: "Maria das Graças Santos",
-    cpfResponsavel: "123.456.789-00",
-    telResponsavel: "(21) 99876-5432",
-    frequenciaGeral: "100% Presença",
-    qtdAtividades: 1,
-    dataCriacao: "2026-08-10",
-  },
-  {
-    id: "aluno-beatriz",
-    nome: "Beatriz Souza Mello",
-    email: "beatriz.souza@aluno.cufa.org",
-    telefone: "(21) 98765-4321",
-    polo: "Viaduto de Madureira",
-    modalidade: "Corte e Costura",
-    turma: "Turma 1 - Manhã",
-    nomeEscola: "C.E. Madureira",
-    anoEscolar: "2º Ano - Ensino Médio",
-    turnoEscolar: "Tarde",
-    qtdPessoasResidencia: "3",
-    nomeResponsavel: "Ana Lúcia Souza",
-    cpfResponsavel: "987.654.321-11",
-    telResponsavel: "(21) 98765-4321",
-    frequenciaGeral: "95% Presença",
-    qtdAtividades: 1,
-    dataCriacao: "2026-08-12",
-  },
-  {
-    id: "aluno-lucas",
-    nome: "Lucas Oliveira Silva",
-    email: "lucas.oliveira@aluno.cufa.org",
-    telefone: "(11) 97654-3210",
-    polo: "Paraisópolis",
-    modalidade: "Karatê",
-    turma: "Turma 1 - Tarde",
-    nomeEscola: "E.E. Paraisópolis",
-    anoEscolar: "9º Ano - Ensino Fundamental",
-    turnoEscolar: "Manhã",
-    qtdPessoasResidencia: "5",
-    nomeResponsavel: "Roberto Oliveira",
-    cpfResponsavel: "456.789.123-22",
-    telResponsavel: "(11) 97654-3210",
-    frequenciaGeral: "98% Presença",
-    qtdAtividades: 1,
-    dataCriacao: "2026-08-14",
-  },
-  {
-    id: "aluno-kaua",
-    nome: "Kauã Ferreira da Silva",
-    email: "kaua.ferreira@aluno.cufa.org",
-    telefone: "(21) 96543-2109",
-    polo: "Complexo da Penha",
-    modalidade: "Aula de Inglês",
-    turma: "Turma 1 - Tarde",
-    nomeEscola: "E.M. Ary Barroso",
-    anoEscolar: "7º Ano - Ensino Fundamental",
-    turnoEscolar: "Manhã",
-    qtdPessoasResidencia: "4",
-    nomeResponsavel: "Fernanda Ferreira",
-    cpfResponsavel: "789.123.456-33",
-    telResponsavel: "(21) 96543-2109",
-    frequenciaGeral: "100% Presença",
-    qtdAtividades: 1,
-    dataCriacao: "2026-08-15",
-  },
-];
-
 function GestorAlunosDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroPolo, setFiltroPolo] = useState("todos");
@@ -180,175 +101,35 @@ function GestorAlunosDashboardPage() {
   const [downloadingZipId, setDownloadingZipId] = useState<string | null>(null);
   const [selectedAluno, setSelectedAluno] = useState<AlunoRecord | null>(null);
 
-  const [alunosList, setAlunosList] = useState<AlunoRecord[]>(() => {
-    return loadMergedAlunos();
-  });
-
-  function loadMergedAlunos(): AlunoRecord[] {
-    const list: AlunoRecord[] = [...defaultAlunosBase];
-    const seenEmails = new Set<string>(list.map((a) => a.email.toLowerCase()));
-
-    try {
-      const storedCad = localStorage.getItem("cufa_alunos_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((cad: any) => {
-            const cEmail = String(cad.email || "").toLowerCase();
-            const cNome = cad.nome || "Aluno";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
-
-            let userPolo = cad.polo || "Complexo da Penha";
-            let userMod = cad.modalidade || "Jiu Jitsu";
-            let userTurma = cad.turma || "Turma 1 - Tarde";
-
-            let totalInsc = 1;
-            let freqCalc = "100% Presença";
-
-            try {
-              const inscStored = localStorage.getItem(`cufa_aluno_inscricoes_${cEmail}`);
-              if (inscStored) {
-                const inscList = JSON.parse(inscStored);
-                if (Array.isArray(inscList) && inscList.length > 0) {
-                  const activeList = inscList.filter((i: any) => i.status === "ativa");
-                  totalInsc = Math.max(activeList.length, 1);
-                  const activeInsc = activeList[0] || inscList[0];
-                  if (activeInsc) {
-                    userPolo = activeInsc.poloNome || userPolo;
-                    userMod = activeInsc.atividadeNome || userMod;
-                    userTurma = activeInsc.turmaNome || userTurma;
-                  }
-                }
-              }
-            } catch {}
-
-            try {
-              const freqStored = localStorage.getItem(`cufa_aluno_frequencia_${cEmail}`);
-              if (freqStored) {
-                const freqList = JSON.parse(freqStored);
-                if (Array.isArray(freqList) && freqList.length > 0) {
-                  const pres = freqList.filter((f: any) => f.presente).length;
-                  freqCalc = `${Math.round((pres / freqList.length) * 100)}% Presença`;
-                }
-              }
-            } catch {}
-
-            if (cEmail && !seenEmails.has(cEmail)) {
-              seenEmails.add(cEmail);
-              list.push({
-                id: cad.id || `aluno-${Date.now()}`,
-                nome: cNome,
-                email: cEmail,
-                telefone: cad.telefone || "",
-                polo: userPolo,
-                modalidade: userMod,
-                turma: userTurma,
-                dataNasc: cad.dataNasc,
-                nomeEscola: cad.nomeEscola || "Não informada",
-                anoEscolar: cad.anoEscolar || "1º Ano - Ensino Fundamental",
-                turnoEscolar: cad.turnoEscolar || "Manhã",
-                qtdPessoasResidencia: cad.qtdPessoasResidencia || "1",
-                nomeResponsavel: cad.nomeResponsavel || "Responsável Legal",
-                cpfResponsavel: cad.cpfResponsavel || "",
-                telResponsavel: cad.telResponsavel || "",
-                docIdName: cad.docIdName,
-                docIdData: cad.docIdData,
-                docResName: cad.docResName,
-                docResData: cad.docResData,
-                foto: fUser || null,
-                dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
-                frequenciaGeral: freqCalc,
-                qtdAtividades: totalInsc,
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    // Also read cufa_alunos_polo
-    try {
-      const storedPolo = localStorage.getItem("cufa_alunos_polo");
-      if (storedPolo) {
-        const parsed = JSON.parse(storedPolo);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((pAluno: any) => {
-            const pEmail = String(pAluno.email || `${cleanStr(pAluno.nome)}@aluno.cufa.org`).toLowerCase();
-            if (!seenEmails.has(pEmail)) {
-              seenEmails.add(pEmail);
-              list.push({
-                id: pAluno.id || `aluno-polo-${Date.now()}`,
-                nome: pAluno.nome,
-                email: pEmail,
-                telefone: pAluno.telefone || "(21) 98765-4321",
-                polo: pAluno.polo || "Complexo da Penha",
-                modalidade: pAluno.oficina || "Jiu Jitsu",
-                turma: "Turma 1 - Tarde",
-                nomeEscola: "E.M. Paulo Freire",
-                anoEscolar: "1º Ano - Ensino Médio",
-                turnoEscolar: "Manhã",
-                qtdPessoasResidencia: "4",
-                nomeResponsavel: "Responsável Legal",
-                cpfResponsavel: "000.000.000-00",
-                telResponsavel: "(21) 98765-4321",
-                dataCriacao: "2026-08-16",
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    return list;
-  }
+  const [alunosList, setAlunosList] = useState<AlunoRecord[]>([]);
 
   const { polos: polosCadastrados } = usePolosCadastrados();
 
-  function mergeBanco(base: AlunoRecord[], remotos: AlunoCadastro[]): AlunoRecord[] {
-    const porEmail = new Map(base.map((a) => [a.email.toLowerCase(), a]));
-    remotos.forEach((r) => {
+  function mapearBanco(remotos: AlunoCadastro[]): AlunoRecord[] {
+    return remotos.map((r) => {
       const email = String(r.email || "").toLowerCase();
-      if (!email) return;
-      const existente = porEmail.get(email);
-      const registro: AlunoRecord = {
-        id: existente?.id || r.id || email,
-        nome: r.nome || existente?.nome || "Aluno",
+      return {
+        id: r.id || email,
+        nome: r.nome || "Aluno",
         email,
-        telefone: r.telefone || existente?.telefone || "",
-        polo: r.polo_nome || existente?.polo || "—",
-        modalidade: existente?.modalidade || "—",
-        turma: existente?.turma || "—",
-        dataNasc: r.data_nasc || existente?.dataNasc || "—",
-        nomeEscola: r.nome_escola || existente?.nomeEscola || "Não informada",
-        anoEscolar: r.ano_escolar || existente?.anoEscolar || "—",
-        turnoEscolar: r.turno_escolar || existente?.turnoEscolar || "—",
-        qtdPessoasResidencia: String(r.qtd_pessoas_residencia ?? existente?.qtdPessoasResidencia ?? "1"),
-        nomeResponsavel: r.nome_responsavel || existente?.nomeResponsavel || "—",
-        cpfResponsavel: r.cpf_responsavel || existente?.cpfResponsavel || "",
-        telResponsavel: r.tel_responsavel || existente?.telResponsavel || "",
-        docIdName: existente?.docIdName ?? null,
-        docIdData: existente?.docIdData ?? null,
-        docResName: existente?.docResName ?? null,
-        docResData: existente?.docResData ?? null,
-        foto: r.avatar_url || getAvatarLocal(email) || existente?.foto || null,
-        dataCriacao: (r.created_at || "").slice(0, 10) || existente?.dataCriacao || "2026-08-01",
-        frequenciaGeral: existente?.frequenciaGeral ?? "—",
-        qtdAtividades: existente?.qtdAtividades ?? 0,
-        hospitalEmergencia: existente?.hospitalEmergencia || (r as any).hospital_emergencia || "",
-        cep: existente?.cep || (r as any).cep || "",
-        endereco: existente?.endereco || (r as any).endereco || "",
-        numero: existente?.numero || (r as any).numero || "",
-        bairro: existente?.bairro || (r as any).bairro || "",
-        cidade: existente?.cidade || (r as any).cidade || "Rio de Janeiro",
-        uf: existente?.uf || (r as any).uf || "RJ",
-        telefonePai: existente?.telefonePai || (r as any).telefone_pai || "",
-        telefoneVizinho: existente?.telefoneVizinho || (r as any).telefone_vizinho || "",
-        telefoneAvo: existente?.telefoneAvo || (r as any).telefone_avo || "",
-        termoAutorizacaoName: existente?.termoAutorizacaoName ?? null,
+        telefone: r.telefone || "",
+        polo: r.polo_nome || "—",
+        modalidade: "—",
+        turma: "—",
+        dataNasc: r.data_nasc || "—",
+        nomeEscola: r.nome_escola || "Não informada",
+        anoEscolar: r.ano_escolar || "—",
+        turnoEscolar: r.turno_escolar || "—",
+        qtdPessoasResidencia: String(r.qtd_pessoas_residencia ?? 0),
+        nomeResponsavel: r.nome_responsavel || "—",
+        cpfResponsavel: r.cpf_responsavel || "",
+        telResponsavel: r.tel_responsavel || "",
+        foto: r.avatar_url || getAvatarLocal(email),
+        dataCriacao: (r.created_at || "").slice(0, 10),
+        frequenciaGeral: "—",
+        qtdAtividades: 0,
       };
-      porEmail.set(email, registro);
     });
-    return Array.from(porEmail.values());
   }
 
   useEffect(() => {
@@ -358,10 +139,7 @@ function GestorAlunosDashboardPage() {
       try {
         const remotos = await fetchAlunosCadastro();
         if (ativo) {
-          setAlunosList((atuais) => {
-            if (remotos.length === 0) return atuais;
-            return mergeBanco(atuais, remotos);
-          });
+          setAlunosList(mapearBanco(remotos));
         }
       } catch (error) {
         if (ativo) toast.error(error instanceof Error ? error.message : "Não foi possível carregar os alunos.");

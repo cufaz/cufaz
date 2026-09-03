@@ -238,7 +238,7 @@ export function SignupDialog({
     }
   }
 
-  function enviar(e: React.FormEvent) {
+  async function enviar(e: React.FormEvent) {
     e.preventDefault();
     if (senha !== confirmarSenha) {
       toast.error("As senhas digitadas não coincidem!", {
@@ -334,25 +334,21 @@ export function SignupDialog({
       };
 
       try {
-        const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-        let listCad = storedCad ? JSON.parse(storedCad) : [];
-        listCad.push(novoProf);
-        localStorage.setItem("cufa_professores_cadastrados", JSON.stringify(listCad));
-
+        await upsertProfessorCadastro({
+          nome: pNome,
+          email: pEmail,
+          telefone: telefone.trim() || null,
+          polo_nome: unidade || null,
+          modalidade: modalidade || null,
+          status: "ativo",
+          avatar_url: fotoPerfil,
+        });
         if (fotoPerfil) setAvatarLocal(pEmail, fotoPerfil);
-
         window.dispatchEvent(new Event("cufa_professores_updated"));
-      } catch {}
-
-      void upsertProfessorCadastro({
-        nome: pNome,
-        email: pEmail,
-        telefone: telefone.trim() || null,
-        polo_nome: unidade || null,
-        modalidade: modalidade || null,
-        status: "ativo",
-        avatar_url: fotoPerfil,
-      }).catch(() => {});
+      } catch (error) {
+        toast.error("Não foi possível salvar o cadastro.", { description: error instanceof Error ? error.message : undefined });
+        return;
+      }
 
 
       localStorage.setItem("cufa_logged_user", pEmail);
@@ -406,30 +402,27 @@ export function SignupDialog({
       };
 
       try {
-        const stored = localStorage.getItem("cufa_alunos_cadastrados");
-        let list = stored ? JSON.parse(stored) : [];
-        list.push(novoAluno);
-        localStorage.setItem("cufa_alunos_cadastrados", JSON.stringify(list));
-
+        await upsertAlunoCadastro({
+          nome: aNome,
+          email: aEmail,
+          telefone: telefone.trim() || null,
+          data_nasc: dataNasc || null,
+          nome_escola: nomeEscola || null,
+          ano_escolar: anoEscolar || null,
+          turno_escolar: turnoEscolar || null,
+          qtd_pessoas_residencia: Number(qtdPessoasResidencia) || 0,
+          nome_responsavel: nomeResponsavel || null,
+          cpf_responsavel: cpfResponsavel || null,
+          tel_responsavel: telResponsavel || null,
+          polo_nome: unidade || null,
+          avatar_url: fotoPerfil,
+        });
         if (fotoPerfil) setAvatarLocal(aEmail, fotoPerfil);
         window.dispatchEvent(new Event("cufa_alunos_updated"));
-      } catch {}
-
-      void upsertAlunoCadastro({
-        nome: aNome,
-        email: aEmail,
-        telefone: telefone.trim() || null,
-        data_nasc: dataNasc || null,
-        nome_escola: nomeEscola || null,
-        ano_escolar: anoEscolar || null,
-        turno_escolar: turnoEscolar || null,
-        qtd_pessoas_residencia: Number(qtdPessoasResidencia) || 0,
-        nome_responsavel: nomeResponsavel || null,
-        cpf_responsavel: cpfResponsavel || null,
-        tel_responsavel: telResponsavel || null,
-        polo_nome: unidade || null,
-        avatar_url: fotoPerfil,
-      }).catch(() => {});
+      } catch (error) {
+        toast.error("Não foi possível salvar o cadastro.", { description: error instanceof Error ? error.message : undefined });
+        return;
+      }
 
 
       localStorage.setItem("cufa_logged_user", aEmail);

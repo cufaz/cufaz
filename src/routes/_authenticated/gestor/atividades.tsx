@@ -937,19 +937,6 @@ export function AtividadesPage() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label>Centro de Custo</Label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  value={String(itemForm['centro_custo_id'] ?? "cc-101")}
-                  onChange={(e) => setItemForm({ ...itemForm, centro_custo_id: e.target.value })}
-                >
-                  <option value="cc-101">CC-101 — Esporte & Inclusão</option>
-                  <option value="cc-102">CC-102 — Cultura & Arte Periférica</option>
-                  <option value="cc-103">CC-103 — Educação & Cidadania</option>
-                  <option value="cc-104">CC-104 — Administrativo & Operações</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
                 <Label>Descrição</Label>
                 <Textarea rows={2} value={String(itemForm['descricao'] ?? "")} onChange={(e) => setItemForm({ ...itemForm, descricao: e.target.value })} />
               </div>

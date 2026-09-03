@@ -79,48 +79,6 @@ function cleanStr(str: string = "") {
     .trim();
 }
 
-const defaultProfessoresBase: ProfessorRecord[] = [
-  {
-    id: "prof-santana",
-    nome: "Prof.ª Santana Silva",
-    email: "santana@cufa.com.br",
-    telefone: "(21) 98765-4321",
-    polo: "Complexo da Penha",
-    modalidade: "Jiu Jitsu",
-    turma: "Turma 1 - Tarde (14h - 16h)",
-    alunosCount: 40,
-    frequencia: 95,
-    status: "aprovado",
-    dataCriacao: "2026-08-14",
-  },
-  {
-    id: "prof-marcos",
-    nome: "Prof. Marcos Vinícius",
-    email: "marcos.prof@cufa.com.br",
-    telefone: "(21) 97654-3210",
-    polo: "Viaduto de Madureira",
-    modalidade: "Corte e Costura",
-    turma: "Turma 1 - Manhã (09h - 11h)",
-    alunosCount: 25,
-    frequencia: 92,
-    status: "aprovado",
-    dataCriacao: "2026-08-15",
-  },
-  {
-    id: "prof-fenix",
-    nome: "Prof.ª Fênix Farias",
-    email: "fenix.prof@cufa.com.br",
-    telefone: "(11) 98888-7777",
-    polo: "Paraisópolis",
-    modalidade: "Karatê",
-    turma: "Turma 1 - Tarde (15h - 17h)",
-    alunosCount: 30,
-    frequencia: 98,
-    status: "aprovado",
-    dataCriacao: "2026-08-16",
-  },
-];
-
 function ProfessoresDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroPolo, setFiltroPolo] = useState("todos");
@@ -132,13 +90,11 @@ function ProfessoresDashboardPage() {
   const apagarCadastro = useServerFn(deleteCadastroPessoa);
 
   // Read registered & candidate professors dynamically from local storage & Supabase
-  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>(() => {
-    return loadMergedProfessores();
-  });
+  const [professoresList, setProfessoresList] = useState<ProfessorRecord[]>([]);
 
   function loadMergedProfessores(remotos: ProfessorCadastro[] = []): ProfessorRecord[] {
-    const list: ProfessorRecord[] = [...defaultProfessoresBase];
-    const seenEmails = new Set(list.map((p) => p.email.toLowerCase()));
+    const list: ProfessorRecord[] = [];
+    const seenEmails = new Set<string>();
 
     // Merge remote DB professors
     remotos.forEach((r) => {
@@ -150,102 +106,18 @@ function ProfessoresDashboardPage() {
           id: r.id || `prof-db-${rEmail}`,
           nome: r.nome || "Professor",
           email: rEmail,
-          telefone: r.telefone || "(21) 98765-4321",
-          polo: r.polo_nome || "Complexo da Penha",
-          modalidade: r.modalidade || "Jiu Jitsu",
-          turma: "Turma 1 - Tarde",
-          alunosCount: 30,
-          frequencia: 90,
+          telefone: r.telefone || "",
+          polo: r.polo_nome || "—",
+          modalidade: r.modalidade || "—",
+          turma: "—",
+          alunosCount: 0,
+          frequencia: 0,
           status: (r.status === "pendente" ? "pendente" : "aprovado") as any,
           foto: r.avatar_url || null,
-          dataCriacao: (r.created_at || "").slice(0, 10) || "2026-08-15",
+          dataCriacao: (r.created_at || "").slice(0, 10),
         });
       }
     });
-
-    // Read candidacies
-    try {
-      const storedSolic = localStorage.getItem("cufa_professores_solicitacoes");
-      if (storedSolic) {
-        const parsed = JSON.parse(storedSolic);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((solic: any) => {
-            const pEmail = String(solic.email || "").toLowerCase();
-            const pNome = solic.professorNome || "Professor";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${pEmail}`);
-
-            if (pEmail && !seenEmails.has(pEmail)) {
-              seenEmails.add(pEmail);
-              list.unshift({
-                id: solic.id || `prof-solic-${Date.now()}`,
-                nome: pNome,
-                email: pEmail,
-                telefone: solic.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
-                polo: solic.poloNome || "Complexo da Penha",
-                modalidade: solic.atividadeNome || "Oficina Esportiva",
-                turma: solic.turmaNome || "Turma 1 - Tarde",
-                alunosCount: 20,
-                frequencia: 88,
-                status: solic.status === "aprovado" ? "aprovado" : "pendente",
-                foto: fUser || null,
-                dataCriacao: solic.dataSolicitacao || new Date().toISOString().slice(0, 10),
-                docIdName: solic.docIdName,
-                docResName: solic.docResName,
-                docFuncName: solic.docFuncName,
-              });
-            } else if (pEmail) {
-              const idx = list.findIndex((p) => p.email.toLowerCase() === pEmail);
-              if (idx !== -1 && list[idx]) {
-                const target = list[idx]!;
-                target.status = solic.status === "aprovado" ? "aprovado" : "pendente";
-                if (solic.poloNome) target.polo = solic.poloNome;
-                if (solic.atividadeNome) target.modalidade = solic.atividadeNome;
-                if (solic.turmaNome) target.turma = solic.turmaNome;
-                if (fUser) target.foto = fUser;
-              }
-            }
-          });
-        }
-      }
-    } catch {}
-
-    // Read registered accounts
-    try {
-      const storedCad = localStorage.getItem("cufa_professores_cadastrados");
-      if (storedCad) {
-        const parsed = JSON.parse(storedCad);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((cad: any) => {
-            const cEmail = String(cad.email || "").toLowerCase();
-            const cNome = cad.professorNome || "Prof. Cadastrado";
-            const fUser = localStorage.getItem(`cufa_perfil_foto_${cEmail}`);
-
-            if (cEmail && !seenEmails.has(cEmail)) {
-              seenEmails.add(cEmail);
-              list.unshift({
-                id: cad.id || `prof-cad-${Date.now()}`,
-                nome: cNome,
-                email: cEmail,
-                telefone: cad.telefone || localStorage.getItem("cufa_professor_telefone") || "(21) 98765-4321",
-                polo: "Complexo da Penha",
-                modalidade: "Jiu Jitsu",
-                turma: "Turma 1 - Tarde",
-                alunosCount: 25,
-                frequencia: 94,
-                status: "aprovado",
-                foto: fUser || null,
-                dataCriacao: cad.dataCriacao || new Date().toISOString().slice(0, 10),
-              });
-            } else if (cEmail) {
-              const idx = list.findIndex((p) => p.email.toLowerCase() === cEmail);
-              if (idx !== -1 && list[idx] && fUser) {
-                list[idx]!.foto = fUser;
-              }
-            }
-          });
-        }
-      }
-    } catch {}
 
     return list;
   }
