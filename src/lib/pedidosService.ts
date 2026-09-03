@@ -90,6 +90,18 @@ export async function createPedidoDB(pedido: Omit<PedidoDB, "id" | "created_at">
   return data;
 }
 
+export async function updatePedidoDB(id: string, updates: Partial<PedidoDB>) {
+  const { data, error } = await supabase
+    .from("pedidos_compra")
+    .update(updates as any)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  window.dispatchEvent(new Event("cufa_pedidos_updated"));
+  return data;
+}
+
 export async function updatePedidoStatusDB(
   id: string,
   status: "aprovado" | "reprovado",

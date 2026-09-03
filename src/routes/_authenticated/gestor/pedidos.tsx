@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { brl, competenciaLabel, competenciaOptions } from "@/lib/format";
+import { fetchCentrosCustoDB } from "@/lib/centroCustoService";
 
 export const Route = createFileRoute("/_authenticated/gestor/pedidos")({ component: PedidosPage });
 
@@ -32,7 +33,7 @@ const cor: Record<string, string> = {
   reprovado: "bg-destructive/15 text-destructive",
 };
 
-import { fetchPedidosDB, createPedidoDB, updatePedidoStatusDB, deletePedidoDB } from "@/lib/pedidosService";
+import { fetchPedidosDB, createPedidoDB, updatePedidoDB, updatePedidoStatusDB, deletePedidoDB } from "@/lib/pedidosService";
 
 function PedidosPage() {
   const qc = useQueryClient();
@@ -45,9 +46,10 @@ function PedidosPage() {
   const { data, isLoading } = useQuery({ queryKey: ["pedidos"], queryFn: () => fetchPedidosDB() });
   const polos = useQuery({ queryKey: ["polos"], queryFn: () => fetchPolos({}) });
   const fin = useQuery({ queryKey: ["financeiro-cats"], queryFn: () => fetchFin({ data: {} }) });
+  const centrosCusto = useQuery({ queryKey: ["centros-custo"], queryFn: fetchCentrosCustoDB });
 
   const mDecidir = useMutation({
-    mutationFn: (v: { id: string; status: "aprovado" | "reprovado"; observacao?: string }) => updatePedidoStatusDB(v.id, v.status, v.observacao),
+    mutationFn: (v: { id: string; status: "aprovado" | "reprovado"; observacao?: string; updates?: Row }) => updatePedidoStatusDB(v.id, v.status, v.observacao, v.updates),
     onSuccess: () => {
       toast.success("Status do pedido atualizado no banco!");
       qc.invalidateQueries();
@@ -202,9 +204,10 @@ function PedidosPage() {
   }, []);
 
   const [approveModalPedido, setApproveModalPedido] = useState<Row | null>(null);
-  const [aprovPoloNome, setAprovPoloNome] = useState<string>("Complexo da Penha");
+  const [aprovPoloNome, setAprovPoloNome] = useState<string>("");
   const [aprovCategoria, setAprovCategoria] = useState<string>("Materiais / consumo");
   const [aprovValorTotal, setAprovValorTotal] = useState<string>("0");
+  const [aprovCentroCustoId, setAprovCentroCustoId] = useState<string>("");
 
   const [editModalPedido, setEditModalPedido] = useState<Row | null>(null);
 
@@ -271,7 +274,7 @@ function PedidosPage() {
   }
 
   function openApprovalModal(p: Row) {
-    const currentPolo = p['polo_nome'] || p['polos']?.nome || "Complexo da Penha";
+    const currentPolo = p['polo_nome'] || p['polos']?.nome || "";
     const currentCat = p['categoria'] || p['categorias_custo']?.nome || categorias[0] || "Materiais / consumo";
     const currentVal = Number(p['valor_total'] || p['valor'] || 0);
 
@@ -279,6 +282,7 @@ function PedidosPage() {
     setAprovPoloNome(currentPolo);
     setAprovCategoria(currentCat);
     setAprovValorTotal(formatBRLInput(currentVal));
+    setAprovCentroCustoId(String(p['centro_custo_id'] || ""));
   }
 
   function handleConfirmarAprovacao(e: React.FormEvent) {
@@ -287,79 +291,21 @@ function PedidosPage() {
 
     const pId = String(approveModalPedido['id']);
     const valNum = parseBRLToNumber(aprovValorTotal);
-    const poloIdCode = aprovPoloNome.toLowerCase().includes("penha")
-      ? "penha"
-      : aprovPoloNome.toLowerCase().includes("madureira")
-      ? "madureira"
-      : aprovPoloNome.toLowerCase().includes("paraisopolis") || aprovPoloNome.toLowerCase().includes("paraisópolis")
-      ? "paraisopolis"
-      : "polo-teste";
-
-    const updatedP = {
-      ...approveModalPedido,
-      polo_nome: aprovPoloNome,
-      polo_id: poloIdCode,
-      categoria: aprovCategoria,
-      valor_total: valNum,
-      status: "aprovado",
-    };
-
-    let updated = localPedidos.map((p) => (String(p['id']) === pId ? updatedP : p));
-    if (!localPedidos.some((p) => String(p['id']) === pId)) {
-      updated = [updatedP, ...localPedidos];
+    const polo = ((polos.data ?? []) as Row[]).find((item) => String(item['nome']) === aprovPoloNome);
+    if (!polo || !aprovCentroCustoId) {
+      toast.error("Selecione um polo e um centro de custo cadastrados.");
+      return;
     }
-
-    setLocalPedidos(updated);
-    try {
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-    } catch {}
-
-    // Register expense in financeiro!
-    const novoLanc = {
-      id: `lanc-ped-${Date.now()}`,
-      polo_id: poloIdCode,
-      descricao: `[Compra Aprovada] ${approveModalPedido['item'] || approveModalPedido['descricao'] || 'Pedido de Compra'}`,
-      valor: valNum,
-      tipo: "despesa",
-      natureza: "realizado",
-      categoria_id: aprovCategoria,
-      categoria_nome: aprovCategoria,
-      competencia: "2026-08-01",
-      created_at: new Date().toISOString(),
-    };
-
-    try {
-      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-      const listLanc = storedLanc ? JSON.parse(storedLanc) : [];
-      localStorage.setItem("cufa_lancamentos_custom", JSON.stringify([novoLanc, ...listLanc]));
-    } catch {}
-
-    mDecidir.mutate({ id: pId, status: "aprovado" });
-    toast.success(`Pedido APROVADO! Lançado R$ ${valNum.toFixed(2)} no Polo ${aprovPoloNome}!`);
+    mDecidir.mutate({
+      id: pId,
+      status: "aprovado",
+      updates: { polo_id: String(polo['id']), centro_custo_id: aprovCentroCustoId, valor_total: valNum },
+    });
     setApproveModalPedido(null);
   }
 
   function handleDecidirLocal(id: string, novoStatus: "aprovado" | "reprovado", pObj: Row) {
-    let updated = localPedidos.map((p) => {
-      if (String(p['id']) === String(id)) {
-        return { ...p, status: novoStatus };
-      }
-      return p;
-    });
-
-    if (!localPedidos.some((p) => String(p['id']) === String(id))) {
-      updated = [{ ...pObj, status: novoStatus }, ...localPedidos];
-    }
-
-    setLocalPedidos(updated);
-    try {
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-    } catch {}
-
     mDecidir.mutate({ id, status: novoStatus });
-    toast.success(novoStatus === "reprovado" ? "Pedido reprovado!" : "Pedido atualizado!");
   }
 
   const [pedidoExcluir, setPedidoExcluir] = useState<Row | null>(null);
@@ -368,35 +314,12 @@ function PedidosPage() {
     const p = pedidoExcluir;
     if (!p) return;
     const pId = String(p['id']);
-    const itemNome = String(p['item'] ?? p['descricao'] ?? "");
-
-    const updated = localPedidos.filter((l) => String(l['id']) !== pId);
-    setLocalPedidos(updated);
-    try {
-      localStorage.setItem("cufa_compras_polo", JSON.stringify(updated));
-      // remove lançamentos financeiros vinculados a este pedido
-      const storedLanc = localStorage.getItem("cufa_lancamentos_custom");
-      const listLanc: Row[] = storedLanc ? JSON.parse(storedLanc) : [];
-      const limpos = listLanc.filter((l) => {
-        if (String(l['id']) === `lanc-ped-${pId}`) return false;
-        const desc = String(l['descricao'] ?? "");
-        if (itemNome && desc === `[Compra Aprovada] ${itemNome}`) return false;
-        return true;
-      });
-      localStorage.setItem("cufa_lancamentos_custom", JSON.stringify(limpos));
-      window.dispatchEvent(new Event("cufa_pedidos_updated"));
-      window.dispatchEvent(new Event("cufa_lancamentos_updated"));
-    } catch {}
-
     mExcluir.mutate({ id: pId });
     setPedidoExcluir(null);
   }
 
   const serverPedidos: Row[] = data ?? [];
-  const pedidos: Row[] = [
-    ...localPedidos,
-    ...serverPedidos.filter((s) => !localPedidos.some((l) => String(l['id']) === String(s['id']))),
-  ];
+  const pedidos: Row[] = serverPedidos;
 
   return (
     <GestorShell
@@ -448,7 +371,7 @@ function PedidosPage() {
       ) : (
         <div className="grid gap-3">
           {pedidos.map((p) => {
-            const pNomeStr = p['polo_nome'] ?? p['polos']?.nome ?? "Complexo da Penha";
+            const pNomeStr = p['polo_nome'] ?? p['polos']?.nome ?? "Polo não vinculado";
             const pCatStr = p['categoria'] ?? p['categorias_custo']?.nome ?? "Sem categoria";
             const compStr = p['competencia'] ? competenciaLabel(String(p['competencia'])) : "Agosto / 2026";
             const valNum = Number(p['valor_total'] || p['valor'] || 0);
@@ -769,9 +692,10 @@ function PedidosPage() {
                   value={aprovPoloNome}
                   onChange={(e) => setAprovPoloNome(e.target.value)}
                 >
-                  <option value="Complexo da Penha">Complexo da Penha</option>
-                  <option value="Viaduto de Madureira">Viaduto de Madureira</option>
-                  <option value="Paraisópolis">Paraisópolis</option>
+                  <option value="">Selecione um polo</option>
+                  {((polos.data ?? []) as Row[]).map((polo) => (
+                    <option key={String(polo['id'])} value={String(polo['nome'])}>{String(polo['nome'])}</option>
+                  ))}
                 </select>
               </div>
 
@@ -779,13 +703,17 @@ function PedidosPage() {
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Centro de Custo</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  defaultValue="cc-101"
+                  value={aprovCentroCustoId}
+                  onChange={(e) => setAprovCentroCustoId(e.target.value)}
                 >
-                  <option value="cc-101">CC-101 — Esporte & Inclusão</option>
-                  <option value="cc-102">CC-102 — Cultura & Arte Periférica</option>
-                  <option value="cc-103">CC-103 — Educação & Cidadania</option>
-                  <option value="cc-104">CC-104 — Administrativo & Operações</option>
+                  <option value="">Selecione um centro de custo</option>
+                  {(centrosCusto.data ?? []).map((centro) => (
+                    <option key={centro.id} value={centro.id}>{centro.codigo} — {centro.nome}</option>
+                  ))}
                 </select>
+                {!centrosCusto.isLoading && (centrosCusto.data ?? []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhum centro de custo cadastrado.</p>
+                ) : null}
               </div>
 
               <div className="space-y-1.5">
