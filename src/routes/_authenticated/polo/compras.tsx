@@ -39,14 +39,19 @@ interface PedidoItem {
 import { fetchPedidosDB, createPedidoDB, PedidoDB } from "@/lib/pedidosService";
 
 import { usePolosCadastrados } from "@/lib/cadastros";
+import { fetchCentrosCustoDB, type CentroCustoDB } from "@/lib/centroCustoService";
 
 export function PoloComprasPage() {
   const { polos } = usePolosCadastrados();
-  const poloNome = polos[0]?.nome || "Complexo da Penha";
-  const poloId = polos[0]?.id || "penha";
+  const poloAtribuido = localStorage.getItem("cufa_polo_atribuido") || "";
+  const poloAtual = polos.find((p) => p.nome === poloAtribuido) || polos[0];
+  const poloNome = poloAtual?.nome || "Polo não vinculado";
+  const poloId = poloAtual?.id || "";
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidos, setPedidos] = useState<PedidoDB[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<CentroCustoDB[]>([]);
+  const [centroCustoId, setCentroCustoId] = useState("");
 
   function loadPedidos() {
     fetchPedidosDB().then((list) => {
@@ -64,6 +69,12 @@ export function PoloComprasPage() {
     window.addEventListener("cufa_pedidos_updated", loadPedidos);
     return () => window.removeEventListener("cufa_pedidos_updated", loadPedidos);
   }, [poloNome]);
+
+  useEffect(() => {
+    void fetchCentrosCustoDB().then(setCentrosCusto).catch((error) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar os centros de custo.");
+    });
+  }, []);
 
   const BASE_CATEGORIAS_CUFA = [
     "Pessoal",
@@ -122,21 +133,20 @@ export function PoloComprasPage() {
       return;
     }
 
-    const currentPoloNome = localStorage.getItem("cufa_polo_atribuido") || "Complexo da Penha";
+    const currentPoloNome = poloNome;
     const qtdNum = parseFloat(quantidade.replace(/\D/g, "")) || 1;
     const vTotalNum = parseBRLToNumber(valorTotalStr);
     const vUnitNum = vTotalNum > 0 ? vTotalNum / qtdNum : 0;
 
-    const poloIdCode = currentPoloNome.toLowerCase().includes("madureira")
-      ? "madureira"
-      : currentPoloNome.toLowerCase().includes("paraisopolis") || currentPoloNome.toLowerCase().includes("paraisópolis")
-      ? "paraisopolis"
-      : "penha";
+    if (!poloId || !centroCustoId) {
+      toast.error("Vincule o responsável a um polo e selecione um centro de custo cadastrado.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       await createPedidoDB({
-        polo_id: poloIdCode,
+        polo_id: poloId,
         polo_nome: currentPoloNome,
         solicitante_nome: `Responsável (${currentPoloNome})`,
         item: itemNome,
@@ -147,6 +157,7 @@ export function PoloComprasPage() {
         competencia: "2026-08-01",
         status: "pendente",
         descricao: observacao,
+        centro_custo_id: centroCustoId,
       });
 
       toast.success("Solicitação de compra salva no banco com sucesso!", {
@@ -259,13 +270,15 @@ export function PoloComprasPage() {
               <Label className="text-xs font-bold uppercase text-muted-foreground">Centro de Custo</Label>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                defaultValue="cc-101"
+                value={centroCustoId}
+                onChange={(e) => setCentroCustoId(e.target.value)}
               >
-                <option value="cc-101">CC-101 — Esporte & Inclusão</option>
-                <option value="cc-102">CC-102 — Cultura & Arte Periférica</option>
-                <option value="cc-103">CC-103 — Educação & Cidadania</option>
-                <option value="cc-104">CC-104 — Administrativo & Operações</option>
+                <option value="">Selecione um centro de custo</option>
+                {centrosCusto.map((centro) => (
+                  <option key={centro.id} value={centro.id}>{centro.codigo} — {centro.nome}</option>
+                ))}
               </select>
+              {centrosCusto.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum centro de custo cadastrado.</p> : null}
             </div>
 
             <div className="space-y-1.5">

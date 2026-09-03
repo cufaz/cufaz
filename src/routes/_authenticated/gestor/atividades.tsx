@@ -17,7 +17,6 @@ import {
 } from "@/lib/gestao.functions";
 import { GestorShell } from "@/components/admin/GestorShell";
 import { PoloMultiSelect } from "@/components/admin/PoloMultiSelect";
-import { itensOrcamentoOFICIAIS } from "@/components/admin/dataDetalhada";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,36 +155,6 @@ export function AtividadesPage() {
         custo_mensal: Number(v['custo_mensal'] || 0),
         ativo: Boolean(v['ativo'] ?? true),
       };
-      try {
-        const stored = localStorage.getItem("cufa_atividades_gestor");
-        let list = stored ? JSON.parse(stored) : [];
-        if (!Array.isArray(list)) list = [];
-        const poloFound = polosCriacao.find((p) => String(p['id']) === String(v['polo_id']));
-        const poloNome = poloFound ? String(poloFound['nome']) : "Complexo da Penha";
-
-        const newAct = {
-          id: v['id'] || `act-${Date.now()}`,
-          nome: v['nome'],
-          polo_id: v['polo_id'],
-          polo_nome: poloNome,
-          polo: poloNome,
-          vagas: Number(v['vagas'] || 10),
-          descricao: v['descricao'] || "",
-          dias: v['dias'] || "Seg e Quat - 14:00 às 16:00",
-          ativo: true,
-          turmaNome: "Turma 1 - Tarde (14h - 16h)",
-        };
-
-        const existingIdx = list.findIndex((a: any) => String(a.id) === String(newAct.id) || String(a.nome).toLowerCase() === String(newAct.nome).toLowerCase());
-        if (existingIdx >= 0) {
-          list[existingIdx] = { ...list[existingIdx], ...newAct };
-        } else {
-          list.push(newAct);
-        }
-        localStorage.setItem("cufa_atividades_gestor", JSON.stringify(list));
-        window.dispatchEvent(new Event("cufa_atividades_updated"));
-      } catch {}
-
       if (v['id']) {
         payload['id'] = v['id'];
       }
@@ -198,20 +167,7 @@ export function AtividadesPage() {
     onError: fail,
   });
   const mDelAtividade = useMutation({
-    mutationFn: (id: string) => {
-      try {
-        const stored = localStorage.getItem("cufa_atividades_gestor");
-        if (stored) {
-          const list = JSON.parse(stored);
-          if (Array.isArray(list)) {
-            const filtered = list.filter((a: any) => String(a.id) !== String(id));
-            localStorage.setItem("cufa_atividades_gestor", JSON.stringify(filtered));
-            window.dispatchEvent(new Event("cufa_atividades_updated"));
-          }
-        }
-      } catch {}
-      return apagar({ data: { id } });
-    },
+    mutationFn: (id: string) => apagar({ data: { id } }),
     onSuccess: () => ok("Atividade removida"),
     onError: fail,
   });
@@ -270,59 +226,8 @@ export function AtividadesPage() {
   const [dataFim, setDataFim] = useState<string>("2026-08-31");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const defaultAllPolos: Row[] = [
-    { id: "penha", nome: "Complexo da Penha" },
-    { id: "paraisopolis", nome: "Paraisópolis" },
-    { id: "madureira", nome: "Viaduto de Madureira" },
-  ];
-
-  const polos: Row[] = (() => {
-    const fetched = (data?.polos as Row[]) ?? [];
-    const seen = new Set(fetched.map((p) => String(p['nome']).toLowerCase()));
-    const merged = [...fetched];
-    defaultAllPolos.forEach((p) => {
-      if (!seen.has(String(p['nome']).toLowerCase())) {
-        merged.push(p);
-      }
-    });
-    return merged;
-  })();
-
-  const polosCriacao: Row[] = (() => {
-    const listMap = new Map<string, Row>();
-
-    const fetched = (data?.polos as Row[]) ?? [];
-    fetched.forEach((p) => {
-      if (p['nome']) listMap.set(String(p['nome']).toLowerCase(), p);
-    });
-
-    try {
-      const stored = localStorage.getItem("cufa_polos_cadastrados");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((p: any) => {
-            if (p.nome && !listMap.has(String(p.nome).toLowerCase())) {
-              listMap.set(String(p.nome).toLowerCase(), {
-                id: p.id || `polo-${Date.now()}`,
-                nome: p.nome,
-              });
-            }
-          });
-        }
-      }
-    } catch {}
-
-    if (listMap.size === 0) {
-      return [
-        { id: "penha", nome: "Complexo da Penha" },
-        { id: "paraisopolis", nome: "Paraisópolis" },
-        { id: "madureira", nome: "Viaduto de Madureira" },
-      ];
-    }
-
-    return Array.from(listMap.values());
-  })();
+  const polos: Row[] = (data?.polos as Row[]) ?? [];
+  const polosCriacao = polos;
 
   const atividades: Row[] = data?.atividades ?? [];
 
@@ -428,7 +333,7 @@ export function AtividadesPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <Badge variant="secondary" className="mb-1 text-[10px] font-bold">
-                        {a['polos']?.nome || "Complexo da Penha"}
+                        {a['polos']?.nome || "Polo não vinculado"}
                       </Badge>
                       <h2 className="text-base font-bold">{String(a['nome'])}</h2>
                       <p className="text-xs text-muted-foreground">{String(a['dias'] ?? "")}</p>
@@ -807,24 +712,7 @@ export function AtividadesPage() {
           ) : (
             (() => {
               const serverItens = (orcamento.data?.itens ?? []) as Row[];
-              const nomeAtiv = String(orcamentoDe?.['nome'] ?? "").toLowerCase();
-
-              const fallbackItens = itensOrcamentoOFICIAIS
-                .filter(
-                  (i) =>
-                    i.atividade.toLowerCase().includes(nomeAtiv) ||
-                    nomeAtiv.includes(i.atividade.toLowerCase())
-                )
-                .map((i) => ({
-                  id: i.id,
-                  item: i.item,
-                  descricao: i.descricao,
-                  quantidade: i.quantidade,
-                  custo_mensal: i.previsto,
-                  categorias_custo: { nome: i.categoria },
-                }));
-
-              const itensExibidos = serverItens.length > 0 ? serverItens : fallbackItens;
+              const itensExibidos = serverItens;
               const totalMensal = itensExibidos.reduce(
                 (s: number, i: Row) => s + Number(i['custo_mensal'] ?? 0),
                 0
@@ -934,19 +822,6 @@ export function AtividadesPage() {
                       {String(c['nome'])}
                     </option>
                   ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Centro de Custo</Label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
-                  value={String(itemForm['centro_custo_id'] ?? "cc-101")}
-                  onChange={(e) => setItemForm({ ...itemForm, centro_custo_id: e.target.value })}
-                >
-                  <option value="cc-101">CC-101 — Esporte & Inclusão</option>
-                  <option value="cc-102">CC-102 — Cultura & Arte Periférica</option>
-                  <option value="cc-103">CC-103 — Educação & Cidadania</option>
-                  <option value="cc-104">CC-104 — Administrativo & Operações</option>
                 </select>
               </div>
               <div className="space-y-1.5">

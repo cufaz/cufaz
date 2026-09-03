@@ -135,11 +135,11 @@ function CentroCustoPage() {
           onClick={() =>
             setModalForm({
               nome: "",
-              codigo: `CC-${Math.floor(100 + Math.random() * 900)}`,
-              setor: "Projetos Esportivos",
-              responsavel: "Gestor do Polo",
+              codigo: "",
+              setor: "",
+              responsavel: "",
               descricao: "",
-              orcamento_mensal: 10000,
+              orcamento_mensal: 0,
               ativo: true,
             })
           }
@@ -242,8 +242,8 @@ function CentroCustoPage() {
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {centrosFiltrados.map((c) => {
-                        const realizadoEst = Math.round(Number(c.orcamento_mensal || 0) * 0.75);
-                        const percConsumo = Number(c.orcamento_mensal || 0) > 0 ? Math.round((realizadoEst / Number(c.orcamento_mensal)) * 100) : 0;
+                        const realizado = Number(c.realizado || 0);
+                        const percConsumo = Number(c.orcamento_mensal || 0) > 0 ? Math.round((realizado / Number(c.orcamento_mensal)) * 100) : 0;
 
                         return (
                           <tr key={c.id} className="hover:bg-muted/20">
